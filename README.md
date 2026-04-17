@@ -286,6 +286,14 @@ SDK-backed plugins log at least these categories:
 - RPC handler success/failure
 - shutdown handling
 
+The control CLI now supports log inspection:
+
+```bash
+.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo logs
+.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo -component rpc -level warn logs
+.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo -event plugin_auth_failed -format json logs
+```
+
 ## Current limitations
 
 This is still a frozen early substrate, not a polished general release.
