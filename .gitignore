@@ -1,0 +1,10 @@
+.tmp-bin/
+.tmp-logs/
+.tmp-smoke/
+*.test
+*.out
+coverage.txt
+coverage.out
+POSTMORTEM*.md
+TASKS.md
+docs/after-action-*.md
