@@ -185,14 +185,15 @@ func (h *Host) States() []State {
 
 // RestartPlugin restarts exactly one plugin and returns its new state.
 func (h *Host) RestartPlugin(pluginID string) (State, error) {
-	manager, err := h.Manager(pluginID)
+	out, err := h.Call(pluginID, RoutedCallRestart, nil)
 	if err != nil {
 		return State{}, err
 	}
-	if err := manager.Restart(); err != nil {
-		return State{}, err
+	state, ok := out.Body.(State)
+	if !ok {
+		return State{}, fmt.Errorf("restart routed response type mismatch")
 	}
-	return manager.State(), nil
+	return state, nil
 }
 
 // RoutedCall represents one explicit direct routed operation by plugin id.
@@ -201,6 +202,7 @@ type RoutedCall string
 const (
 	RoutedCallHeartbeat RoutedCall = "heartbeat"
 	RoutedCallEcho      RoutedCall = "echo"
+	RoutedCallRestart   RoutedCall = "restart"
 )
 
 // RouteTarget resolves one plugin id into its current route entry and manager.
@@ -236,6 +238,56 @@ func (h *Host) Heartbeat(pluginID string) (testpluginapi.HeartbeatResponse, erro
 	}
 	return manager.Heartbeat()
 }
+
+// RoutedResponse captures the result of one routed operation.
+type RoutedResponse struct {
+	Route Route
+	Call  RoutedCall
+	Body  any
+}
+
+// RoutedRequest is the generic direct-routing request shape.
+type RoutedRequest struct {
+	PluginID string
+	Call     RoutedCall
+	Arg      any
+}
+
+// Call routes one supported direct operation to the target plugin id.
+func (h *Host) Call(pluginID string, call RoutedCall, arg any) (RoutedResponse, error) {
+	return h.CallRequest(RoutedRequest{PluginID: pluginID, Call: call, Arg: arg})
+}
+
+// CallRequest routes one supported direct request through the generic request shape.
+func (h *Host) CallRequest(req RoutedRequest) (RoutedResponse, error) {
+	route, manager, err := h.RouteTarget(req.PluginID)
+	if err != nil {
+		return RoutedResponse{}, err
+	}
+	switch req.Call {
+	case RoutedCallHeartbeat:
+		out, err := manager.Heartbeat()
+		if err != nil {
+			return RoutedResponse{}, err
+		}
+		return RoutedResponse{Route: route, Call: req.Call, Body: out}, nil
+	case RoutedCallEcho:
+		message, _ := req.Arg.(string)
+		out, err := manager.Echo(message)
+		if err != nil {
+			return RoutedResponse{}, err
+		}
+		return RoutedResponse{Route: route, Call: req.Call, Body: testpluginapi.EchoResponse{Message: out}}, nil
+	case RoutedCallRestart:
+		if err := manager.Restart(); err != nil {
+			return RoutedResponse{}, err
+		}
+		return RoutedResponse{Route: route, Call: req.Call, Body: manager.State()}, nil
+	default:
+		return RoutedResponse{}, fmt.Errorf("unsupported routed call: %s", req.Call)
+	}
+}
+
 
 // MonitorLoop runs all manager monitor loops until the context ends.
 func (h *Host) MonitorLoop(ctx context.Context) {

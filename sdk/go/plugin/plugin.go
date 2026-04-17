@@ -76,6 +76,15 @@ type Config struct {
 	AuthToken    string
 }
 
+// ErrMissingEnv reports one required plugin startup environment variable that was not set.
+type ErrMissingEnv struct {
+	Name string
+}
+
+func (e ErrMissingEnv) Error() string {
+	return fmt.Sprintf("%s is required for plugin startup", e.Name)
+}
+
 type Core interface {
 	Version() string
 	Heartbeat(Empty, *HeartbeatResponse) error
@@ -107,24 +116,27 @@ type server struct {
 func LoadConfigFromEnv() (Config, error) {
 	sock := os.Getenv("RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET")
 	if sock == "" {
-		return Config{}, fmt.Errorf("RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET is required")
+		return Config{}, ErrMissingEnv{Name: "RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET"}
 	}
 	pluginID := os.Getenv("RPC_PLUGIN_SYSTEM_PLUGIN_ID")
 	if pluginID == "" {
-		return Config{}, fmt.Errorf("RPC_PLUGIN_SYSTEM_PLUGIN_ID is required")
+		return Config{}, ErrMissingEnv{Name: "RPC_PLUGIN_SYSTEM_PLUGIN_ID"}
 	}
 	genStr := os.Getenv("RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION")
+	if genStr == "" {
+		return Config{}, ErrMissingEnv{Name: "RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION"}
+	}
 	generationID, err := strconv.ParseUint(genStr, 10, 64)
 	if err != nil {
-		return Config{}, fmt.Errorf("parse generation: %w", err)
+		return Config{}, fmt.Errorf("parse RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION %q: %w", genStr, err)
 	}
 	authFile := os.Getenv("RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE")
 	if authFile == "" {
-		return Config{}, fmt.Errorf("RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE is required")
+		return Config{}, ErrMissingEnv{Name: "RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE"}
 	}
 	authTokenRaw, err := os.ReadFile(authFile)
 	if err != nil {
-		return Config{}, fmt.Errorf("read auth token: %w", err)
+		return Config{}, fmt.Errorf("read RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE %q: %w", authFile, err)
 	}
 	return Config{SocketPath: sock, PluginID: pluginID, GenerationID: generationID, AuthToken: string(authTokenRaw)}, nil
 }
@@ -132,15 +144,18 @@ func LoadConfigFromEnv() (Config, error) {
 func Serve(core Core) error {
 	cfg, err := LoadConfigFromEnv()
 	if err != nil {
-		return err
+		return fmt.Errorf("load plugin config from env: %w", err)
 	}
 	return ServeWithConfig(cfg, core)
 }
 
 func ServeWithConfig(cfg Config, core Core) error {
+	if core == nil {
+		return fmt.Errorf("plugin core is required")
+	}
 	logger, err := NewLogger(cfg)
 	if err != nil {
-		return err
+		return fmt.Errorf("create plugin logger: %w", err)
 	}
 	defer logger.Close()
 	_ = logger.Event(LogEvent{Event: EventPluginBootStarted, Message: "plugin boot starting"})

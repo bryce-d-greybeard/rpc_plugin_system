@@ -36,6 +36,54 @@ func TestRouteTargetReturnsExplicitDirectRoute(t *testing.T) {
 	}
 }
 
+func TestCallRoutesSupportedOperations(t *testing.T) {
+	echoPlugin := buildPlugin(t)
+	runtimeDir := t.TempDir()
+
+	host, err := NewHost(HostConfig{
+		RuntimeDir:     runtimeDir,
+		DialTimeout:    2 * time.Second,
+		CallTimeout:    200 * time.Millisecond,
+		HeartbeatEvery: 100 * time.Millisecond,
+		Plugins:        []PluginConfig{{PluginID: "echo", PluginPath: echoPlugin}},
+	})
+	if err != nil {
+		t.Fatalf("new host: %v", err)
+	}
+	defer host.Close()
+
+	if err := host.StartAll(); err != nil {
+		t.Fatalf("start all: %v", err)
+	}
+
+	hbOut, err := host.Call("echo", RoutedCallHeartbeat, nil)
+	if err != nil {
+		t.Fatalf("call heartbeat: %v", err)
+	}
+	hb, ok := hbOut.Body.(testpluginapi.HeartbeatResponse)
+	if !ok || hb.PluginID != "echo" || hbOut.Call != RoutedCallHeartbeat {
+		t.Fatalf("unexpected heartbeat routed result: %+v body=%T", hbOut, hbOut.Body)
+	}
+
+	echoOut, err := host.Call("echo", RoutedCallEcho, "hello-call")
+	if err != nil {
+		t.Fatalf("call echo: %v", err)
+	}
+	echoResp, ok := echoOut.Body.(testpluginapi.EchoResponse)
+	if !ok || echoResp.Message != "hello-call" || echoOut.Call != RoutedCallEcho {
+		t.Fatalf("unexpected echo routed result: %+v body=%T", echoOut, echoOut.Body)
+	}
+
+	restartOut, err := host.Call("echo", RoutedCallRestart, nil)
+	if err != nil {
+		t.Fatalf("call restart: %v", err)
+	}
+	restarted, ok := restartOut.Body.(State)
+	if !ok || restarted.PluginID != "echo" || restarted.GenerationID == 0 || restartOut.Call != RoutedCallRestart {
+		t.Fatalf("unexpected restart routed result: %+v body=%T", restartOut, restartOut.Body)
+	}
+}
+
 func TestRoutingRemainsTargetedWhenOtherPluginBecomesUnhealthy(t *testing.T) {
 	echoPlugin := buildPlugin(t)
 	failurePlugin := buildFailurePlugin(t)

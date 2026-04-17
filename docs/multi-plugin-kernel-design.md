@@ -297,13 +297,15 @@ Keep the first version boring:
 Current direct-routing slice now includes:
 - host-level direct routing by plugin id for `Heartbeat`
 - host-level direct routing by plugin id for `Echo`
+- routed restart by plugin id through the same direct-routing layer
 - an explicit `RouteTarget(plugin_id)` resolution step in the host so direct routing is a deliberate primitive instead of scattered manager lookups
-- admin/control-plane routing for targeted `Heartbeat` and `Echo`
-- CLI commands for `plugin`, `capabilities`, `heartbeat`, and `echo`
+- a small routed-call layer in the host for supported direct operations
+- admin/control-plane routing for targeted `Heartbeat`, `Echo`, and restart
+- CLI commands for `plugin`, `capabilities`, `heartbeat`, `echo`, and restart
 - explicit routes marked as `direct-plugin-id` so the route surface is documented as a deliberate mode, not an accident
 
 Still needed to finish the direct-routing story:
-- decide whether v1 needs routed operations beyond the current small initial set
+- decide whether v1 needs routed operations beyond the current small initial set of `Heartbeat`, `Echo`, and restart
 - prove routed operations remain coherent under more mixed failure churn than the current first proof slice
 
 Current route-inspection slice now adds:

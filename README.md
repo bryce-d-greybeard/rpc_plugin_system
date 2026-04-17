@@ -90,11 +90,13 @@ That SDK is the intended public Go authoring surface. It provides:
 - RPC service/method constants
 - request/response types
 - adapter-based optional capability registration
+- `TemplatePlugin` as the stable minimal skeleton
 - `Serve` / `ServeWithConfig` helpers
 
-For the smallest supported authoring path, start with:
+For the supported authoring path, start with:
+- `sdk/go/plugin/template.go`
 - `sdk/go/plugin/example_minimal.go`
-- `cmd/rpcplugin-echo/main.go`
+- `cmd/rpcplugin-echo/main.go` for the minimal template extended with optional capabilities
 
 The intended rule is simple:
 - plugin authors should not need to read internal packages to get a basic plugin running
@@ -108,7 +110,7 @@ A minimal Go plugin needs to implement only the required core methods:
 
 Optional capabilities like `Echo`, `Sleep`, and `Crash` are added by implementing the matching optional interfaces.
 
-The normal startup shape is:
+The stable minimal authoring path is:
 
 ```go
 cfg, err := plugin.LoadConfigFromEnv()
@@ -116,16 +118,39 @@ if err != nil {
 	panic(err)
 }
 
-p := &myPlugin{
-	pluginID:     cfg.PluginID,
-	generationID: cfg.GenerationID,
-	startedAt:    time.Now(),
-}
+p := plugin.NewTemplate(cfg, "0.1.0")
 
 if err := plugin.ServeWithConfig(cfg, p); err != nil {
 	panic(err)
 }
 ```
+
+If you need custom heartbeat data or optional capabilities, copy the shape from `sdk/go/plugin/template.go` into your own `main` package and extend it there. The public echo plugin now does exactly that by embedding `TemplatePlugin` and adding `Echo`, `Sleep`, and `Crash`.
+
+### First plugin in one file
+
+A minimal standalone plugin `main.go` can look like this:
+
+```go
+package main
+
+import plugin "rpc_plugin_system/sdk/go/plugin"
+
+func main() {
+	cfg, err := plugin.LoadConfigFromEnv()
+	if err != nil {
+		panic(err)
+	}
+
+	p := plugin.NewTemplate(cfg, "0.1.0")
+
+	if err := plugin.ServeWithConfig(cfg, p); err != nil {
+		panic(err)
+	}
+}
+```
+
+That is the shortest supported public authoring path.
 
 ## Tutorial: run the system locally
 
@@ -143,6 +168,21 @@ That produces:
 - `.tmp-bin/rpcpluginctl`
 - `.tmp-bin/rpcplugin-echo`
 - `.tmp-bin/rpcplugin-failure`
+
+### Step 1b: understand the public plugin startup contract
+
+A plugin launched by the kernel receives these required environment variables:
+- `RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET`
+- `RPC_PLUGIN_SYSTEM_PLUGIN_ID`
+- `RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION`
+- `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
+
+If one is missing or malformed, `plugin.LoadConfigFromEnv()` now fails with an explicit author-facing startup error naming the missing variable.
+
+Examples:
+- missing socket env -> `RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET is required for plugin startup`
+- bad generation env -> parse error naming `RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION`
+- unreadable auth token file -> read error naming `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
 
 ### Step 2: start the daemon with the example plugin
 
@@ -224,7 +264,7 @@ cd /tank/development/rpc_plugin_system
 ```
 
 Current routing note:
-- direct routing by plugin id exists now for targeted control-plane operations such as `Heartbeat` and `Echo`
+- direct routing by plugin id exists now through a small routed-call layer for targeted operations such as `Heartbeat`, `Echo`, and restart
 - the host resolves direct targets explicitly before routed calls execute
 - `routes` shows the current explicit direct-routing table
 - current routes are explicitly marked as `direct-plugin-id`
