@@ -90,8 +90,13 @@ Must have:
 - stable plugin authoring entrypoint
 - strong restart/failure semantics
 - hardening and stress evidence that feels earned
+- real multi-plugin kernel capability
+- clear compatibility and packaging discipline
 - clear branch/release discipline
 - public-safe docs and examples
+
+See also:
+- `docs/v1.0-checklist.md`
 
 ## post-v1 plugin transport adapters
 
