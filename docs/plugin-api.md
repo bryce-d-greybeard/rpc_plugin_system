@@ -14,6 +14,19 @@ This document defines the logical API contract between the rpc_plugin_system ker
 
 ## Required methods
 
+### `Auth`
+Proves possession of the one-time bootstrap token for the current generation.
+
+Reports:
+- plugin id
+- version
+- generation id
+
+Rules:
+- the bootstrap token is one-time-use
+- successful auth spends the token for that generation
+- repeated auth attempts with the same token must not be accepted as a fresh bootstrap
+
 ### `Capabilities`
 Reports:
 - plugin id
@@ -59,6 +72,7 @@ Terminates the plugin process for crash/restart testing.
 ## Error semantics
 
 The kernel must treat these as failures:
+- auth failure
 - method timeout
 - transport break
 - generation mismatch

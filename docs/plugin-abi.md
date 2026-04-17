@@ -15,7 +15,6 @@ Current v0.1.0 startup environment:
 - `RPC_PLUGIN_SYSTEM_PLUGIN_ID`
 - `RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION`
 - `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
-- `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE` (currently used in the test harness/plugin flow)
 
 ## Transport contract
 
@@ -26,12 +25,13 @@ Current v0.1.0 startup environment:
 
 ## Authentication contract
 
-1. kernel creates challenge file
-2. plugin reads challenge
-3. plugin signs challenge digest with its auth token
-4. plugin writes signature artifact
-5. kernel verifies signature against trusted public key
-6. only then does the instance qualify as trusted
+1. kernel creates a one-time auth token for the generation
+2. kernel writes the token to a protected auth file
+3. plugin reads the token from `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
+4. plugin proves the token once through the `Auth` RPC method
+5. kernel verifies exact token match
+6. kernel removes the auth token file after successful bootstrap
+7. only then does the instance qualify as trusted
 
 ## Generation contract
 
@@ -46,7 +46,7 @@ On plugin death/restart, the kernel must:
 - close RPC client
 - close underlying socket connection
 - reap process state
-- remove stale socket/auth/signature artifacts
+- remove stale socket/auth artifacts
 - invalidate the dead generation
 
 ## Reconnect contract
@@ -76,5 +76,6 @@ Any change to:
 - lifecycle expectations
 - required methods
 - generation semantics
+- auth bootstrap semantics
 
 must be treated as an API/ABI compatibility change and documented explicitly.
