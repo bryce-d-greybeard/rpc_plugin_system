@@ -92,6 +92,41 @@ That SDK is the intended public Go authoring surface. It provides:
 - adapter-based optional capability registration
 - `Serve` / `ServeWithConfig` helpers
 
+For the smallest supported authoring path, start with:
+- `sdk/go/plugin/example_minimal.go`
+- `cmd/rpcplugin-echo/main.go`
+
+The intended rule is simple:
+- plugin authors should not need to read internal packages to get a basic plugin running
+
+## Minimal plugin shape
+
+A minimal Go plugin needs to implement only the required core methods:
+- `Version() string`
+- `Heartbeat(plugin.Empty, *plugin.HeartbeatResponse) error`
+- `Shutdown(plugin.Empty, *plugin.Empty) error`
+
+Optional capabilities like `Echo`, `Sleep`, and `Crash` are added by implementing the matching optional interfaces.
+
+The normal startup shape is:
+
+```go
+cfg, err := plugin.LoadConfigFromEnv()
+if err != nil {
+	panic(err)
+}
+
+p := &myPlugin{
+	pluginID:     cfg.PluginID,
+	generationID: cfg.GenerationID,
+	startedAt:    time.Now(),
+}
+
+if err := plugin.ServeWithConfig(cfg, p); err != nil {
+	panic(err)
+}
+```
+
 ## Tutorial: run the system locally
 
 This walkthrough shows the normal happy-path flow using the example echo plugin.
@@ -172,6 +207,28 @@ That should:
 The important thing to verify is:
 - the `generation_id` increases
 - the plugin becomes healthy again
+
+### Step 4b: inspect one plugin and route direct requests by plugin id
+
+The multi-plugin control surface is growing toward v1. Even in single-plugin mode, the control CLI now exposes direct plugin-id targeting for inspection and routed operations.
+
+Examples:
+
+```bash
+cd /tank/development/rpc_plugin_system
+.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo plugin -plugin-id echo
+.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo capabilities
+.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo routes
+.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo heartbeat -plugin-id echo
+.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo echo -plugin-id echo -message hello
+```
+
+Current routing note:
+- direct routing by plugin id exists now for targeted control-plane operations such as `Heartbeat` and `Echo`
+- the host resolves direct targets explicitly before routed calls execute
+- `routes` shows the current explicit direct-routing table
+- current routes are explicitly marked as `direct-plugin-id`
+- broader capability-based routing is still later work
 
 ### Step 5: inspect runtime artifacts
 

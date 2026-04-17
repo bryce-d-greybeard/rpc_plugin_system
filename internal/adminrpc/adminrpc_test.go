@@ -11,46 +11,40 @@ import (
 	"testing"
 	"time"
 
-	"rpc_plugin_system/internal/auth"
 	"rpc_plugin_system/internal/kernel"
+	"rpc_plugin_system/internal/testpluginapi"
 )
 
 func TestStatusAndRestart(t *testing.T) {
-	token, err := auth.NewToken()
-	if err != nil {
-		t.Fatalf("generate auth token: %v", err)
-	}
 	pluginBin := buildPlugin(t)
 	runtimeDir := t.TempDir()
-	logPath := filepath.Join(runtimeDir, "events.jsonl")
 	adminSocket := filepath.Join(runtimeDir, "admin.sock")
 
-	manager, err := kernel.New(kernel.Config{
-		RuntimeDir:       runtimeDir,
-		PluginPath:       pluginBin,
-		PluginID:         "echo",
-		DialTimeout:      2 * time.Second,
-		CallTimeout:      200 * time.Millisecond,
-		HeartbeatEvery:   100 * time.Millisecond,
-		EventLogPath:     logPath,
+	host, err := kernel.NewHost(kernel.HostConfig{
+		RuntimeDir:     runtimeDir,
+		DialTimeout:    2 * time.Second,
+		CallTimeout:    200 * time.Millisecond,
+		HeartbeatEvery: 100 * time.Millisecond,
+		Plugins:        []kernel.PluginConfig{{PluginID: "echo", PluginPath: pluginBin}},
 	})
 	if err != nil {
-		t.Fatalf("new manager: %v", err)
+		t.Fatalf("new host: %v", err)
 	}
-	defer manager.Close()
+	defer host.Close()
 
-	os.Setenv("RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE", auth.Encode(token))
-	defer os.Unsetenv("RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE")
-
-	if err := manager.Start(); err != nil {
-		t.Fatalf("start manager: %v", err)
+	if err := host.StartAll(); err != nil {
+		t.Fatalf("start all: %v", err)
 	}
-	firstGeneration := manager.State().GenerationID
+	firstGeneration, err := host.Manager("echo")
+	if err != nil {
+		t.Fatalf("manager echo: %v", err)
+	}
+	firstState := firstGeneration.State()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() {
-		if err := Serve(ctx, adminSocket, manager); err != nil {
+		if err := Serve(ctx, adminSocket, host); err != nil {
 			t.Errorf("serve admin rpc: %v", err)
 		}
 	}()
@@ -77,20 +71,60 @@ func TestStatusAndRestart(t *testing.T) {
 		t.Fatalf("admin socket permissions = %o, want 600", got)
 	}
 
-	var state kernel.State
+	var state kernel.HostState
 	if err := client.Call(MethodStatus, Empty{}, &state); err != nil {
 		t.Fatalf("status rpc: %v", err)
 	}
-	if state.PluginID != "echo" || state.GenerationID != firstGeneration || state.PID == 0 {
+	if len(state.Plugins) != 1 || state.Plugins[0].PluginID != "echo" || state.Plugins[0].GenerationID != firstState.GenerationID || state.Plugins[0].PID == 0 {
 		t.Fatalf("unexpected status state: %+v", state)
 	}
 
+	var pluginState kernel.State
+	if err := client.Call(MethodPlugin, PluginRequest{PluginID: "echo"}, &pluginState); err != nil {
+		t.Fatalf("plugin rpc: %v", err)
+	}
+	if pluginState.PluginID != "echo" || pluginState.PID == 0 {
+		t.Fatalf("unexpected plugin state: %+v", pluginState)
+	}
+
+	var caps map[string][]string
+	if err := client.Call(MethodCapabilities, Empty{}, &caps); err != nil {
+		t.Fatalf("capabilities rpc: %v", err)
+	}
+	if len(caps["echo"]) != 1 || caps["echo"][0] != "echo" {
+		t.Fatalf("unexpected capability map: %+v", caps)
+	}
+
+	var routes []kernel.Route
+	if err := client.Call(MethodRoutes, Empty{}, &routes); err != nil {
+		t.Fatalf("routes rpc: %v", err)
+	}
+	if len(routes) != 1 || routes[0].PluginID != "echo" {
+		t.Fatalf("unexpected routes: %+v", routes)
+	}
+
+	var hb testpluginapi.HeartbeatResponse
+	if err := client.Call(MethodHeartbeat, HeartbeatRequest{PluginID: "echo"}, &hb); err != nil {
+		t.Fatalf("heartbeat rpc: %v", err)
+	}
+	if hb.PluginID != "echo" {
+		t.Fatalf("unexpected heartbeat plugin id: %+v", hb)
+	}
+
+	var echoed testpluginapi.EchoResponse
+	if err := client.Call(MethodEcho, EchoRequest{PluginID: "echo", Message: "admin-router"}, &echoed); err != nil {
+		t.Fatalf("echo rpc: %v", err)
+	}
+	if echoed.Message != "admin-router" {
+		t.Fatalf("unexpected echo response: %+v", echoed)
+	}
+
 	var restarted kernel.State
-	if err := client.Call(MethodRestart, Empty{}, &restarted); err != nil {
+	if err := client.Call(MethodRestart, RestartRequest{PluginID: "echo"}, &restarted); err != nil {
 		t.Fatalf("restart rpc: %v", err)
 	}
-	if restarted.GenerationID != firstGeneration+1 {
-		t.Fatalf("generation did not increment: got %d want %d", restarted.GenerationID, firstGeneration+1)
+	if restarted.GenerationID != firstState.GenerationID+1 {
+		t.Fatalf("generation did not increment: got %d want %d", restarted.GenerationID, firstState.GenerationID+1)
 	}
 	if restarted.PID == 0 {
 		t.Fatalf("restart did not leave plugin running: %+v", restarted)
