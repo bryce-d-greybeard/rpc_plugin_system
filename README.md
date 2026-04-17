@@ -5,10 +5,11 @@
 The current v0.1.0 slice is a kernel-first substrate that proves:
 - one supervised plugin process at a time
 - Unix socket RPC transport
-- keypair challenge/response trust on startup
+- one-time bootstrap token trust on startup
 - heartbeat and health reporting
 - timeout handling and poisoned-client teardown
 - restart supervision with generation tracking
+- verbose first-class append-only event logging
 - a small admin/control CLI
 
 ## Project layout
@@ -24,7 +25,8 @@ Important internals:
 - `internal/adminrpc` - local admin socket API
 - `internal/auth` - one-time token bootstrap helpers
 - `internal/runtime` - runtime-dir and Unix socket helpers
-- `internal/testpluginapi` - RPC contract used by the example/failure plugins
+- `sdk/go/plugin` - public Go plugin authoring SDK
+- `internal/testpluginapi` - test-only env helpers and compatibility shims
 
 ## Build
 
@@ -40,6 +42,13 @@ Build the main binaries explicitly:
 go build -o .tmp-bin/rpcplugind ./cmd/rpcplugind
 go build -o .tmp-bin/rpcpluginctl ./cmd/rpcpluginctl
 go build -o .tmp-bin/rpcplugin-echo ./cmd/rpcplugin-echo
+go build -o .tmp-bin/rpcplugin-failure ./cmd/rpcplugin-failure
+```
+
+Or use the Makefile:
+
+```bash
+make build
 ```
 
 ## Test
@@ -56,78 +65,169 @@ Run the kernel-focused suite:
 go test ./internal/kernel/...
 ```
 
-## Quick start
-
-### 1. Generate a plugin keypair
-
-The daemon expects the plugin auth token in `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`.
-
-Right now the easiest way to generate a compatible keypair is with a tiny Go helper:
+Or use:
 
 ```bash
-cat > /tmp/gen_rpc_plugin_key.go <<'EOF'
-package main
-
-import (
-  "fmt"
-  "rpc_plugin_system/internal/auth"
-)
-
-func main() {
-  kp, err := auth.NewToken()
-  if err != nil {
-    panic(err)
-  }
-  fmt.Println("PRIVATE=" + auth.Encode(kp.Private))
-  fmt.Println("PUBLIC=" + auth.Encode(kp.Public))
-}
-EOF
-
-go run /tmp/gen_rpc_plugin_key.go
+make test
 ```
 
-Save the printed values.
+## Plugin authoring entrypoint
 
-### 2. Export the auth token for the daemon
+Plugin authors should start from:
 
-```bash
-export RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE='...private-from-generator...'
+```go
+import plugin "rpc_plugin_system/sdk/go/plugin"
 ```
 
-### 3. Start the daemon with the example plugin
+That SDK is the intended public Go authoring surface. It provides:
+- bootstrap config loading from env
+- one-time token auth handling
+- RPC service/method constants
+- request/response types
+- adapter-based optional capability registration
+- `Serve` / `ServeWithConfig` helpers
+
+## Tutorial: run the system locally
+
+This walkthrough shows the normal happy-path flow using the example echo plugin.
+
+### Step 1: build the binaries
 
 ```bash
-mkdir -p .tmp-bin
-go build -o .tmp-bin/rpcplugind ./cmd/rpcplugind
-go build -o .tmp-bin/rpcplugin-echo ./cmd/rpcplugin-echo
+cd /tank/development/rpc_plugin_system
+make build
+```
 
+That produces:
+- `.tmp-bin/rpcplugind`
+- `.tmp-bin/rpcpluginctl`
+- `.tmp-bin/rpcplugin-echo`
+- `.tmp-bin/rpcplugin-failure`
+
+### Step 2: start the daemon with the example plugin
+
+In one terminal:
+
+```bash
+cd /tank/development/rpc_plugin_system
 .tmp-bin/rpcplugind \
   -runtime-dir /tmp/rpc_plugin_system-demo \
   -plugin ./.tmp-bin/rpcplugin-echo \
   -plugin-id echo
 ```
 
-That starts the supervisor, launches the plugin, and serves the local admin socket at:
+What this does:
+- creates a runtime directory under `/tmp/rpc_plugin_system-demo`
+- creates a one-time bootstrap token for this generation
+- launches the plugin executable
+- authenticates the plugin through the one-time token bootstrap
+- opens the admin socket for local control
+- starts the monitor loop
 
-- `/tmp/rpc_plugin_system-demo/admin.sock`
+If startup succeeds, the daemon stays running in the foreground.
 
-It also writes the event log to:
+### Step 3: inspect status from a second terminal
 
-- `/tmp/rpc_plugin_system-demo/events.jsonl`
-
-### 4. Query status from another shell
+Open another terminal and run:
 
 ```bash
-go build -o .tmp-bin/rpcpluginctl ./cmd/rpcpluginctl
-
+cd /tank/development/rpc_plugin_system
 .tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo status
 ```
 
-### 5. Restart the supervised plugin
+You should get JSON showing fields like:
+- plugin id
+- generation id
+- health
+- socket path
+- pid
+
+Healthy output means:
+- the plugin started
+- auth succeeded
+- capabilities were read
+- the kernel currently trusts that generation
+
+### Step 4: restart the plugin
+
+From the second terminal:
 
 ```bash
+cd /tank/development/rpc_plugin_system
 .tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo restart
 ```
+
+That should:
+- stop the current plugin process
+- start a new process
+- create a new generation
+- perform fresh bootstrap auth
+- return updated state
+
+The important thing to verify is:
+- the `generation_id` increases
+- the plugin becomes healthy again
+
+### Step 5: inspect runtime artifacts
+
+While the daemon is running, inspect the runtime directory:
+
+```bash
+ls -la /tmp/rpc_plugin_system-demo
+```
+
+You should typically see artifacts like:
+- `admin.sock`
+- `echo.sock`
+- `events.jsonl`
+
+The event log is the canonical operator log for v0.1.0. It is append-only JSONL with verbose lifecycle, auth, RPC, restart, and cleanup events.
+
+The one-time auth token file is bootstrap-only and should be removed after successful auth.
+
+### Step 6: stop the daemon
+
+Go back to the terminal running `rpcplugind` and press `Ctrl+C`.
+
+After shutdown, you can check whether runtime artifacts were cleaned up:
+
+```bash
+ls -la /tmp/rpc_plugin_system-demo
+```
+
+## Tutorial: run the failure plugin
+
+The failure plugin exists so the kernel can be tested against controlled bad behavior.
+
+### Example: force auth failure
+
+```bash
+cd /tank/development/rpc_plugin_system
+RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_FAIL_AUTH=true \
+.tmp-bin/rpcplugind \
+  -runtime-dir /tmp/rpc_plugin_system-failure \
+  -plugin ./.tmp-bin/rpcplugin-failure \
+  -plugin-id failure
+```
+
+Expected result:
+- daemon startup should fail
+- the kernel should reject the plugin during bootstrap
+
+### Example: close transport on echo
+
+This path is mainly exercised in tests, but the behavior is controlled through env vars such as:
+- `RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_CLOSE_ON_ECHO`
+- `RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_CRASH_ON_ECHO`
+- `RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_HEARTBEAT_STATUS`
+- `RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_HEARTBEAT_ERRORS`
+- `RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_SLEEP_SCALE`
+- `RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_CLOSE_ON_ACCEPT`
+
+See:
+- `cmd/rpcplugin-failure/main.go`
+- `internal/testpluginapi/env.go`
+- `internal/kernel/failure_suite_test.go`
 
 ## How the example plugin is configured
 
@@ -137,10 +237,7 @@ The supervisor passes runtime information to plugins through environment variabl
 - `RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION`
 - `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
 
-The example plugin also expects the auth challenge path via:
-- `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
-
-That legacy auth env name still exists in the current code path and should likely be renamed later.
+The auth token file is one-time-use per generation and is removed after successful bootstrap.
 
 ## Failure testing
 
@@ -151,6 +248,43 @@ Behavior is driven by environment variables and exercised through:
 - `internal/kernel/failure_suite_test.go`
 
 That suite currently covers startup/auth/identity/generation/capabilities/heartbeat/timeout/crash/transport/restart-churn behavior.
+
+## Logging
+
+v0.1.0 logging is intentionally first-class.
+
+Current logging design:
+- canonical log format is append-only JSONL
+- kernel and SDK-backed plugins share the same event schema and severity model
+- logs are written to `events.jsonl` in the runtime dir
+- every write is flushed with `fsync` so logs are durable and human-inspectable during failures
+- entries are verbose and include level, component, event, plugin id, generation id, pid, socket path, method, message, error/reason, and optional details
+
+The log is designed to be both:
+- machine-parseable for later tooling
+- human-readable enough to inspect directly with normal shell tools
+
+The kernel logs at least these categories:
+- manager initialization
+- plugin start request/success/failure
+- socket dial request/success/failure
+- auth start/success/failure
+- capability load start/success/failure
+- heartbeat unhealthy/failure transitions
+- RPC start/success/failure/timeout
+- RPC poison events
+- restart request/success/failure
+- shutdown request/success/failure
+- forced kill
+- runtime cleanup success/failure
+
+SDK-backed plugins log at least these categories:
+- boot/config load
+- listener start/stop
+- auth attempt/accept/reject
+- capability reporting
+- RPC handler success/failure
+- shutdown handling
 
 ## Current limitations
 
@@ -170,7 +304,6 @@ Current constraints include:
 - `docs/plugin-abi.md`
 - `docs/compatibility.md`
 - `docs/plugin-standard-v0.md`
-- `POSTMORTEM-v0.1.0-rpc-restart.md`
 
 ## Status
 
