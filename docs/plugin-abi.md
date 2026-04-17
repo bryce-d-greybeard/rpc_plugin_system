@@ -22,6 +22,7 @@ Current v0.1.0 startup environment:
 - Go `net/rpc`
 - gob encoding
 - one live RPC connection per active plugin generation
+- the frozen v0.1.0 service namespace remains `TestPlugin.*`
 
 ## Authentication contract
 
@@ -48,6 +49,7 @@ On plugin death/restart, the kernel must:
 - reap process state
 - remove stale socket/auth artifacts
 - invalidate the dead generation
+- emit lifecycle/cleanup log events that explain what happened
 
 ## Reconnect contract
 
@@ -67,6 +69,8 @@ Plugin death must not:
 - crash the kernel
 - leave stale generations accepted
 - keep stale RPC clients trusted
+
+Timeouts and transport breaks should poison the current RPC client so the dead transport is not reused.
 
 ## Compatibility rule
 

@@ -36,3 +36,31 @@ func TestWriteEventsJSON(t *testing.T) {
 		}
 	}
 }
+
+func TestWriteSummaryText(t *testing.T) {
+	var buf bytes.Buffer
+	summary := eventlog.Summary{Total: 3, ByLevel: map[string]int{eventlog.LevelInfo: 1, eventlog.LevelWarn: 2}, ByComponent: map[string]int{eventlog.ComponentRPC: 2}, ByEvent: map[string]int{eventlog.EventRPCFailed: 2}}
+	if err := WriteSummaryText(&buf, summary); err != nil {
+		t.Fatalf("write summary text: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{"total: 3", "levels:", "warn: 2", "events:", "rpc_call_failed: 2"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("summary text missing %q in %q", want, out)
+		}
+	}
+}
+
+func TestWriteSummaryJSON(t *testing.T) {
+	var buf bytes.Buffer
+	summary := eventlog.Summary{Total: 2, ByLevel: map[string]int{eventlog.LevelInfo: 2}, ByComponent: map[string]int{eventlog.ComponentKernel: 2}, ByEvent: map[string]int{eventlog.EventPluginStarted: 2}}
+	if err := WriteSummaryJSON(&buf, summary); err != nil {
+		t.Fatalf("write summary json: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{"\"total\": 2", "\"plugin_started\": 2"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("summary json missing %q in %q", want, out)
+		}
+	}
+}

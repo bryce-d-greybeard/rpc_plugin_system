@@ -34,6 +34,10 @@ Reports:
 - generation id
 - capability list
 
+Rules:
+- optional methods must be advertised through capability reporting
+- capability names should be stable and documented
+
 ### `Heartbeat`
 Reports:
 - plugin id
@@ -44,6 +48,13 @@ Reports:
 - current work count
 - last successful request time
 - recent error count
+
+The current v0.1.0 wire fields are:
+- `UptimeSeconds`
+- `Status`
+- `CurrentWorkCount`
+- `LastSuccessfulUnixSec`
+- `RecentErrorCount`
 
 ### `Shutdown`
 Requests graceful shutdown.
@@ -68,6 +79,7 @@ Terminates the plugin process for crash/restart testing.
 - Generation id must match the generation that the kernel issued requests against.
 - Timeout is a kernel concern; plugins should not assume infinite request duration.
 - Plugins should be restart-safe and tolerate process replacement.
+- Required v0.1.0 RPC service/method names remain under the `TestPlugin.*` namespace for compatibility with the frozen substrate.
 
 ## Error semantics
 

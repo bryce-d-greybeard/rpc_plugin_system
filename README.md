@@ -12,6 +12,11 @@ The current v0.1.0 slice is a kernel-first substrate that proves:
 - verbose first-class append-only event logging
 - a small admin/control CLI
 
+Current project direction:
+- v0.1.0 is the proven kernel substrate
+- the next milestone is plugin system v1.0
+- memory-system work should begin only after the plugin substrate reaches v1.0
+
 ## Project layout
 
 Main entrypoints:
@@ -292,11 +297,17 @@ The control CLI now supports log inspection:
 .tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo logs
 .tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo -component rpc -level warn logs
 .tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo -event plugin_auth_failed -format json logs
+.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo -since 15m -summary logs
 ```
+
+Logging final-form notes for v0.1.0:
+- event logs rotate automatically when they grow too large
+- rotated backups are retained and included in CLI log reads
+- CLI supports text/json output, filtering, recency windows, reverse order, and summary mode
 
 ## Current limitations
 
-This is still a frozen early substrate, not a polished general release.
+This is still a pre-v1 standalone substrate, not a polished general release.
 
 Current constraints include:
 - one supervised plugin instance at a time
@@ -304,6 +315,17 @@ Current constraints include:
 - Go `net/rpc` transport only
 - plugin auth/bootstrap UX is still developer-oriented
 - some naming and bootstrap rough edges remain
+
+## Road to v1.0
+
+The current intent is to finish `rpc_plugin_system` as a real v1.0 standalone substrate before starting memory-system implementation on top of it.
+
+That means the near-term focus stays on:
+- hardening and stress coverage
+- SDK/plugin authoring polish
+- compatibility and packaging discipline
+- stronger public docs/examples
+- branch/release promotion discipline up to v1.0
 
 ## Key docs
 

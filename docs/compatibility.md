@@ -17,10 +17,10 @@ Startup environment, socket behavior, auth artifacts, transport expectations, te
 The kernel should hard-fail a plugin start when any of these occur:
 - plugin id mismatch
 - auth verification failure
-- missing required methods/capabilities
 - generation mismatch on startup registration
 - non-executable or invalid plugin path
 - incompatible transport/runtime assumptions
+- capabilities fetch failure or capability sentinel failure during startup
 
 ## Soft-fail / degraded conditions
 
@@ -35,6 +35,7 @@ The kernel may degrade rather than hard-fail when:
 For v0.1.0, versioning is simple:
 - exact behavior matters more than negotiated compatibility
 - explicit documented contract changes win over implicit compatibility assumptions
+- the current frozen wire namespace remains `TestPlugin.*` even though the public SDK package is `sdk/go/plugin`
 
 Later versions may add:
 - feature negotiation

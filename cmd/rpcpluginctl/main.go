@@ -24,11 +24,14 @@ func main() {
 		method     = flag.String("method", "", "filter logs by method")
 		limit      = flag.Int("limit", 200, "limit log lines returned")
 		format     = flag.String("format", "text", "log format: text or json")
+		since      = flag.Duration("since", 0, "only show logs newer than this duration, e.g. 15m")
+		reverse    = flag.Bool("reverse", true, "show newest matching logs first")
+		summary    = flag.Bool("summary", false, "show summary counts instead of raw log lines")
 	)
 	flag.Parse()
 
 	if flag.NArg() != 1 {
-		log.Fatalf("usage: %s [-runtime-dir DIR] [-level LEVEL] [-component COMPONENT] [-event EVENT] [-plugin-id ID] [-method METHOD] [-limit N] [-format text|json] <status|restart|logs>", os.Args[0])
+		log.Fatalf("usage: %s [-runtime-dir DIR] [-level LEVEL] [-component COMPONENT] [-event EVENT] [-plugin-id ID] [-method METHOD] [-limit N] [-format text|json] [-since DURATION] [-reverse] [-summary] <status|restart|logs>", os.Args[0])
 	}
 
 	switch flag.Arg(0) {
@@ -53,16 +56,37 @@ func main() {
 			log.Fatal(err)
 		}
 	case "logs":
-		events, err := eventlog.ReadAll(filepath.Join(*runtimeDir, "events.jsonl"), eventlog.Filters{
+		filters := eventlog.Filters{
 			Level:     *level,
 			Component: *component,
 			Event:     *eventName,
 			PluginID:  *pluginID,
 			Method:    *method,
 			Limit:     *limit,
-		})
+			Reverse:   *reverse,
+		}
+		if *since > 0 {
+			filters.Since = time.Now().Add(-*since)
+		}
+		events, err := eventlog.ReadAll(filepath.Join(*runtimeDir, "events.jsonl"), filters)
 		if err != nil {
 			log.Fatal(err)
+		}
+		if *summary {
+			s := eventlog.Summarize(events)
+			switch *format {
+			case "text":
+				if err := cli.WriteSummaryText(os.Stdout, s); err != nil {
+					log.Fatal(err)
+				}
+			case "json":
+				if err := cli.WriteSummaryJSON(os.Stdout, s); err != nil {
+					log.Fatal(err)
+				}
+			default:
+				log.Fatalf("unknown log format %q, want text or json", *format)
+			}
+			return
 		}
 		switch *format {
 		case "text":
@@ -77,7 +101,7 @@ func main() {
 			log.Fatalf("unknown log format %q, want text or json", *format)
 		}
 	case "help", "-h", "--help":
-		fmt.Printf("usage: %s [-runtime-dir DIR] [-level LEVEL] [-component COMPONENT] [-event EVENT] [-plugin-id ID] [-method METHOD] [-limit N] [-format text|json] <status|restart|logs>\n", os.Args[0])
+		fmt.Printf("usage: %s [-runtime-dir DIR] [-level LEVEL] [-component COMPONENT] [-event EVENT] [-plugin-id ID] [-method METHOD] [-limit N] [-format text|json] [-since DURATION] [-reverse] [-summary] <status|restart|logs>\n", os.Args[0])
 		return
 	default:
 		log.Fatalf("unknown command %q, want status, restart, or logs", flag.Arg(0))

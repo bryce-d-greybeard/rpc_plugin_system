@@ -234,6 +234,12 @@ Suggested validation includes:
 - mixed-failure stress runs
 - log assertions for key lifecycle, auth, timeout, restart, and cleanup events
 
+Current earned validation now includes explicit local coverage for:
+- restart storm monotonicity
+- timeout storm poisoning and recovery
+- repeated transport-break recovery
+- repeated monitor-loop failure recovery
+
 ## Intended next users of the standard
 
 After kernel stabilization, this standard should support plugins such as:

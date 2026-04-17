@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sort"
 
 	"rpc_plugin_system/internal/eventlog"
 )
@@ -24,6 +25,46 @@ func WriteEventsJSON(w io.Writer, events []eventlog.Event) error {
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(events); err != nil {
 		return fmt.Errorf("encode events: %w", err)
+	}
+	return nil
+}
+
+// WriteSummaryText writes a human-readable summary block.
+func WriteSummaryText(w io.Writer, summary eventlog.Summary) error {
+	if _, err := fmt.Fprintf(w, "total: %d\n", summary.Total); err != nil {
+		return fmt.Errorf("write summary total: %w", err)
+	}
+	for _, section := range []struct {
+		name   string
+		counts map[string]int
+	}{
+		{name: "levels", counts: summary.ByLevel},
+		{name: "components", counts: summary.ByComponent},
+		{name: "events", counts: summary.ByEvent},
+	} {
+		if _, err := fmt.Fprintf(w, "%s:\n", section.name); err != nil {
+			return fmt.Errorf("write summary section: %w", err)
+		}
+		keys := make([]string, 0, len(section.counts))
+		for key := range section.counts {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			if _, err := fmt.Fprintf(w, "  %s: %d\n", key, section.counts[key]); err != nil {
+				return fmt.Errorf("write summary count: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+// WriteSummaryJSON writes a summary as indented JSON.
+func WriteSummaryJSON(w io.Writer, summary eventlog.Summary) error {
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(summary); err != nil {
+		return fmt.Errorf("encode summary: %w", err)
 	}
 	return nil
 }
