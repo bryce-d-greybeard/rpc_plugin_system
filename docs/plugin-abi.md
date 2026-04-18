@@ -29,10 +29,11 @@ Current v0.1.0 startup environment:
 1. kernel creates a one-time auth token for the generation
 2. kernel writes the token to a protected auth file
 3. plugin reads the token from `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
-4. plugin proves the token once through the `Auth` RPC method
-5. kernel verifies exact token match
-6. kernel removes the auth token file after successful bootstrap
-7. only then does the instance qualify as trusted
+4. on Linux v1 paths, the kernel also verifies peer credentials through the runtime adapter before trusting the connection
+5. plugin proves the token once through the `Auth` RPC method
+6. kernel verifies exact token match
+7. kernel removes the auth token file after successful bootstrap
+8. only then does the instance qualify as trusted
 
 ## Generation contract
 
@@ -81,5 +82,6 @@ Any change to:
 - required methods
 - generation semantics
 - auth bootstrap semantics
+- peer credential verification semantics on supported platforms
 
 must be treated as an API/ABI compatibility change and documented explicitly.

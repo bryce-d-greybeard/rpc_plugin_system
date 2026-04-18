@@ -6,6 +6,7 @@ The current v0.1.0 slice is a kernel-first substrate that proves:
 - one supervised plugin process at a time
 - Unix socket RPC transport
 - one-time bootstrap token trust on startup
+- Linux peer credential verification on startup
 - heartbeat and health reporting
 - timeout handling and poisoned-client teardown
 - restart supervision with generation tracking
@@ -16,6 +17,8 @@ Current project direction:
 - v0.1.0 is the proven kernel substrate
 - the next milestone is plugin system v1.0
 - memory-system work should begin only after the plugin substrate reaches v1.0
+- the frozen v1 scope lives in `docs/v1-freeze.md`
+- compatibility, install, and release discipline now live explicitly in `docs/compatibility.md`, `docs/install.md`, and `docs/release-promotion-checklist.md`
 
 ## Project layout
 
@@ -29,11 +32,17 @@ Important internals:
 - `internal/kernel` - supervisor and monitor loop
 - `internal/adminrpc` - local admin socket API
 - `internal/auth` - one-time token bootstrap helpers
-- `internal/runtime` - runtime-dir and Unix socket helpers
+- `internal/runtime` - runtime-dir, Unix socket helpers, and Linux-first peercred adapter path
 - `sdk/go/plugin` - public Go plugin authoring SDK
 - `internal/testpluginapi` - test-only env helpers and compatibility shims
 
 ## Build
+
+See also:
+- `docs/install.md`
+- `docs/compatibility.md`
+- `docs/release-promotion-checklist.md`
+
 
 From the project root:
 
@@ -55,6 +64,8 @@ Or use the Makefile:
 ```bash
 make build
 ```
+
+For v1, packaging means a clean stable source release and explicit operator guidance, not distro packaging or prebuilts.
 
 ## Test
 
@@ -92,6 +103,12 @@ That SDK is the intended public Go authoring surface. It provides:
 - adapter-based optional capability registration
 - `TemplatePlugin` as the stable minimal skeleton
 - `Serve` / `ServeWithConfig` helpers
+
+The supported public authoring recipe is:
+1. `LoadConfigFromEnv()`
+2. `NewTemplate(...)`
+3. optionally implement capability interfaces like `Echo`, `Sleep`, or `Crash`
+4. `ServeWithConfig(...)`
 
 For the supported authoring path, start with:
 - `sdk/go/plugin/template.go`
@@ -200,6 +217,7 @@ What this does:
 - creates a runtime directory under `/tmp/rpc_plugin_system-demo`
 - creates a one-time bootstrap token for this generation
 - launches the plugin executable
+- verifies Linux peer credentials for the connected Unix socket when supported
 - authenticates the plugin through the one-time token bootstrap
 - opens the admin socket for local control
 - starts the monitor loop
@@ -268,6 +286,7 @@ Current routing note:
 - the host resolves direct targets explicitly before routed calls execute
 - `routes` shows the current explicit direct-routing table
 - current routes are explicitly marked as `direct-plugin-id`
+- the current intent is to freeze this small explicit routed-call set for v1 unless a real missing operation appears
 - broader capability-based routing is still later work
 
 ### Step 5: inspect runtime artifacts
@@ -276,14 +295,17 @@ While the daemon is running, inspect the runtime directory:
 
 ```bash
 ls -la /tmp/rpc_plugin_system-demo
+ls -la /tmp/rpc_plugin_system-demo/echo
 ```
 
 You should typically see artifacts like:
-- `admin.sock`
-- `echo.sock`
-- `events.jsonl`
+- `/tmp/rpc_plugin_system-demo/admin.sock`
+- `/tmp/rpc_plugin_system-demo/echo/echo.sock`
+- `/tmp/rpc_plugin_system-demo/echo/events.jsonl`
 
 The event log is the canonical operator log for v0.1.0. It is append-only JSONL with verbose lifecycle, auth, RPC, restart, and cleanup events.
+
+In single-plugin host mode, `rpcpluginctl logs` will automatically fall back to the sole plugin log when there is exactly one plugin log under the runtime directory.
 
 The one-time auth token file is bootstrap-only and should be removed after successful auth.
 
@@ -358,7 +380,8 @@ v0.1.0 logging is intentionally first-class.
 Current logging design:
 - canonical log format is append-only JSONL
 - kernel and SDK-backed plugins share the same event schema and severity model
-- logs are written to `events.jsonl` in the runtime dir
+- host-managed logs are written as per-plugin `events.jsonl` files under plugin runtime subdirectories
+- `rpcpluginctl logs` can target a specific plugin with `-plugin-id`, and in single-plugin host mode it falls back to the only plugin log automatically
 - every write is flushed with `fsync` so logs are durable and human-inspectable during failures
 - entries are verbose and include level, component, event, plugin id, generation id, pid, socket path, method, message, error/reason, and optional details
 

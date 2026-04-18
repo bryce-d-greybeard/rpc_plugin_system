@@ -59,6 +59,14 @@ The current v0.1.0 wire fields are:
 ### `Shutdown`
 Requests graceful shutdown.
 
+For the substrate itself, the stable required wire methods are still the `TestPlugin.*` methods documented here.
+
+For public authors using `sdk/go/plugin`, the stable authoring path is:
+- load config with `LoadConfigFromEnv()`
+- build the minimal core with `NewTemplate(...)`
+- extend optional capabilities by implementing the matching optional interfaces
+- serve through `ServeWithConfig(...)`
+
 ## v0.1.0 test-plugin methods
 
 These are required for the v0.1.0 test plugin specifically:
@@ -85,6 +93,7 @@ Terminates the plugin process for crash/restart testing.
 
 The kernel must treat these as failures:
 - auth failure
+- Linux peer credential verification failure on supported Linux runtime paths
 - method timeout
 - transport break
 - generation mismatch

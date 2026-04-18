@@ -16,27 +16,38 @@ import (
 )
 
 func main() {
-	var (
-		runtimeDir = flag.String("runtime-dir", filepath.Join(os.TempDir(), "rpc_plugin_system"), "runtime directory")
-		pluginID   = flag.String("plugin-id", "", "target plugin id for plugin-specific operations")
-		echoMsg    = flag.String("message", "ping", "message for echo command")
-		level      = flag.String("level", "", "filter logs by level")
-		component  = flag.String("component", "", "filter logs by component")
-		eventName  = flag.String("event", "", "filter logs by event name")
-		method     = flag.String("method", "", "filter logs by method")
-		limit      = flag.Int("limit", 200, "limit log lines returned")
-		format     = flag.String("format", "text", "log format: text or json")
-		since      = flag.Duration("since", 0, "only show logs newer than this duration, e.g. 15m")
-		reverse    = flag.Bool("reverse", true, "show newest matching logs first")
-		summary    = flag.Bool("summary", false, "show summary counts instead of raw log lines")
-	)
-	flag.Parse()
-
-	if flag.NArg() != 1 {
+	args := os.Args[1:]
+	if len(args) == 0 {
+		log.Fatalf("usage: %s [-runtime-dir DIR] [-plugin-id ID] [-message TEXT] [-level LEVEL] [-component COMPONENT] [-event EVENT] [-method METHOD] [-limit N] [-format text|json] [-since DURATION] [-reverse] [-summary] <status|plugins|plugin|capabilities|routes|heartbeat|echo|restart|logs>", os.Args[0])
+	}
+	command, flagArgs := splitCommandArgs(args)
+	if command == "" {
 		log.Fatalf("usage: %s [-runtime-dir DIR] [-plugin-id ID] [-message TEXT] [-level LEVEL] [-component COMPONENT] [-event EVENT] [-method METHOD] [-limit N] [-format text|json] [-since DURATION] [-reverse] [-summary] <status|plugins|plugin|capabilities|routes|heartbeat|echo|restart|logs>", os.Args[0])
 	}
 
-	switch flag.Arg(0) {
+	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	var (
+		runtimeDir = fs.String("runtime-dir", filepath.Join(os.TempDir(), "rpc_plugin_system"), "runtime directory")
+		pluginID   = fs.String("plugin-id", "", "target plugin id for plugin-specific operations")
+		echoMsg    = fs.String("message", "ping", "message for echo command")
+		level      = fs.String("level", "", "filter logs by level")
+		component  = fs.String("component", "", "filter logs by component")
+		eventName  = fs.String("event", "", "filter logs by event name")
+		method     = fs.String("method", "", "filter logs by method")
+		limit      = fs.Int("limit", 200, "limit log lines returned")
+		format     = fs.String("format", "text", "log format: text or json")
+		since      = fs.Duration("since", 0, "only show logs newer than this duration, e.g. 15m")
+		reverse    = fs.Bool("reverse", true, "show newest matching logs first")
+		summary    = fs.Bool("summary", false, "show summary counts instead of raw log lines")
+	)
+	if err := fs.Parse(flagArgs); err != nil {
+		log.Fatal(err)
+	}
+	if fs.NArg() != 0 {
+		log.Fatalf("unexpected extra args: %v", fs.Args())
+	}
+
+	switch command {
 	case "status", "plugins", "plugin", "capabilities", "routes", "heartbeat", "echo", "restart":
 		client, err := adminrpc.Dial(filepath.Join(*runtimeDir, "admin.sock"), 2*time.Second)
 		if err != nil {
@@ -44,7 +55,7 @@ func main() {
 		}
 		defer client.Close()
 
-		switch flag.Arg(0) {
+		switch command {
 		case "status", "plugins":
 			var state kernel.HostState
 			err = client.Call(adminrpc.MethodPlugins, adminrpc.Empty{}, &state)
@@ -122,9 +133,9 @@ func main() {
 			}
 		}
 	case "logs":
-		logPath := filepath.Join(*runtimeDir, "events.jsonl")
-		if *pluginID != "" {
-			logPath = filepath.Join(*runtimeDir, *pluginID, "events.jsonl")
+		logPath, err := resolveLogPath(*runtimeDir, *pluginID)
+		if err != nil {
+			log.Fatal(err)
 		}
 		filters := eventlog.Filters{
 			Level:     *level,
@@ -174,6 +185,34 @@ func main() {
 		fmt.Printf("usage: %s [-runtime-dir DIR] [-plugin-id ID] [-message TEXT] [-level LEVEL] [-component COMPONENT] [-event EVENT] [-method METHOD] [-limit N] [-format text|json] [-since DURATION] [-reverse] [-summary] <status|plugins|plugin|capabilities|routes|heartbeat|echo|restart|logs>\n", os.Args[0])
 		return
 	default:
-		log.Fatalf("unknown command %q, want status, plugins, plugin, capabilities, routes, heartbeat, echo, restart, or logs", flag.Arg(0))
+		log.Fatalf("unknown command %q, want status, plugins, plugin, capabilities, routes, heartbeat, echo, restart, or logs", command)
 	}
+}
+
+func resolveLogPath(runtimeDir, pluginID string) (string, error) {
+	if pluginID != "" {
+		return filepath.Join(runtimeDir, pluginID, "events.jsonl"), nil
+	}
+	rootLog := filepath.Join(runtimeDir, "events.jsonl")
+	if _, err := os.Stat(rootLog); err == nil {
+		return rootLog, nil
+	}
+	entries, err := os.ReadDir(runtimeDir)
+	if err != nil {
+		return rootLog, err
+	}
+	var pluginLogs []string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		candidate := filepath.Join(runtimeDir, entry.Name(), "events.jsonl")
+		if _, err := os.Stat(candidate); err == nil {
+			pluginLogs = append(pluginLogs, candidate)
+		}
+	}
+	if len(pluginLogs) == 1 {
+		return pluginLogs[0], nil
+	}
+	return rootLog, nil
 }

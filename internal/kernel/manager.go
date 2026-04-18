@@ -204,6 +204,21 @@ func (m *Manager) Start() error {
 		m.cleanupFailedStart(cmd, nil, generation, "dial failure", err)
 		return err
 	}
+	if err := m.verifyPeerCred(client, cmd.Process.Pid, generation); err != nil {
+		m.logEvent(eventlog.Event{
+			Level:        eventlog.LevelError,
+			Component:    eventlog.ComponentAuth,
+			Event:        eventlog.EventAuthFailed,
+			PluginID:     m.cfg.PluginID,
+			GenerationID: generation,
+			PID:          cmd.Process.Pid,
+			SocketPath:   socketPath,
+			Message:      "plugin peer credentials verification failed",
+			Error:        err.Error(),
+		})
+		m.cleanupFailedStart(cmd, client, generation, "peer credential mismatch", err)
+		return err
+	}
 
 	m.logEvent(eventlog.Event{
 		Level:        eventlog.LevelInfo,
@@ -903,6 +918,34 @@ func (m *Manager) poisonClient(client *rpcClient, generation uint64, method, rea
 		Error:        errorString(cause),
 	})
 	_ = client.close()
+}
+
+func (m *Manager) verifyPeerCred(client *rpcClient, wantPID int, generation uint64) error {
+	if client == nil || client.conn == nil {
+		return fmt.Errorf("peercred verification requires connected unix socket")
+	}
+	cred, err := amruntime.ReadPeerCred(client.conn)
+	if err != nil {
+		return fmt.Errorf("read peer credentials: %w", err)
+	}
+	if cred.PID != wantPID {
+		return fmt.Errorf("peer pid mismatch: got %d want %d", cred.PID, wantPID)
+	}
+	m.logEvent(eventlog.Event{
+		Level:        eventlog.LevelInfo,
+		Component:    eventlog.ComponentAuth,
+		Event:        eventlog.EventPeerCredVerified,
+		PluginID:     m.cfg.PluginID,
+		GenerationID: generation,
+		PID:          wantPID,
+		SocketPath:   amruntime.SocketPath(m.cfg.RuntimeDir, m.cfg.PluginID),
+		Message:      "plugin peer credentials verified",
+		Details: map[string]any{
+			"peer_uid": cred.UID,
+			"peer_gid": cred.GID,
+		},
+	})
+	return nil
 }
 
 func isRPCPoisonError(err error) bool {

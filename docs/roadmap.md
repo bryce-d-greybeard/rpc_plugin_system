@@ -49,7 +49,8 @@ Goal:
 Should have:
 - deeper stress/endurance coverage
 - more exhaustive failure-point coverage
-- peer credential verification (`SO_PEERCRED`) where supported
+- peer credential verification through a platform adapter layer
+- Linux `SO_PEERCRED` support first
 - stronger operator-visible state and event reporting
 - cleaner runtime artifact handling under churn
 
@@ -71,11 +72,11 @@ Goal:
 - make the plugin system easier to consume as a standalone project
 
 Should have:
-- stronger version negotiation story
-- explicit compatibility matrix
-- packaging guidance
-- clearer release policy
+- explicit compatibility policy and matrix
+- packaging and install guidance
+- clearer branch promotion and release policy
 - more stable public contracts
+- a real pre-promotion validation set
 
 ## v1.0.0 - stable standalone plugin substrate
 
@@ -97,6 +98,15 @@ Must have:
 
 See also:
 - `docs/v1.0-checklist.md`
+
+## post-v1 changelog / hardening expansions
+
+Planned follow-up after `v1.0.0`:
+- extend peer credential verification beyond Linux through the same adapter-pattern runtime abstraction
+- add BSD and other Unix peer credential backends where the host OS provides a credible kernel-backed mechanism
+- keep Linux `SO_PEERCRED` as the first shipped backend, not the forever-only one
+- document per-platform behavior clearly instead of pretending one Unix credential API exists everywhere
+- keep post-v1 evolution backward compatible by default unless a major-version break is explicitly justified
 
 ## post-v1 plugin transport adapters
 

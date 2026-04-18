@@ -178,17 +178,23 @@ Mixed-plugin failure must not collapse all routing state into nonsense.
 
 ## Admin/control-plane shape
 
-The current admin surface is too small for v1.
+The current admin surface is no longer just a single-plugin proof.
 
-Today it effectively exposes:
-- single-plugin status
-- single-plugin restart
+Today it already exposes:
+- full host/plugin state
+- list all plugins
+- inspect one plugin state
+- restart one plugin
+- inspect capability map
+- inspect routing decisions / route table
+- route targeted `Heartbeat`
+- route targeted `Echo`
 
 A v1 control plane should expose at least:
 - list all plugins
 - inspect one plugin state
 - restart one plugin
-- restart all plugins optionally
+- restart all plugins optionally later
 - inspect logs for one plugin
 - inspect logs across all plugins
 - inspect capability map
@@ -221,20 +227,26 @@ A per-plugin state should include:
 
 ### Admin operations
 
-Suggested control-plane operations:
-- `ListPlugins`
-- `GetPlugin`
-- `RestartPlugin`
-- `RestartAll`
-- `GetCapabilityMap`
-- `GetRouteTable`
+Current control-plane operations already include:
+- `Admin.Status`
+- `Admin.Plugins`
+- `Admin.Plugin`
+- `Admin.Restart`
+- `Admin.Capabilities`
+- `Admin.Routes`
+- `Admin.Heartbeat`
+- `Admin.Echo`
 
-The CLI can then grow commands like:
+The current CLI already includes:
+- `rpcpluginctl status`
 - `rpcpluginctl plugins`
-- `rpcpluginctl plugin <id> status`
-- `rpcpluginctl plugin <id> restart`
+- `rpcpluginctl plugin -plugin-id <id>`
+- `rpcpluginctl restart -plugin-id <id>`
 - `rpcpluginctl routes`
 - `rpcpluginctl capabilities`
+- `rpcpluginctl heartbeat -plugin-id <id>`
+- `rpcpluginctl echo -plugin-id <id> -message <text>`
+- `rpcpluginctl logs`
 
 ## Logging model in a multi-plugin kernel
 
@@ -306,7 +318,7 @@ Current direct-routing slice now includes:
 
 Still needed to finish the direct-routing story:
 - decide whether v1 needs routed operations beyond the current small initial set of `Heartbeat`, `Echo`, and restart
-- prove routed operations remain coherent under more mixed failure churn than the current first proof slice
+- otherwise explicitly freeze the current initial routed-call set as sufficient for v1
 
 Current route-inspection slice now adds:
 - an explicit direct-routing table in host state

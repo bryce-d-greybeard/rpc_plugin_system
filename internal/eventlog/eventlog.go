@@ -41,6 +41,7 @@ const (
 	EventAuthStarted          = "plugin_auth_started"
 	EventAuthSucceeded        = "plugin_auth_succeeded"
 	EventAuthFailed           = "plugin_auth_failed"
+	EventPeerCredVerified     = "plugin_peercred_verified"
 	EventCapabilitiesStarted  = "plugin_capabilities_started"
 	EventCapabilitiesFailed   = "plugin_capabilities_failed"
 	EventCapabilitiesLoaded   = "plugin_capabilities_loaded"

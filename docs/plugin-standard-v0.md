@@ -124,6 +124,9 @@ The kernel may provide environment variables such as:
 - kernel verifies exact token match
 - token file is removed after successful bootstrap
 - unverified plugin instances are not trusted
+- the runtime hardening path may also verify kernel-reported peer credentials through a platform adapter
+- v1 ships Linux peer credential verification first through `SO_PEERCRED`
+- post-v1 may add BSD and other Unix backends behind the same adapter pattern
 
 ## Lifecycle rules
 
@@ -239,6 +242,9 @@ Current earned validation now includes explicit local coverage for:
 - timeout storm poisoning and recovery
 - repeated transport-break recovery
 - repeated monitor-loop failure recovery
+- mixed-failure sequence recovery with cross-plugin isolation checks
+- runtime artifact cleanup assertions across restart churn
+- Linux peer credential verification during startup
 
 ## Intended next users of the standard
 
@@ -255,7 +261,9 @@ After kernel stabilization, this standard should support plugins such as:
 
 Do not casually change this standard.
 
-When changing it:
+For frozen v1 scope and non-goals, use `docs/v1-freeze.md` as the source of truth during final audit and promotion work.
+
+When changing this standard:
 1. update the standard docs
 2. update acceptance tests
 3. update kernel implementation
