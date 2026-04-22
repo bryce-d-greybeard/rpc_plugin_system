@@ -449,7 +449,7 @@ Logging final-form notes for v0.1.0:
 
 ## Current limitations
 
-This is still a pre-v1 standalone substrate, not a polished general release.
+`v1.0.0` is a stable local substrate release, not an everything-platform release.
 
 Current constraints include:
 - local Unix-socket operation only
@@ -457,19 +457,19 @@ Current constraints include:
 - plugin auth/bootstrap UX is still developer-oriented
 - admin/control trust is still local-filesystem based rather than backed by a separate admin auth layer
 - plugin ids are intentionally restricted to path-safe names using only letters, digits, dot, underscore, and dash
-- plugin-side logs are intentionally shell-first for v1 rather than fully integrated into the CLI
-- some naming rough edges remain, but the v1 freeze does not justify widening scope to polish them unless they are real release blockers
+- plugin-side logs are intentionally shell-first in `v1.0.0` rather than fully integrated into the CLI
+- naming rough edges remain, but they were judged non-blocking for the stable local v1 scope
 
-## Road to v1.0
+## Post-v1 direction
 
-The current intent is to finish `rpc_plugin_system` as a real v1.0 standalone substrate before starting memory-system implementation on top of it.
+With `v1.0.0` shipped, the next work can move beyond proving the standalone substrate.
 
-That means the near-term focus stays on:
-- hardening and stress coverage
-- SDK/plugin authoring polish
-- compatibility and packaging discipline
-- final public-doc coherence against the frozen v1 scope
-- branch/release promotion discipline up to v1.0
+Near-term follow-up areas include:
+- post-v1 hardening and stress expansion
+- broader transport/runtime adapter growth where justified
+- continued SDK/plugin authoring polish
+- operator-surface refinement where it improves the local substrate without breaking the stable contract
+- memory-system implementation on top of the now-stable plugin substrate
 
 ## Key docs
 

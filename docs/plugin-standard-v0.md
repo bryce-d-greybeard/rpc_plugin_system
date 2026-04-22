@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the first stable plugin standard that plugins will target after the kernel is stable.
+This document defines the first stable plugin standard shipped with `rpc_plugin_system v1.0.0`.
 
 This standard is intended to be generic and standalone. It is not tied to any higher-level application domain.
 
@@ -261,7 +261,7 @@ After kernel stabilization, this standard should support plugins such as:
 
 Do not casually change this standard.
 
-For frozen v1 scope and non-goals, use `docs/v1-freeze.md` as the source of truth during final audit and promotion work.
+For frozen v1 scope and non-goals, `docs/v1-freeze.md` is the source of truth for what shipped in `v1.0.0`.
 
 When changing this standard:
 1. update the standard docs
