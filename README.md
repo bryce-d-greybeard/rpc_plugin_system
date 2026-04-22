@@ -54,10 +54,10 @@ go build ./...
 Build the main binaries explicitly:
 
 ```bash
-go build -o .tmp-bin/rpcplugind ./cmd/rpcplugind
-go build -o .tmp-bin/rpcpluginctl ./cmd/rpcpluginctl
-go build -o .tmp-bin/rpcplugin-echo ./cmd/rpcplugin-echo
-go build -o .tmp-bin/rpcplugin-failure ./cmd/rpcplugin-failure
+go build -buildvcs=false -o .tmp-bin/rpcplugind ./cmd/rpcplugind
+go build -buildvcs=false -o .tmp-bin/rpcpluginctl ./cmd/rpcpluginctl
+go build -buildvcs=false -o .tmp-bin/rpcplugin-echo ./cmd/rpcplugin-echo
+go build -buildvcs=false -o .tmp-bin/rpcplugin-failure ./cmd/rpcplugin-failure
 ```
 
 Or use the Makefile:
@@ -136,7 +136,7 @@ if err != nil {
 	panic(err)
 }
 
-p := plugin.NewTemplate(cfg, "0.1.0")
+p := plugin.NewTemplate(cfg, "1.0.0-dev")
 
 if err := plugin.ServeWithConfig(cfg, p); err != nil {
 	panic(err)
@@ -160,7 +160,7 @@ func main() {
 		panic(err)
 	}
 
-	p := plugin.NewTemplate(cfg, "0.1.0")
+	p := plugin.NewTemplate(cfg, "1.0.0-dev")
 
 	if err := plugin.ServeWithConfig(cfg, p); err != nil {
 		panic(err)

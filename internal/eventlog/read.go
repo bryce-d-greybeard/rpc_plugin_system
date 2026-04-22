@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
 	"strings"
 	"time"
 )
@@ -143,7 +142,6 @@ func existingLogPaths(path string) ([]string, error) {
 	if len(paths) == 0 {
 		return nil, fmt.Errorf("open event log: %w", os.ErrNotExist)
 	}
-	sort.Strings(paths)
 	return paths, nil
 }
 

@@ -31,7 +31,7 @@ func buildPlugin(t *testing.T) string {
 			return
 		}
 		pluginBuildPath = filepath.Join(cacheDir, "rpcplugin-echo")
-		cmd := exec.Command("go", "build", "-o", pluginBuildPath, "./cmd/rpcplugin-echo")
+		cmd := exec.Command("go", "build", "-buildvcs=false", "-o", pluginBuildPath, "./cmd/rpcplugin-echo")
 		cmd.Dir = filepath.Clean(filepath.Join("..", ".."))
 		out, err := cmd.CombinedOutput()
 		if err != nil {

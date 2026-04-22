@@ -8,19 +8,19 @@ build: daemon ctl echo failure
 
 daemon:
 	mkdir -p $(BINDIR)
-	go build -o $(BINDIR)/rpcplugind ./cmd/rpcplugind
+	go build -buildvcs=false -o $(BINDIR)/rpcplugind ./cmd/rpcplugind
 
 ctl:
 	mkdir -p $(BINDIR)
-	go build -o $(BINDIR)/rpcpluginctl ./cmd/rpcpluginctl
+	go build -buildvcs=false -o $(BINDIR)/rpcpluginctl ./cmd/rpcpluginctl
 
 echo:
 	mkdir -p $(BINDIR)
-	go build -o $(BINDIR)/rpcplugin-echo ./cmd/rpcplugin-echo
+	go build -buildvcs=false -o $(BINDIR)/rpcplugin-echo ./cmd/rpcplugin-echo
 
 failure:
 	mkdir -p $(BINDIR)
-	go build -o $(BINDIR)/rpcplugin-failure ./cmd/rpcplugin-failure
+	go build -buildvcs=false -o $(BINDIR)/rpcplugin-failure ./cmd/rpcplugin-failure
 
 test:
 	go test ./...

@@ -6,6 +6,7 @@ import (
 	"net/rpc"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"rpc_plugin_system/internal/auth"
@@ -106,6 +107,7 @@ type acceptHook interface{ OnServeListener(net.Listener) }
 type identityHook interface{ Identity() (string, uint64) }
 
 type server struct {
+	mu           sync.Mutex
 	core         Core
 	cfg          Config
 	authUsed     bool
@@ -217,6 +219,8 @@ func (s *server) Auth(in AuthRequest, out *AuthResponse) error {
 			return err
 		}
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if s.authUsed || !auth.EqualToken([]byte(in.Token), []byte(s.cfg.AuthToken)) {
 		if s.logger != nil {
 			_ = s.logger.Event(LogEvent{Level: LogLevelWarn, Event: EventPluginAuthRejected, Method: MethodAuth, Message: "plugin auth token rejected", Reason: "used or mismatched token"})
@@ -250,12 +254,18 @@ func (s *server) Capabilities(_ Empty, out *CapabilitiesResponse) error {
 }
 
 func (s *server) Heartbeat(in Empty, out *HeartbeatResponse) error {
+	if err := s.requireAuth(MethodHeartbeat); err != nil {
+		return err
+	}
 	err := s.core.Heartbeat(in, out)
 	s.logRPC(MethodHeartbeat, err)
 	return err
 }
 
 func (s *server) Shutdown(in Empty, out *Empty) error {
+	if err := s.requireAuth(MethodShutdown); err != nil {
+		return err
+	}
 	if s.logger != nil {
 		_ = s.logger.Event(LogEvent{Event: EventPluginShutdownCalled, Method: MethodShutdown, Message: "plugin shutdown requested"})
 	}
@@ -265,6 +275,9 @@ func (s *server) Shutdown(in Empty, out *Empty) error {
 }
 
 func (s *server) Echo(in EchoRequest, out *EchoResponse) error {
+	if err := s.requireAuth(MethodEcho); err != nil {
+		return err
+	}
 	p, ok := s.core.(Echo)
 	if !ok {
 		err := rpc.ErrShutdown
@@ -277,6 +290,9 @@ func (s *server) Echo(in EchoRequest, out *EchoResponse) error {
 }
 
 func (s *server) Sleep(in SleepRequest, out *Empty) error {
+	if err := s.requireAuth(MethodSleep); err != nil {
+		return err
+	}
 	p, ok := s.core.(Sleep)
 	if !ok {
 		err := rpc.ErrShutdown
@@ -289,6 +305,9 @@ func (s *server) Sleep(in SleepRequest, out *Empty) error {
 }
 
 func (s *server) Crash(in CrashRequest, out *Empty) error {
+	if err := s.requireAuth(MethodCrash); err != nil {
+		return err
+	}
 	p, ok := s.core.(Crash)
 	if !ok {
 		err := rpc.ErrShutdown
@@ -297,6 +316,20 @@ func (s *server) Crash(in CrashRequest, out *Empty) error {
 	}
 	err := p.Crash(in, out)
 	s.logRPC(MethodCrash, err)
+	return err
+}
+
+func (s *server) requireAuth(method string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.authUsed {
+		return nil
+	}
+	err := os.ErrPermission
+	if s.logger != nil {
+		_ = s.logger.Event(LogEvent{Level: LogLevelWarn, Event: EventPluginAuthRejected, Method: method, Message: "plugin rpc rejected before auth", Reason: "auth required", Error: err.Error()})
+	}
+	s.logRPC(method, err)
 	return err
 }
 

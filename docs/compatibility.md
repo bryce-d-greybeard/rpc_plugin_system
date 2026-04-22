@@ -10,13 +10,15 @@ This document defines compatibility expectations between the kernel and plugin e
 Method names, request/response shapes, health values, and capability semantics.
 
 ### ABI compatibility
-Startup environment, socket behavior, auth artifacts, transport expectations, teardown rules, and generation semantics.
+Startup environment, socket behavior, auth artifacts, transport expectations, teardown rules, runtime path conventions, and generation semantics.
 
 ## Hard-fail conditions
 
 The kernel should hard-fail a plugin start when any of these occur:
 - plugin id mismatch
 - auth verification failure
+- non-auth RPC use before successful bootstrap auth
+- invalid plugin id for runtime path use
 - generation mismatch on startup registration
 - non-executable or invalid plugin path
 - incompatible transport/runtime assumptions
@@ -38,7 +40,7 @@ The kernel may degrade rather than hard-fail when:
 | Required RPC methods | `Auth`, `Capabilities`, `Heartbeat`, `Shutdown` | yes | no |
 | Generation semantics | one process and one trusted connection per generation | yes | no |
 | Startup env contract | required env vars must be present and parseable | yes | no |
-| Bootstrap auth | one-time token proof is required | yes | no |
+| Bootstrap auth | one-time token proof is required before non-auth RPC methods are served | yes | no |
 | Peer credential hardening | Linux `SO_PEERCRED` path supported in v1 | yes on supported Linux path when verification is enabled by the runtime; unsupported platforms are not v1 hardening targets | backend expansion post-v1 |
 | Optional capabilities | may be absent | no | yes |
 | Optional response fields | safe to ignore when additive | no | yes |
@@ -63,6 +65,7 @@ Later versions may add:
 The compatibility policy for v1 and later is:
 - required lifecycle semantics are stable
 - required startup env names are stable
+- non-auth RPC methods require successful bootstrap auth first
 - required wire method names are stable
 - required core response shape/meaning is stable
 - published source release layout is stable
@@ -77,6 +80,7 @@ After `v1.0.0`, the default rule is backward compatibility.
 
 That means:
 - do not rename required env vars casually
+- do not relax auth-before-RPC enforcement casually
 - do not rename required RPC methods casually
 - do not change required field meanings casually
 - prefer additive capability growth over contract breakage

@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	DefaultLogFileName = "events.jsonl"
+	DefaultLogFileName       = "events.jsonl"
+	DefaultPluginLogFileName = "plugin-events.jsonl"
 )
 
 // Logger is the shared plugin logging interface used by SDK-backed plugins.
@@ -50,9 +51,9 @@ const (
 	EventPluginRequestFailed    = "plugin_request_failed"
 )
 
-// NewLogger opens the shared append-only plugin event log in the runtime dir.
+// NewLogger opens the plugin-owned append-only event log in the runtime dir.
 func NewLogger(cfg Config) (*Logger, error) {
-	path := filepath.Join(filepath.Dir(cfg.SocketPath), DefaultLogFileName)
+	path := filepath.Join(filepath.Dir(cfg.SocketPath), DefaultPluginLogFileName)
 	base, err := eventlog.New(path)
 	if err != nil {
 		return nil, fmt.Errorf("open plugin event log: %w", err)

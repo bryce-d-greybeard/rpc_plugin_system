@@ -68,6 +68,24 @@ func TestNewTemplateBuildsMinimalHealthyPlugin(t *testing.T) {
 	}
 }
 
+func TestServerRejectsNonAuthMethodsBeforeAuth(t *testing.T) {
+	srv := &server{core: NewTemplate(Config{PluginID: "echo", GenerationID: 7}, "1.2.3"), cfg: Config{PluginID: "echo", GenerationID: 7, AuthToken: "secret"}}
+
+	var hb HeartbeatResponse
+	if err := srv.Heartbeat(Empty{}, &hb); !errors.Is(err, os.ErrPermission) {
+		t.Fatalf("heartbeat before auth err = %v, want permission", err)
+	}
+
+	var authOut AuthResponse
+	if err := srv.Auth(AuthRequest{Token: "secret"}, &authOut); err != nil {
+		t.Fatalf("auth: %v", err)
+	}
+
+	if err := srv.Heartbeat(Empty{}, &hb); err != nil {
+		t.Fatalf("heartbeat after auth: %v", err)
+	}
+}
+
 func clearPluginEnv(t *testing.T) {
 	t.Helper()
 	for _, name := range []string{

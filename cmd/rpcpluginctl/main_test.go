@@ -9,7 +9,7 @@ import (
 
 func TestCLIAllowsSubcommandFlagsAfterCommand(t *testing.T) {
 	bin := filepath.Join(t.TempDir(), "rpcpluginctl")
-	cmd := exec.Command("go", "build", "-o", bin, "./cmd/rpcpluginctl")
+	cmd := exec.Command("go", "build", "-buildvcs=false", "-o", bin, "./cmd/rpcpluginctl")
 	cmd.Dir = filepath.Join("..", "..")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("build rpcpluginctl: %v\n%s", err, out)

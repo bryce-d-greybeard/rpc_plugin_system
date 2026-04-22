@@ -23,7 +23,7 @@ It exists to stop drift during the final audit and promotion work.
 ### Stable local kernel behavior
 - executable plugin supervision over Unix domain sockets
 - one process and one trusted RPC connection per generation
-- one-time token bootstrap auth
+- one-time token bootstrap auth enforced before non-auth RPC methods are served
 - Linux peer credential verification through the runtime adapter path
 - timeout poisoning and stale-client rejection
 - restart supervision with generation advancement
@@ -33,7 +33,7 @@ It exists to stop drift during the final audit and promotion work.
 ### Stable operator/control surface
 - daemon: `rpcplugind`
 - control CLI: `rpcpluginctl`
-- admin/control plane over local Unix socket RPC
+- admin/control plane over local Unix socket RPC scoped by runtime-dir filesystem access
 - host state inspection
 - plugin listing and per-plugin inspection
 - capability map inspection
@@ -41,7 +41,8 @@ It exists to stop drift during the final audit and promotion work.
 - targeted per-plugin restart
 - targeted `Heartbeat` routing
 - targeted `Echo` routing
-- log inspection through `rpcpluginctl logs`
+- kernel log inspection through `rpcpluginctl logs`
+- sibling plugin-side SDK event logs under `plugin-events.jsonl`
 
 ### Stable multi-plugin scope for v1
 - multiple supervised plugins

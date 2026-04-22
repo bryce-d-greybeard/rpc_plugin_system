@@ -214,5 +214,8 @@ func resolveLogPath(runtimeDir, pluginID string) (string, error) {
 	if len(pluginLogs) == 1 {
 		return pluginLogs[0], nil
 	}
+	if len(pluginLogs) > 1 {
+		return "", fmt.Errorf("multiple plugin logs found under %s, use -plugin-id", runtimeDir)
+	}
 	return rootLog, nil
 }

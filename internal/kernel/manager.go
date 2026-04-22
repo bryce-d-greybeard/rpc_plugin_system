@@ -31,6 +31,10 @@ type Config struct {
 }
 
 // State reports the current known runtime state of a plugin.
+//
+// PID is the currently observed plugin process id when one is known to the
+// manager. A false Healthy value means the generation is not currently trusted
+// for routed work. It does not necessarily prove the process has already exited.
 type State struct {
 	PluginID     string
 	GenerationID uint64
@@ -598,7 +602,9 @@ func (m *Manager) Kill() error {
 func (m *Manager) State() State {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.state
+	state := m.state
+	state.Capabilities = append([]string(nil), state.Capabilities...)
+	return state
 }
 
 func (m *Manager) dial(socketPath string, generation uint64) (*rpcClient, error) {
@@ -901,7 +907,6 @@ func (m *Manager) poisonClient(client *rpcClient, generation uint64, method, rea
 	if m.client == client {
 		m.client = nil
 		m.state.Healthy = false
-		m.state.PID = 0
 	}
 	m.mu.Unlock()
 	m.logEvent(eventlog.Event{

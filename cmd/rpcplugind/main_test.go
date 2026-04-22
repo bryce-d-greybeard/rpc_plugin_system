@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
@@ -41,6 +42,28 @@ func TestDaemonAndCLIEndToEnd(t *testing.T) {
 	}
 	if restarted.PID == 0 || !restarted.Healthy {
 		t.Fatalf("unexpected restarted status: %+v", restarted)
+	}
+}
+
+func TestParsePluginsRejectsUnsafePluginIDs(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		plugins  string
+		pluginID string
+		wantErr  string
+	}{
+		{name: "single path traversal", pluginID: "../echo", wantErr: "invalid plugin id"},
+		{name: "single slash", pluginID: "echo/test", wantErr: "invalid plugin id"},
+		{name: "single empty", pluginID: "", wantErr: "plugin id is required"},
+		{name: "multi path traversal", plugins: "../echo=/bin/true", wantErr: "invalid plugin id"},
+		{name: "multi slash", plugins: "echo/test=/bin/true", wantErr: "invalid plugin id"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := parsePlugins(tc.plugins, tc.pluginID, "/bin/true")
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("parsePlugins err = %v, want substring %q", err, tc.wantErr)
+			}
+		})
 	}
 }
 
@@ -152,7 +175,7 @@ func buildBinary(t *testing.T, name, pkg string) string {
 	bin := filepath.Join(cacheDir, name)
 	binaryBuildMu.Unlock()
 
-	cmd := exec.Command("go", "build", "-o", bin, pkg)
+	cmd := exec.Command("go", "build", "-buildvcs=false", "-o", bin, pkg)
 	cmd.Dir = filepath.Clean(filepath.Join("..", ".."))
 	out, err := cmd.CombinedOutput()
 	if err != nil {

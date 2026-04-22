@@ -3,6 +3,7 @@ package kernel
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -288,7 +289,6 @@ func (h *Host) CallRequest(req RoutedRequest) (RoutedResponse, error) {
 	}
 }
 
-
 // MonitorLoop runs all manager monitor loops until the context ends.
 func (h *Host) MonitorLoop(ctx context.Context) {
 	h.mu.RLock()
@@ -299,9 +299,9 @@ func (h *Host) MonitorLoop(ctx context.Context) {
 }
 
 func pluginRuntimeDir(root, pluginID string) string {
-	return fmt.Sprintf("%s/%s", root, pluginID)
+	return filepath.Join(root, pluginID)
 }
 
 func pluginEventLogPath(root, pluginID string) string {
-	return fmt.Sprintf("%s/%s/events.jsonl", root, pluginID)
+	return filepath.Join(root, pluginID, "events.jsonl")
 }

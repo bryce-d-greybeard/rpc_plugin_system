@@ -52,8 +52,15 @@ Example runtime layout during execution:
 - `/tmp/rpc_plugin_system-demo/admin.sock`
 - `/tmp/rpc_plugin_system-demo/echo/echo.sock`
 - `/tmp/rpc_plugin_system-demo/echo/events.jsonl`
+- `/tmp/rpc_plugin_system-demo/echo/plugin-events.jsonl`
 
 Host-managed plugin state lives under per-plugin runtime subdirectories.
+
+Plugin id notes:
+- plugin ids become runtime subdirectory names and socket/auth file prefixes
+- for that reason, plugin ids are intentionally restricted to path-safe names
+- allowed characters are letters, digits, dot (`.`), underscore (`_`), and dash (`-`)
+- plugin ids must begin with a letter or digit
 
 ## Single-plugin launch
 
@@ -89,6 +96,11 @@ cd /tank/development/rpc_plugin_system
 .tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo routes
 .tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo plugin -plugin-id echo
 ```
+
+Log inspection note:
+- in single-plugin mode, `rpcpluginctl logs` can fall back to the sole kernel plugin log automatically
+- in multi-plugin mode, pass `-plugin-id` explicitly when reading kernel logs
+- plugin-side SDK logs live in sibling `plugin-events.jsonl` files and are intended for direct shell inspection today
 
 ## Packaging stance for v1
 
