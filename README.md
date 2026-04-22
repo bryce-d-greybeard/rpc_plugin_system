@@ -275,7 +275,7 @@ The important thing to verify is:
 
 ### Step 4b: inspect one plugin and route direct requests by plugin id
 
-The multi-plugin control surface is growing toward v1. Even in single-plugin mode, the control CLI now exposes direct plugin-id targeting for inspection and routed operations.
+The frozen v1 control surface includes direct plugin-id targeting for inspection and a deliberately small routed-call set. Even in single-plugin mode, the control CLI exposes that narrow explicit surface.
 
 Examples:
 
@@ -395,7 +395,7 @@ Current logging design:
 - kernel-managed logs are written as per-plugin `events.jsonl` files under plugin runtime subdirectories
 - SDK-backed plugin logs are written as sibling `plugin-events.jsonl` files under the same runtime subdirectories
 - `rpcpluginctl logs` can target a specific kernel log with `-plugin-id`, and in single-plugin host mode it falls back to the only kernel plugin log automatically
-- plugin-side `plugin-events.jsonl` remains a shell-inspection surface for now rather than a first-class CLI surface
+- plugin-side `plugin-events.jsonl` remains an intentional shell-inspection surface for v1 rather than a first-class CLI surface
 - every write is flushed with `fsync` so logs are durable and human-inspectable during failures, but that durability is an intentional write-cost tradeoff
 - entries are verbose and include level, component, event, plugin id, generation id, pid, socket path, method, message, error/reason, and optional details
 
@@ -450,7 +450,7 @@ Current constraints include:
 - admin/control trust is still local-filesystem based rather than backed by a separate admin auth layer
 - plugin ids are intentionally restricted to path-safe names using only letters, digits, dot, underscore, and dash
 - plugin-side logs are intentionally shell-first for v1 rather than fully integrated into the CLI
-- some naming and bootstrap rough edges remain
+- some naming rough edges remain, but the v1 freeze does not justify widening scope to polish them unless they are real release blockers
 
 ## Road to v1.0
 
@@ -460,7 +460,7 @@ That means the near-term focus stays on:
 - hardening and stress coverage
 - SDK/plugin authoring polish
 - compatibility and packaging discipline
-- stronger public docs/examples
+- final public-doc coherence against the frozen v1 scope
 - branch/release promotion discipline up to v1.0
 
 ## Key docs

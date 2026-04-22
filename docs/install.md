@@ -100,7 +100,7 @@ cd /tank/development/rpc_plugin_system
 Log inspection note:
 - in single-plugin mode, `rpcpluginctl logs` can fall back to the sole kernel plugin log automatically
 - in multi-plugin mode, pass `-plugin-id` explicitly when reading kernel logs
-- plugin-side SDK logs live in sibling `plugin-events.jsonl` files and are intended for direct shell inspection today
+- plugin-side SDK logs live in sibling `plugin-events.jsonl` files and remain an intentional shell-first inspection path for v1
 
 ## Packaging stance for v1
 
@@ -109,6 +109,7 @@ For the frozen v1 release stance, see:
 - `docs/release-promotion-checklist.md`
 
 Packaging discipline for `v1.0.0` means:
+- no late v1 feature-scope expansion
 - the repo builds cleanly from source
 - the source release format is stable and documented
 - the build outputs are named clearly

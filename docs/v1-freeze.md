@@ -42,7 +42,7 @@ It exists to stop drift during the final audit and promotion work.
 - targeted `Heartbeat` routing
 - targeted `Echo` routing
 - kernel log inspection through `rpcpluginctl logs`
-- sibling plugin-side SDK event logs under `plugin-events.jsonl`
+- sibling plugin-side SDK event logs under `plugin-events.jsonl` as an intentional shell-first inspection surface
 
 ### Stable multi-plugin scope for v1
 - multiple supervised plugins
@@ -57,6 +57,7 @@ It exists to stop drift during the final audit and promotion work.
 ## v1.0.0 does not include
 
 - capability-based routing as a required v1 feature
+- broadening the routed-call set unless a concrete release blocker forces it
 - non-Linux peer credential backends
 - alternate plugin transports such as gRPC, Connect, Twirp, JSON-RPC, dRPC, or Thrift
 - browser/UI-facing control-plane transport expansion
@@ -77,3 +78,4 @@ During final audit and promotion work:
 - do not add new feature lanes casually
 - do not expand v1 scope just because something sounds nice
 - only fix real blockers, coherence issues, validation failures, or release-readiness gaps
+- do not turn final polish into feature work

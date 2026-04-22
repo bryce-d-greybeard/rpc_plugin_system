@@ -54,7 +54,7 @@ For v1, versioning is still blunt:
 - the current frozen wire namespace remains `TestPlugin.*` even though the public SDK package is `sdk/go/plugin`
 - additive capability growth is allowed when it does not break the required contract
 
-Later versions may add:
+Post-v1 only, later versions may add:
 - feature negotiation
 - capability versioning
 - optional extension points
@@ -97,3 +97,4 @@ When changing API/ABI behavior:
 4. rerun acceptance coverage
 5. update install/release docs if public behavior changed
 6. state whether the change is backward compatible
+7. do not smuggle new v1 surface area into a compatibility edit
