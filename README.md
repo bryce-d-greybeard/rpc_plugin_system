@@ -2,20 +2,21 @@
 
 `rpc_plugin_system` is a local Go project for supervising executable plugins over Unix domain sockets using Go `net/rpc`.
 
-The current v0.1.0 slice is a kernel-first substrate that proves:
-- one supervised plugin process at a time
+The current codebase is a kernel-first substrate that now proves:
+- multiple supervised plugin processes under one host
+- per-plugin runtime isolation and explicit plugin-id routing
 - Unix socket RPC transport
-- one-time bootstrap token trust on startup
+- one-time bootstrap token trust on startup, enforced before non-auth RPC methods are served
 - Linux peer credential verification on startup
 - heartbeat and health reporting
 - timeout handling and poisoned-client teardown
 - restart supervision with generation tracking
-- verbose first-class append-only event logging
-- a small admin/control CLI
+- verbose first-class append-only kernel event logging
+- a small local admin/control CLI
 
 Current project direction:
-- v0.1.0 is the proven kernel substrate
-- the next milestone is plugin system v1.0
+- v0.1.0 proved the initial kernel substrate
+- the current tree carries that substrate forward into the frozen multi-plugin v1 scope
 - memory-system work should begin only after the plugin substrate reaches v1.0
 - the frozen v1 scope lives in `docs/v1-freeze.md`
 - compatibility, install, and release discipline now live explicitly in `docs/compatibility.md`, `docs/install.md`, and `docs/release-promotion-checklist.md`
@@ -218,9 +219,15 @@ What this does:
 - creates a one-time bootstrap token for this generation
 - launches the plugin executable
 - verifies Linux peer credentials for the connected Unix socket when supported
-- authenticates the plugin through the one-time token bootstrap
+- authenticates the plugin through the one-time token bootstrap before non-auth plugin RPC methods are trusted
 - opens the admin socket for local control
 - starts the monitor loop
+
+Trust-boundary note:
+- plugin RPC trust is established by the kernel's bootstrap-authenticated connection plus Linux peer credential verification on supported Linux hosts
+- the plugin socket is a local Unix socket artifact, not a general remote API surface
+- the admin socket is trusted through local runtime-dir filesystem access and socket permissions, not through a separate admin auth layer
+- if runtime directory ownership or socket permissions are wrong, local control assumptions are wrong too
 
 If startup succeeds, the daemon stays running in the foreground.
 
@@ -302,10 +309,15 @@ You should typically see artifacts like:
 - `/tmp/rpc_plugin_system-demo/admin.sock`
 - `/tmp/rpc_plugin_system-demo/echo/echo.sock`
 - `/tmp/rpc_plugin_system-demo/echo/events.jsonl`
+- `/tmp/rpc_plugin_system-demo/echo/plugin-events.jsonl`
 
-The event log is the canonical operator log for v0.1.0. It is append-only JSONL with verbose lifecycle, auth, RPC, restart, and cleanup events.
+The kernel event log is the canonical operator log for v0.1.0. It is append-only JSONL with verbose lifecycle, auth, RPC, restart, and cleanup events.
 
-In single-plugin host mode, `rpcpluginctl logs` will automatically fall back to the sole plugin log when there is exactly one plugin log under the runtime directory.
+SDK-backed plugins now write their own append-only JSONL log as `plugin-events.jsonl` so plugin-side events do not contend with kernel-managed `events.jsonl` rotation and writes.
+
+In single-plugin host mode, `rpcpluginctl logs` will automatically fall back to the sole kernel plugin log when there is exactly one plugin log under the runtime directory. In multi-plugin host mode, pass `-plugin-id` explicitly.
+
+For v1, plugin-side `plugin-events.jsonl` remains an intentional shell-first inspection surface rather than a first-class CLI surface.
 
 The one-time auth token file is bootstrap-only and should be removed after successful auth.
 
@@ -380,9 +392,11 @@ v0.1.0 logging is intentionally first-class.
 Current logging design:
 - canonical log format is append-only JSONL
 - kernel and SDK-backed plugins share the same event schema and severity model
-- host-managed logs are written as per-plugin `events.jsonl` files under plugin runtime subdirectories
-- `rpcpluginctl logs` can target a specific plugin with `-plugin-id`, and in single-plugin host mode it falls back to the only plugin log automatically
-- every write is flushed with `fsync` so logs are durable and human-inspectable during failures
+- kernel-managed logs are written as per-plugin `events.jsonl` files under plugin runtime subdirectories
+- SDK-backed plugin logs are written as sibling `plugin-events.jsonl` files under the same runtime subdirectories
+- `rpcpluginctl logs` can target a specific kernel log with `-plugin-id`, and in single-plugin host mode it falls back to the only kernel plugin log automatically
+- plugin-side `plugin-events.jsonl` remains a shell-inspection surface for now rather than a first-class CLI surface
+- every write is flushed with `fsync` so logs are durable and human-inspectable during failures, but that durability is an intentional write-cost tradeoff
 - entries are verbose and include level, component, event, plugin id, generation id, pid, socket path, method, message, error/reason, and optional details
 
 The log is designed to be both:
@@ -430,10 +444,12 @@ Logging final-form notes for v0.1.0:
 This is still a pre-v1 standalone substrate, not a polished general release.
 
 Current constraints include:
-- one supervised plugin instance at a time
 - local Unix-socket operation only
 - Go `net/rpc` transport only
 - plugin auth/bootstrap UX is still developer-oriented
+- admin/control trust is still local-filesystem based rather than backed by a separate admin auth layer
+- plugin ids are intentionally restricted to path-safe names using only letters, digits, dot, underscore, and dash
+- plugin-side logs are intentionally shell-first for v1 rather than fully integrated into the CLI
 - some naming and bootstrap rough edges remain
 
 ## Road to v1.0
@@ -458,3 +474,9 @@ That means the near-term focus stays on:
 ## Status
 
 The kernel slice is real, tested, and being hardened through failure-point and stress-oriented validation before the standard is considered fully earned.
+
+Current honest status:
+- the core substrate is credible
+- the local hardening story is real for the narrow Linux-first scope
+- the public docs and operator story are much closer to the code than they were before
+- the remaining work is mostly release-discipline polish, trust-boundary clarity, and final coherence review rather than core-mechanism rescue
