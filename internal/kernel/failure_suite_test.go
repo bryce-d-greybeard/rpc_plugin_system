@@ -31,7 +31,7 @@ func buildFailurePlugin(t *testing.T) string {
 		t.Fatal(failurePluginBuildErr)
 	}
 	failurePluginBuildPath = filepath.Join(cacheDir, "rpcplugin-failure")
-	cmd := exec.Command("go", "build", "-o", failurePluginBuildPath, "./cmd/rpcplugin-failure")
+	cmd := exec.Command("go", "build", "-buildvcs=false", "-o", failurePluginBuildPath, "./cmd/rpcplugin-failure")
 	cmd.Dir = filepath.Clean(filepath.Join("..", ".."))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -43,11 +43,11 @@ func buildFailurePlugin(t *testing.T) string {
 
 func TestFailurePluginSuite(t *testing.T) {
 	tests := []struct {
-		name    string
-		plugin  string
+		name     string
+		plugin   string
 		pluginID string
-		env     map[string]string
-		run     func(t *testing.T, m *Manager)
+		env      map[string]string
+		run      func(t *testing.T, m *Manager)
 	}{
 		{name: "happy-path", plugin: buildPlugin(t), pluginID: "echo", run: expectHealthyEcho},
 		{name: "auth-failure", plugin: buildFailurePlugin(t), pluginID: "failure", env: map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_FAIL_AUTH": "true"}, run: expectStartFailure},
@@ -74,13 +74,13 @@ func TestFailurePluginSuite(t *testing.T) {
 			runtimeDir := t.TempDir()
 			logPath := filepath.Join(runtimeDir, "events.jsonl")
 			manager, err := New(Config{
-				RuntimeDir:       runtimeDir,
-				PluginPath:       tc.plugin,
-				PluginID:         tc.pluginID,
-						DialTimeout:      2 * time.Second,
-				CallTimeout:      150 * time.Millisecond,
-				HeartbeatEvery:   100 * time.Millisecond,
-				EventLogPath:     logPath,
+				RuntimeDir:     runtimeDir,
+				PluginPath:     tc.plugin,
+				PluginID:       tc.pluginID,
+				DialTimeout:    2 * time.Second,
+				CallTimeout:    150 * time.Millisecond,
+				HeartbeatEvery: 100 * time.Millisecond,
+				EventLogPath:   logPath,
 			})
 			if err != nil {
 				t.Fatalf("new manager: %v", err)

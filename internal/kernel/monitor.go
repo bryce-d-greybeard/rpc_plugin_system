@@ -24,8 +24,26 @@ func (m *Manager) MonitorLoop(ctx context.Context) {
 					return
 				default:
 				}
-				_ = m.log.Write(eventlog.Event{Type: "heartbeat_failed", Plugin: m.cfg.PluginID, Message: err.Error()})
-				_ = m.Restart()
+				m.logEvent(eventlog.Event{
+					Level:     eventlog.LevelWarn,
+					Component: eventlog.ComponentKernel,
+					Event:     eventlog.EventHeartbeatFailed,
+					PluginID:  m.cfg.PluginID,
+					Message:   "monitor observed heartbeat failure and will restart plugin",
+					Error:     err.Error(),
+					Reason:    "monitor loop heartbeat check",
+				})
+				if restartErr := m.Restart(); restartErr != nil {
+					m.logEvent(eventlog.Event{
+						Level:     eventlog.LevelError,
+						Component: eventlog.ComponentKernel,
+						Event:     eventlog.EventRestartFailed,
+						PluginID:  m.cfg.PluginID,
+						Message:   "monitor restart attempt failed",
+						Error:     restartErr.Error(),
+						Reason:    "monitor loop heartbeat recovery",
+					})
+				}
 			}
 		}
 	}

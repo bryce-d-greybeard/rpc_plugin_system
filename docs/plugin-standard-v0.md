@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This document defines the first stable plugin standard that memory-system plugins will target after the kernel is stable.
+This document defines the first stable plugin standard that plugins will target after the kernel is stable.
 
-This standard is intended to be generic. It should support memory plugins well, but it is not memory-specific.
+This standard is intended to be generic and standalone. It is not tied to any higher-level application domain.
 
 ## Standard layers
 
@@ -25,10 +25,24 @@ The plugin standard has four parts:
 - Each plugin start creates a new generation.
 - Stale generations must not remain trusted.
 - The kernel must survive plugin failure.
+- Logging is first-class, verbose, and operator-readable.
+- Plugins and kernel share one logging subsystem and event schema.
 
 ## Required API surface
 
 Every standard plugin must expose these required RPC methods:
+
+### `Auth`
+Returns:
+- plugin id
+- plugin version
+- protocol version where applicable later
+- generation id
+
+Rules:
+- bootstrap token auth is one-time-use per generation
+- successful auth spends the token for that generation
+- a spent token must not be accepted as a fresh bootstrap
 
 ### `Capabilities`
 Returns:
@@ -83,6 +97,12 @@ A plugin must advertise optional methods through capability reporting.
 - plugin is not linked into the kernel process
 - kernel owns lifecycle and restart policy
 
+### Logging model
+- kernel and plugins use the same logging subsystem
+- canonical log format is append-only JSONL
+- event schema, severity levels, and core correlation fields stay aligned across kernel and plugins
+- logs must remain human-readable enough for direct operator inspection
+
 ### Startup environment
 The kernel may provide environment variables such as:
 - `RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET`
@@ -97,10 +117,16 @@ The kernel may provide environment variables such as:
 - reconnect always creates a fresh connection and fresh client
 
 ### Authentication
-- kernel creates challenge artifact
-- plugin signs challenge using configured key material
-- kernel verifies against trusted identity
+- kernel creates a one-time bootstrap token for the generation
+- kernel writes the token to a protected auth file
+- plugin reads the token through `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
+- plugin proves the token once through `Auth`
+- kernel verifies exact token match
+- token file is removed after successful bootstrap
 - unverified plugin instances are not trusted
+- the runtime hardening path may also verify kernel-reported peer credentials through a platform adapter
+- v1 ships Linux peer credential verification first through `SO_PEERCRED`
+- post-v1 may add BSD and other Unix backends behind the same adapter pattern
 
 ## Lifecycle rules
 
@@ -121,6 +147,7 @@ On plugin death, timeout, or poisoned transport, the kernel must:
 - stop trusting the dead process instance
 - reap process state
 - remove stale runtime artifacts when applicable
+- emit explicit lifecycle and cleanup log events explaining what happened
 
 ### Restart rules
 Restart means:
@@ -182,6 +209,8 @@ The kernel is not considered ready for this standard until it proves:
 - restart creates a fresh trusted instance
 - monitor loop survives plugin failure
 - operator-visible state reflects health accurately
+- event logs clearly explain lifecycle/auth/rpc/restart/cleanup behavior
+- plugin logs follow the same logging subsystem and are consistent with kernel logs
 
 ## Stress and endurance expectations
 
@@ -206,23 +235,35 @@ Suggested validation includes:
 - artifact leak checks after repeated cycles
 - generation monotonicity checks under churn
 - mixed-failure stress runs
+- log assertions for key lifecycle, auth, timeout, restart, and cleanup events
+
+Current earned validation now includes explicit local coverage for:
+- restart storm monotonicity
+- timeout storm poisoning and recovery
+- repeated transport-break recovery
+- repeated monitor-loop failure recovery
+- mixed-failure sequence recovery with cross-plugin isolation checks
+- runtime artifact cleanup assertions across restart churn
+- Linux peer credential verification during startup
 
 ## Intended next users of the standard
 
 After kernel stabilization, this standard should support plugins such as:
-- note-store plugin
-- postgres persistence plugin
-- vector locator plugin
-- importer plugin
-- retriever plugin
-- ranker plugin
-- policy plugin
+- storage plugins
+- indexing plugins
+- importer plugins
+- retriever plugins
+- ranker plugins
+- policy plugins
+- service-integration plugins
 
 ## Freeze rule
 
 Do not casually change this standard.
 
-When changing it:
+For frozen v1 scope and non-goals, use `docs/v1-freeze.md` as the source of truth during final audit and promotion work.
+
+When changing this standard:
 1. update the standard docs
 2. update acceptance tests
 3. update kernel implementation

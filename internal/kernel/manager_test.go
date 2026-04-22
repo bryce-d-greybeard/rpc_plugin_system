@@ -31,7 +31,7 @@ func buildPlugin(t *testing.T) string {
 			return
 		}
 		pluginBuildPath = filepath.Join(cacheDir, "rpcplugin-echo")
-		cmd := exec.Command("go", "build", "-o", pluginBuildPath, "./cmd/rpcplugin-echo")
+		cmd := exec.Command("go", "build", "-buildvcs=false", "-o", pluginBuildPath, "./cmd/rpcplugin-echo")
 		cmd.Dir = filepath.Clean(filepath.Join("..", ".."))
 		out, err := cmd.CombinedOutput()
 		if err != nil {
@@ -50,12 +50,12 @@ func TestManagerStartHeartbeatEchoAndRestart(t *testing.T) {
 	logPath := filepath.Join(runtimeDir, "events.jsonl")
 
 	manager, err := New(Config{
-		RuntimeDir:       runtimeDir,
-		PluginPath:       pluginBin,
-		PluginID:         "echo",
-		DialTimeout:      2 * time.Second,
-		CallTimeout:      200 * time.Millisecond,
-		EventLogPath:     logPath,
+		RuntimeDir:   runtimeDir,
+		PluginPath:   pluginBin,
+		PluginID:     "echo",
+		DialTimeout:  2 * time.Second,
+		CallTimeout:  200 * time.Millisecond,
+		EventLogPath: logPath,
 	})
 	if err != nil {
 		t.Fatalf("new manager: %v", err)
@@ -105,12 +105,12 @@ func TestManagerSleepTimeout(t *testing.T) {
 	logPath := filepath.Join(runtimeDir, "events.jsonl")
 
 	manager, err := New(Config{
-		RuntimeDir:       runtimeDir,
-		PluginPath:       pluginBin,
-		PluginID:         "echo",
-		DialTimeout:      2 * time.Second,
-		CallTimeout:      100 * time.Millisecond,
-		EventLogPath:     logPath,
+		RuntimeDir:   runtimeDir,
+		PluginPath:   pluginBin,
+		PluginID:     "echo",
+		DialTimeout:  2 * time.Second,
+		CallTimeout:  100 * time.Millisecond,
+		EventLogPath: logPath,
 	})
 	if err != nil {
 		t.Fatalf("new manager: %v", err)
@@ -129,6 +129,14 @@ func TestManagerSleepTimeout(t *testing.T) {
 	if _, err := manager.Heartbeat(); err == nil {
 		t.Fatal("expected heartbeat to fail after timeout poisoned rpc client")
 	}
+
+	events := readEvents(t, logPath)
+	assertEvent(t, events, eventlog.EventRPCTimeout, func(event eventlog.Event) bool {
+		return event.Method == testpluginapi.MethodSleep && event.Level == eventlog.LevelError
+	})
+	assertEvent(t, events, eventlog.EventRPCPoisoned, func(event eventlog.Event) bool {
+		return event.Method == testpluginapi.MethodSleep && event.Reason == "rpc timeout"
+	})
 }
 
 func TestManagerRejectsUntrustedPlugin(t *testing.T) {
@@ -137,12 +145,12 @@ func TestManagerRejectsUntrustedPlugin(t *testing.T) {
 	logPath := filepath.Join(runtimeDir, "events.jsonl")
 
 	manager, err := New(Config{
-		RuntimeDir:       runtimeDir,
-		PluginPath:       pluginBin,
-		PluginID:         "failure",
-		DialTimeout:      2 * time.Second,
-		CallTimeout:      200 * time.Millisecond,
-		EventLogPath:     logPath,
+		RuntimeDir:   runtimeDir,
+		PluginPath:   pluginBin,
+		PluginID:     "failure",
+		DialTimeout:  2 * time.Second,
+		CallTimeout:  200 * time.Millisecond,
+		EventLogPath: logPath,
 	})
 	if err != nil {
 		t.Fatalf("new manager: %v", err)
@@ -167,6 +175,17 @@ func TestManagerRejectsUntrustedPlugin(t *testing.T) {
 	if state := manager.State(); state.GenerationID != 0 || state.PID != 0 || state.Healthy {
 		t.Fatalf("unexpected state after failed start: %+v", state)
 	}
+
+	events := readEvents(t, logPath)
+	assertEvent(t, events, eventlog.EventAuthStarted, func(event eventlog.Event) bool {
+		return event.PluginID == "failure"
+	})
+	assertEvent(t, events, eventlog.EventAuthFailed, func(event eventlog.Event) bool {
+		return event.PluginID == "failure"
+	})
+	assertEvent(t, events, eventlog.EventPluginStartFailed, func(event eventlog.Event) bool {
+		return event.PluginID == "failure"
+	})
 }
 
 func TestManagerRejectsNonExecutablePluginPath(t *testing.T) {
@@ -194,21 +213,19 @@ func TestManagerKillUsesPluginShutdownWhenAvailable(t *testing.T) {
 	shutdownMarker := filepath.Join(runtimeDir, "shutdown.marker")
 
 	manager, err := New(Config{
-		RuntimeDir:       runtimeDir,
-		PluginPath:       pluginBin,
-		PluginID:         "echo",
-		DialTimeout:      2 * time.Second,
-		CallTimeout:      200 * time.Millisecond,
-		EventLogPath:     logPath,
+		RuntimeDir:   runtimeDir,
+		PluginPath:   pluginBin,
+		PluginID:     "echo",
+		DialTimeout:  2 * time.Second,
+		CallTimeout:  200 * time.Millisecond,
+		EventLogPath: logPath,
 	})
 	if err != nil {
 		t.Fatalf("new manager: %v", err)
 	}
 	defer manager.Close()
 
-	os.Setenv("RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_FAIL_AUTH", "true")
 	os.Setenv("RPC_PLUGIN_SYSTEM_PLUGIN_SHUTDOWN_MARKER", shutdownMarker)
-	defer os.Unsetenv("RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_FAIL_AUTH")
 	defer os.Unsetenv("RPC_PLUGIN_SYSTEM_PLUGIN_SHUTDOWN_MARKER")
 
 	if err := manager.Start(); err != nil {
@@ -223,6 +240,17 @@ func TestManagerKillUsesPluginShutdownWhenAvailable(t *testing.T) {
 	if state := manager.State(); state.PID != 0 || state.Healthy {
 		t.Fatalf("unexpected state after kill: %+v", state)
 	}
+
+	events := readEvents(t, logPath)
+	assertEvent(t, events, eventlog.EventShutdownRequested, func(event eventlog.Event) bool {
+		return event.PluginID == "echo"
+	})
+	assertEvent(t, events, eventlog.EventShutdownSucceeded, func(event eventlog.Event) bool {
+		return event.PluginID == "echo"
+	})
+	assertEvent(t, events, eventlog.EventPluginStopped, func(event eventlog.Event) bool {
+		return event.PluginID == "echo"
+	})
 }
 
 func TestManagerRejectsStaleGenerationResponse(t *testing.T) {
@@ -231,12 +259,12 @@ func TestManagerRejectsStaleGenerationResponse(t *testing.T) {
 	logPath := filepath.Join(runtimeDir, "events.jsonl")
 
 	manager, err := New(Config{
-		RuntimeDir:       runtimeDir,
-		PluginPath:       pluginBin,
-		PluginID:         "echo",
-		DialTimeout:      2 * time.Second,
-		CallTimeout:      200 * time.Millisecond,
-		EventLogPath:     logPath,
+		RuntimeDir:   runtimeDir,
+		PluginPath:   pluginBin,
+		PluginID:     "echo",
+		DialTimeout:  2 * time.Second,
+		CallTimeout:  200 * time.Millisecond,
+		EventLogPath: logPath,
 	})
 	if err != nil {
 		t.Fatalf("new manager: %v", err)
@@ -264,12 +292,12 @@ func TestManagerEventLogRecordsLifecycle(t *testing.T) {
 	logPath := filepath.Join(runtimeDir, "events.jsonl")
 
 	manager, err := New(Config{
-		RuntimeDir:       runtimeDir,
-		PluginPath:       pluginBin,
-		PluginID:         "echo",
-		DialTimeout:      2 * time.Second,
-		CallTimeout:      200 * time.Millisecond,
-		EventLogPath:     logPath,
+		RuntimeDir:   runtimeDir,
+		PluginPath:   pluginBin,
+		PluginID:     "echo",
+		DialTimeout:  2 * time.Second,
+		CallTimeout:  200 * time.Millisecond,
+		EventLogPath: logPath,
 	})
 	if err != nil {
 		t.Fatalf("new manager: %v", err)
@@ -287,10 +315,26 @@ func TestManagerEventLogRecordsLifecycle(t *testing.T) {
 	}
 
 	events := readEvents(t, logPath)
-	assertEventType(t, events, "plugin_started")
-	assertEventType(t, events, "plugin_stopped")
+	assertEvent(t, events, eventlog.EventManagerInitialized, func(event eventlog.Event) bool {
+		return event.PluginID == "echo"
+	})
+	assertEvent(t, events, eventlog.EventPluginStartRequested, func(event eventlog.Event) bool {
+		return event.PluginID == "echo" && event.Level == eventlog.LevelInfo
+	})
+	assertEvent(t, events, eventlog.EventPluginStarted, func(event eventlog.Event) bool {
+		return event.PluginID == "echo" && event.GenerationID > 0 && event.PID > 0
+	})
+	assertEvent(t, events, eventlog.EventCapabilitiesLoaded, func(event eventlog.Event) bool {
+		return event.PluginID == "echo"
+	})
+	assertEvent(t, events, eventlog.EventPluginStopped, func(event eventlog.Event) bool {
+		return event.PluginID == "echo"
+	})
+	assertEvent(t, events, eventlog.EventRuntimeCleanup, func(event eventlog.Event) bool {
+		return event.PluginID == "echo"
+	})
 
-	startedCount := countEventType(events, "plugin_started")
+	startedCount := countEvent(events, eventlog.EventPluginStarted, nil)
 	if startedCount < 2 {
 		t.Fatalf("plugin_started count = %d, want at least 2", startedCount)
 	}
@@ -302,12 +346,12 @@ func TestManagerCloseRemovesRuntimeArtifacts(t *testing.T) {
 	logPath := filepath.Join(runtimeDir, "events.jsonl")
 
 	manager, err := New(Config{
-		RuntimeDir:       runtimeDir,
-		PluginPath:       pluginBin,
-		PluginID:         "echo",
-		DialTimeout:      2 * time.Second,
-		CallTimeout:      200 * time.Millisecond,
-		EventLogPath:     logPath,
+		RuntimeDir:   runtimeDir,
+		PluginPath:   pluginBin,
+		PluginID:     "echo",
+		DialTimeout:  2 * time.Second,
+		CallTimeout:  200 * time.Millisecond,
+		EventLogPath: logPath,
 	})
 	if err != nil {
 		t.Fatalf("new manager: %v", err)
@@ -323,7 +367,7 @@ func TestManagerCloseRemovesRuntimeArtifacts(t *testing.T) {
 	for _, path := range []string{
 		runtime.SocketPath(runtimeDir, "echo"),
 		runtime.AuthPath(runtimeDir, "echo"),
-			} {
+	} {
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			t.Fatalf("runtime artifact still present: %s err=%v", path, err)
 		}
@@ -353,19 +397,23 @@ func readEvents(t *testing.T, path string) []eventlog.Event {
 	return events
 }
 
-func assertEventType(t *testing.T, events []eventlog.Event, want string) {
+func assertEvent(t *testing.T, events []eventlog.Event, want string, match func(eventlog.Event) bool) {
 	t.Helper()
-	if countEventType(events, want) == 0 {
+	if countEvent(events, want, match) == 0 {
 		t.Fatalf("event log missing %q in %+v", want, events)
 	}
 }
 
-func countEventType(events []eventlog.Event, want string) int {
+func countEvent(events []eventlog.Event, want string, match func(eventlog.Event) bool) int {
 	count := 0
 	for _, event := range events {
-		if event.Type == want {
-			count++
+		if event.Event != want {
+			continue
 		}
+		if match != nil && !match(event) {
+			continue
+		}
+		count++
 	}
 	return count
 }

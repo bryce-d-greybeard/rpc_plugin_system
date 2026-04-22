@@ -11,6 +11,7 @@ import (
 
 	"rpc_plugin_system/internal/kernel"
 	"rpc_plugin_system/internal/runtime"
+	"rpc_plugin_system/internal/testpluginapi"
 )
 
 const (
@@ -18,41 +19,151 @@ const (
 	ServiceName = "Admin"
 	// MethodStatus returns the current supervised plugin state.
 	MethodStatus = ServiceName + ".Status"
-	// MethodRestart restarts the supervised plugin and returns the new state.
+	// MethodRestart restarts one supervised plugin and returns the new state.
 	MethodRestart = ServiceName + ".Restart"
+	// MethodPlugins returns all known plugin states and the capability map.
+	MethodPlugins = ServiceName + ".Plugins"
+	// MethodPlugin returns one plugin state by plugin id.
+	MethodPlugin = ServiceName + ".Plugin"
+	// MethodCapabilities returns the current capability map.
+	MethodCapabilities = ServiceName + ".Capabilities"
+	// MethodRoutes returns the current direct-routing table.
+	MethodRoutes = ServiceName + ".Routes"
+	// MethodEcho routes one echo request to a target plugin id.
+	MethodEcho = ServiceName + ".Echo"
+	// MethodHeartbeat routes one heartbeat request to a target plugin id.
+	MethodHeartbeat = ServiceName + ".Heartbeat"
 )
 
 // Empty is a convenience admin RPC request type.
 type Empty struct{}
 
-// Service exposes a small admin RPC surface backed by one kernel manager.
-type Service struct {
-	Manager *kernel.Manager
+// PluginRequest targets one plugin by plugin id.
+type PluginRequest struct {
+	PluginID string
 }
 
-// Status returns the current manager state.
-func (s *Service) Status(_ Empty, out *kernel.State) error {
-	if s.Manager == nil {
-		return fmt.Errorf("manager is required")
+// RestartRequest targets one plugin restart by plugin id.
+type RestartRequest = PluginRequest
+
+// EchoRequest routes a message to one plugin by plugin id.
+type EchoRequest struct {
+	PluginID string
+	Message  string
+}
+
+// HeartbeatRequest routes one heartbeat request to one plugin by plugin id.
+type HeartbeatRequest = PluginRequest
+
+// Service exposes a small admin RPC surface backed by one kernel host.
+type Service struct {
+	Host *kernel.Host
+}
+
+// Status returns the full host state.
+func (s *Service) Status(_ Empty, out *kernel.HostState) error {
+	if s.Host == nil {
+		return fmt.Errorf("host is required")
 	}
-	*out = s.Manager.State()
+	*out = s.Host.State()
 	return nil
 }
 
-// Restart restarts the supervised plugin and returns the new state.
-func (s *Service) Restart(_ Empty, out *kernel.State) error {
-	if s.Manager == nil {
-		return fmt.Errorf("manager is required")
+// Plugins returns the full host state.
+func (s *Service) Plugins(_ Empty, out *kernel.HostState) error {
+	if s.Host == nil {
+		return fmt.Errorf("host is required")
 	}
-	if err := s.Manager.Restart(); err != nil {
+	*out = s.Host.State()
+	return nil
+}
+
+// Plugin returns one plugin state by plugin id.
+func (s *Service) Plugin(in PluginRequest, out *kernel.State) error {
+	if s.Host == nil {
+		return fmt.Errorf("host is required")
+	}
+	if in.PluginID == "" {
+		return fmt.Errorf("plugin id is required")
+	}
+	state, err := s.Host.Plugin(in.PluginID)
+	if err != nil {
 		return err
 	}
-	*out = s.Manager.State()
+	*out = state
+	return nil
+}
+
+// Capabilities returns the current capability map.
+func (s *Service) Capabilities(_ Empty, out *map[string][]string) error {
+	if s.Host == nil {
+		return fmt.Errorf("host is required")
+	}
+	caps := s.Host.CapabilityMap()
+	*out = caps
+	return nil
+}
+
+// Routes returns the current direct-routing table.
+func (s *Service) Routes(_ Empty, out *[]kernel.Route) error {
+	if s.Host == nil {
+		return fmt.Errorf("host is required")
+	}
+	routes := s.Host.Routes()
+	*out = routes
+	return nil
+}
+
+// Echo routes one echo request to a target plugin and returns the response.
+func (s *Service) Echo(in EchoRequest, out *testpluginapi.EchoResponse) error {
+	if s.Host == nil {
+		return fmt.Errorf("host is required")
+	}
+	if in.PluginID == "" {
+		return fmt.Errorf("plugin id is required")
+	}
+	message, err := s.Host.Echo(in.PluginID, in.Message)
+	if err != nil {
+		return err
+	}
+	*out = testpluginapi.EchoResponse{Message: message}
+	return nil
+}
+
+// Heartbeat routes one heartbeat request to a target plugin and returns the response.
+func (s *Service) Heartbeat(in HeartbeatRequest, out *testpluginapi.HeartbeatResponse) error {
+	if s.Host == nil {
+		return fmt.Errorf("host is required")
+	}
+	if in.PluginID == "" {
+		return fmt.Errorf("plugin id is required")
+	}
+	state, err := s.Host.Heartbeat(in.PluginID)
+	if err != nil {
+		return err
+	}
+	*out = state
+	return nil
+}
+
+// Restart restarts one plugin and returns that plugin state.
+func (s *Service) Restart(in RestartRequest, out *kernel.State) error {
+	if s.Host == nil {
+		return fmt.Errorf("host is required")
+	}
+	if in.PluginID == "" {
+		return fmt.Errorf("plugin id is required")
+	}
+	state, err := s.Host.RestartPlugin(in.PluginID)
+	if err != nil {
+		return err
+	}
+	*out = state
 	return nil
 }
 
 // Serve exposes the admin RPC service on one Unix socket until the context ends or the listener fails.
-func Serve(ctx context.Context, socketPath string, manager *kernel.Manager) error {
+func Serve(ctx context.Context, socketPath string, host *kernel.Host) error {
 	listener, err := runtime.ListenUnix(socketPath)
 	if err != nil {
 		return fmt.Errorf("listen admin socket: %w", err)
@@ -63,7 +174,7 @@ func Serve(ctx context.Context, socketPath string, manager *kernel.Manager) erro
 	}()
 
 	server := rpc.NewServer()
-	if err := server.RegisterName(ServiceName, &Service{Manager: manager}); err != nil {
+	if err := server.RegisterName(ServiceName, &Service{Host: host}); err != nil {
 		return fmt.Errorf("register admin rpc: %w", err)
 	}
 

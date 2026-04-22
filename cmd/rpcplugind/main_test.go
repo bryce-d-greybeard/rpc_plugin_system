@@ -6,12 +6,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
 	"time"
 
-	"rpc_plugin_system/internal/auth"
 	"rpc_plugin_system/internal/kernel"
 )
 
@@ -20,30 +20,50 @@ func TestDaemonAndCLIEndToEnd(t *testing.T) {
 	ctlBin := buildBinary(t, "rpcpluginctl", "./cmd/rpcpluginctl")
 	pluginBin := buildBinary(t, "rpcplugin-echo", "./cmd/rpcplugin-echo")
 
-	token, err := auth.NewToken()
-	if err != nil {
-		t.Fatalf("generate auth token: %v", err)
-	}
-
 	runtimeDir := t.TempDir()
 	cmd := exec.Command(daemonBin, "-runtime-dir", runtimeDir, "-plugin", pluginBin)
-	cmd.Env = append(os.Environ(), "RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE="+auth.Encode(token))
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("start daemon: %v", err)
 	}
 	defer stopDaemon(t, cmd)
 
-	status := waitForStatus(t, ctlBin, runtimeDir)
-	if status.PluginID != "echo" || status.GenerationID == 0 || status.PID == 0 || !status.Healthy {
-		t.Fatalf("unexpected initial status: %+v", status)
+	status := waitForHostStatus(t, ctlBin, runtimeDir)
+	if len(status.Plugins) != 1 {
+		t.Fatalf("plugin count = %d, want 1", len(status.Plugins))
+	}
+	plugin := status.Plugins[0]
+	if plugin.PluginID != "echo" || plugin.GenerationID == 0 || plugin.PID == 0 || !plugin.Healthy {
+		t.Fatalf("unexpected initial status: %+v", plugin)
 	}
 
-	restarted := runStatusCommand(t, ctlBin, runtimeDir, "restart")
-	if restarted.GenerationID != status.GenerationID+1 {
-		t.Fatalf("generation after restart = %d, want %d", restarted.GenerationID, status.GenerationID+1)
+	restarted := runRestartCommand(t, ctlBin, runtimeDir, "echo")
+	if restarted.GenerationID != plugin.GenerationID+1 {
+		t.Fatalf("generation after restart = %d, want %d", restarted.GenerationID, plugin.GenerationID+1)
 	}
 	if restarted.PID == 0 || !restarted.Healthy {
 		t.Fatalf("unexpected restarted status: %+v", restarted)
+	}
+}
+
+func TestParsePluginsRejectsUnsafePluginIDs(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		plugins  string
+		pluginID string
+		wantErr  string
+	}{
+		{name: "single path traversal", pluginID: "../echo", wantErr: "invalid plugin id"},
+		{name: "single slash", pluginID: "echo/test", wantErr: "invalid plugin id"},
+		{name: "single empty", pluginID: "", wantErr: "plugin id is required"},
+		{name: "multi path traversal", plugins: "../echo=/bin/true", wantErr: "invalid plugin id"},
+		{name: "multi slash", plugins: "echo/test=/bin/true", wantErr: "invalid plugin id"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := parsePlugins(tc.plugins, tc.pluginID, "/bin/true")
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("parsePlugins err = %v, want substring %q", err, tc.wantErr)
+			}
+		})
 	}
 }
 
@@ -52,64 +72,63 @@ func TestDaemonShutdownRemovesRuntimeArtifacts(t *testing.T) {
 	ctlBin := buildBinary(t, "rpcpluginctl", "./cmd/rpcpluginctl")
 	pluginBin := buildBinary(t, "rpcplugin-echo", "./cmd/rpcplugin-echo")
 
-	token, err := auth.NewToken()
-	if err != nil {
-		t.Fatalf("generate auth token: %v", err)
-	}
-
 	runtimeDir := t.TempDir()
 	cmd := exec.Command(daemonBin, "-runtime-dir", runtimeDir, "-plugin", pluginBin)
-	cmd.Env = append(os.Environ(), "RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE="+auth.Encode(token))
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("start daemon: %v", err)
 	}
 
-	_ = waitForStatus(t, ctlBin, runtimeDir)
+	_ = waitForHostStatus(t, ctlBin, runtimeDir)
 	stopDaemon(t, cmd)
 
 	for _, path := range []string{
 		filepath.Join(runtimeDir, "admin.sock"),
-		filepath.Join(runtimeDir, "echo.sock"),
-		filepath.Join(runtimeDir, "echo.auth"),
-			} {
+		filepath.Join(runtimeDir, "echo", "echo.sock"),
+		filepath.Join(runtimeDir, "echo", "echo.auth"),
+	} {
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			t.Fatalf("daemon shutdown left runtime artifact behind: %s err=%v", path, err)
 		}
 	}
 }
 
-func waitForStatus(t *testing.T, ctlBin, runtimeDir string) kernel.State {
+func waitForHostStatus(t *testing.T, ctlBin, runtimeDir string) kernel.HostState {
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		state, err := tryStatusCommand(ctlBin, runtimeDir, "status")
-		if err == nil {
+		state, err := tryHostStatusCommand(ctlBin, runtimeDir, "status")
+		if err == nil && len(state.Plugins) > 0 && state.Plugins[0].PID != 0 {
 			return state
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 	t.Fatal("timed out waiting for daemon status")
-	return kernel.State{}
+	return kernel.HostState{}
 }
 
-func runStatusCommand(t *testing.T, ctlBin, runtimeDir, subcommand string) kernel.State {
+func runRestartCommand(t *testing.T, ctlBin, runtimeDir, pluginID string) kernel.State {
 	t.Helper()
-	state, err := tryStatusCommand(ctlBin, runtimeDir, subcommand)
+	cmd := exec.Command(ctlBin, "-runtime-dir", runtimeDir, "-plugin-id", pluginID, "restart")
+	out, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("run %s: %v", subcommand, err)
+		t.Fatalf("run restart: %v\n%s", err, string(out))
+	}
+	var state kernel.State
+	if err := json.Unmarshal(out, &state); err != nil {
+		t.Fatalf("decode restart state: %v", err)
 	}
 	return state
 }
 
-func tryStatusCommand(ctlBin, runtimeDir, subcommand string) (kernel.State, error) {
+func tryHostStatusCommand(ctlBin, runtimeDir, subcommand string) (kernel.HostState, error) {
 	cmd := exec.Command(ctlBin, "-runtime-dir", runtimeDir, subcommand)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return kernel.State{}, err
+		return kernel.HostState{}, err
 	}
-	var state kernel.State
+	var state kernel.HostState
 	if err := json.Unmarshal(out, &state); err != nil {
-		return kernel.State{}, err
+		return kernel.HostState{}, err
 	}
 	return state, nil
 }
@@ -156,7 +175,7 @@ func buildBinary(t *testing.T, name, pkg string) string {
 	bin := filepath.Join(cacheDir, name)
 	binaryBuildMu.Unlock()
 
-	cmd := exec.Command("go", "build", "-o", bin, pkg)
+	cmd := exec.Command("go", "build", "-buildvcs=false", "-o", bin, pkg)
 	cmd.Dir = filepath.Clean(filepath.Join("..", ".."))
 	out, err := cmd.CombinedOutput()
 	if err != nil {

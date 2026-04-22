@@ -14,12 +14,29 @@ This document defines the logical API contract between the rpc_plugin_system ker
 
 ## Required methods
 
+### `Auth`
+Proves possession of the one-time bootstrap token for the current generation.
+
+Reports:
+- plugin id
+- version
+- generation id
+
+Rules:
+- the bootstrap token is one-time-use
+- successful auth spends the token for that generation
+- repeated auth attempts with the same token must not be accepted as a fresh bootstrap
+
 ### `Capabilities`
 Reports:
 - plugin id
 - version
 - generation id
 - capability list
+
+Rules:
+- optional methods must be advertised through capability reporting
+- capability names should be stable and documented
 
 ### `Heartbeat`
 Reports:
@@ -32,8 +49,23 @@ Reports:
 - last successful request time
 - recent error count
 
+The current v0.1.0 wire fields are:
+- `UptimeSeconds`
+- `Status`
+- `CurrentWorkCount`
+- `LastSuccessfulUnixSec`
+- `RecentErrorCount`
+
 ### `Shutdown`
 Requests graceful shutdown.
+
+For the substrate itself, the stable required wire methods are still the `TestPlugin.*` methods documented here.
+
+For public authors using `sdk/go/plugin`, the stable authoring path is:
+- load config with `LoadConfigFromEnv()`
+- build the minimal core with `NewTemplate(...)`
+- extend optional capabilities by implementing the matching optional interfaces
+- serve through `ServeWithConfig(...)`
 
 ## v0.1.0 test-plugin methods
 
@@ -55,10 +87,13 @@ Terminates the plugin process for crash/restart testing.
 - Generation id must match the generation that the kernel issued requests against.
 - Timeout is a kernel concern; plugins should not assume infinite request duration.
 - Plugins should be restart-safe and tolerate process replacement.
+- Required v0.1.0 RPC service/method names remain under the `TestPlugin.*` namespace for compatibility with the frozen substrate.
 
 ## Error semantics
 
 The kernel must treat these as failures:
+- auth failure
+- Linux peer credential verification failure on supported Linux runtime paths
 - method timeout
 - transport break
 - generation mismatch

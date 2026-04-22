@@ -1,14 +1,14 @@
 package testpluginapi
 
-// ServiceName is the exported RPC service name for the v0.1.0 test plugin.
-const ServiceName = "TestPlugin"
+import plugin "rpc_plugin_system/sdk/go/plugin"
 
 const (
-	MethodAuth         = ServiceName + ".Auth"
-	MethodCapabilities = ServiceName + ".Capabilities"
-	MethodHeartbeat    = ServiceName + ".Heartbeat"
-	MethodEcho         = ServiceName + ".Echo"
-	MethodSleep        = ServiceName + ".Sleep"
-	MethodCrash        = ServiceName + ".Crash"
-	MethodShutdown     = ServiceName + ".Shutdown"
+	ServiceName = plugin.ServiceName
+	MethodAuth = plugin.MethodAuth
+	MethodCapabilities = plugin.MethodCapabilities
+	MethodHeartbeat = plugin.MethodHeartbeat
+	MethodEcho = plugin.MethodEcho
+	MethodSleep = plugin.MethodSleep
+	MethodCrash = plugin.MethodCrash
+	MethodShutdown = plugin.MethodShutdown
 )
