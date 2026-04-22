@@ -14,12 +14,20 @@ The current codebase is a kernel-first substrate that now proves:
 - verbose first-class append-only kernel event logging
 - a small local admin/control CLI
 
-Current project direction:
-- v0.1.0 proved the initial kernel substrate
-- the current tree carries that substrate forward into the frozen multi-plugin v1 scope
-- memory-system work should begin only after the plugin substrate reaches v1.0
+## Release status
+
+Current stable release: `v1.0.0`
+
+What `v1.0.0` means here:
+- the standalone local plugin substrate has reached its frozen v1 scope
+- multi-plugin supervision, explicit routing, restart handling, and local operator control are part of the stable contract
+- the release is source-only, with compatibility/install/release discipline documented in `docs/compatibility.md`, `docs/install.md`, and `docs/release-promotion-checklist.md`
+
+Project context:
+- `v0.1.0` was the initial kernel proof
+- `v1.0.0` is the first stable standalone plugin substrate release
+- memory-system work should begin only after the plugin substrate reaches v1, which this release now does
 - the frozen v1 scope lives in `docs/v1-freeze.md`
-- compatibility, install, and release discipline now live explicitly in `docs/compatibility.md`, `docs/install.md`, and `docs/release-promotion-checklist.md`
 
 ## Project layout
 
@@ -136,7 +144,7 @@ if err != nil {
 	panic(err)
 }
 
-p := plugin.NewTemplate(cfg, "1.0.0-dev")
+p := plugin.NewTemplate(cfg, "1.0.0")
 
 if err := plugin.ServeWithConfig(cfg, p); err != nil {
 	panic(err)
@@ -160,7 +168,7 @@ func main() {
 		panic(err)
 	}
 
-	p := plugin.NewTemplate(cfg, "1.0.0-dev")
+	p := plugin.NewTemplate(cfg, "1.0.0")
 
 	if err := plugin.ServeWithConfig(cfg, p); err != nil {
 		panic(err)
