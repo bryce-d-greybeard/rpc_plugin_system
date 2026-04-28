@@ -116,3 +116,8 @@ Packaging discipline for `v1.0.0` means:
 - install/run instructions are explicit
 - branch promotion and release checks are explicit
 - public docs match the shipped source tree and behavior
+
+
+## Plugin path requirements
+
+Configured plugin executables must use absolute paths. Relative paths, bare command names, symlinks, directories, non-executable files, and group/world-writable executables are rejected.

@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"rpc_plugin_system/internal/testpluginapi"
 	plugin "rpc_plugin_system/sdk/go/plugin"
 )
 
@@ -28,7 +29,7 @@ func (p *echoPlugin) Crash(in plugin.CrashRequest, _ *plugin.Empty) error {
 
 func (p *echoPlugin) Shutdown(_ plugin.Empty, _ *plugin.Empty) error {
 	go func() {
-		if marker := os.Getenv("RPC_PLUGIN_SYSTEM_PLUGIN_SHUTDOWN_MARKER"); marker != "" {
+		if marker := os.Getenv(testpluginapi.ShutdownMarkerEnv); marker != "" {
 			_ = os.WriteFile(marker, []byte("shutdown\n"), 0o600)
 		}
 		time.Sleep(50 * time.Millisecond)

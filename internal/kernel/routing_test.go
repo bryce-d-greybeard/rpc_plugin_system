@@ -88,9 +88,8 @@ func TestRoutingRemainsTargetedWhenOtherPluginBecomesUnhealthy(t *testing.T) {
 	echoPlugin := buildPlugin(t)
 	failurePlugin := buildFailurePlugin(t)
 	runtimeDir := t.TempDir()
-	oldEnv := setEnvMap(t, map[string]string{
-		"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_CLOSE_ON_ECHO": "true",
-	})
+	behaviorPath := writeBehaviorConfig(t, runtimeDir, testpluginapi.Env{CloseOnEcho: true})
+	oldEnv := setEnvMap(t, map[string]string{testpluginapi.BehaviorConfigEnv: behaviorPath})
 	defer restoreEnvMap(oldEnv)
 
 	host, err := NewHost(HostConfig{

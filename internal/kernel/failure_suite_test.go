@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"rpc_plugin_system/internal/auth"
+	"rpc_plugin_system/internal/testpluginapi"
 )
 
 var (
@@ -46,23 +47,23 @@ func TestFailurePluginSuite(t *testing.T) {
 		name     string
 		plugin   string
 		pluginID string
-		env      map[string]string
+		behavior testpluginapi.Env
 		run      func(t *testing.T, m *Manager)
 	}{
 		{name: "happy-path", plugin: buildPlugin(t), pluginID: "echo", run: expectHealthyEcho},
-		{name: "auth-failure", plugin: buildFailurePlugin(t), pluginID: "failure", env: map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_FAIL_AUTH": "true"}, run: expectStartFailure},
-		{name: "identity-mismatch", plugin: buildFailurePlugin(t), pluginID: "failure", env: map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_ID": "not-failure"}, run: expectStartFailure},
-		{name: "generation-mismatch", plugin: buildFailurePlugin(t), pluginID: "failure", env: map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_GENERATION_OFFSET": "1"}, run: expectStartFailure},
-		{name: "capabilities-error", plugin: buildFailurePlugin(t), pluginID: "failure", env: map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_CAPABILITIES_MODE": "error"}, run: expectStartFailure},
-		{name: "capabilities-empty", plugin: buildFailurePlugin(t), pluginID: "failure", env: map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_CAPABILITIES_MODE": "empty"}, run: expectHealthyStart},
-		{name: "heartbeat-unhealthy", plugin: buildFailurePlugin(t), pluginID: "failure", env: map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_HEARTBEAT_STATUS": "unhealthy"}, run: expectUnhealthyHeartbeat},
-		{name: "heartbeat-error", plugin: buildFailurePlugin(t), pluginID: "failure", env: map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_HEARTBEAT_ERRORS": "1"}, run: expectHeartbeatError},
-		{name: "timeout", plugin: buildFailurePlugin(t), pluginID: "failure", env: map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_SLEEP_SCALE": "2"}, run: expectSleepTimeout},
-		{name: "mid-call-crash", plugin: buildFailurePlugin(t), pluginID: "failure", env: map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_CRASH_ON_ECHO": "true"}, run: expectEchoFailure},
-		{name: "shutdown-delay", plugin: buildFailurePlugin(t), pluginID: "failure", env: map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_SHUTDOWN_DELAY_MS": "500"}, run: expectKillWorks},
-		{name: "startup-failure-close-on-accept", plugin: buildFailurePlugin(t), pluginID: "failure", env: map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_CLOSE_ON_ACCEPT": "true"}, run: expectStartFailure},
-		{name: "transport-close-on-echo", plugin: buildFailurePlugin(t), pluginID: "failure", env: map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_CLOSE_ON_ECHO": "true"}, run: expectEchoSuccess},
-		{name: "restart-churn", plugin: buildFailurePlugin(t), pluginID: "failure", env: map[string]string{}, run: expectRestartChurn},
+		{name: "auth-failure", plugin: buildFailurePlugin(t), pluginID: "failure", behavior: testpluginapi.Env{FailAuth: true}, run: expectStartFailure},
+		{name: "identity-mismatch", plugin: buildFailurePlugin(t), pluginID: "failure", behavior: testpluginapi.Env{PluginID: "not-failure"}, run: expectStartFailure},
+		{name: "generation-mismatch", plugin: buildFailurePlugin(t), pluginID: "failure", behavior: testpluginapi.Env{GenerationOffset: 1}, run: expectStartFailure},
+		{name: "capabilities-error", plugin: buildFailurePlugin(t), pluginID: "failure", behavior: testpluginapi.Env{CapabilitiesMode: "error"}, run: expectStartFailure},
+		{name: "capabilities-empty", plugin: buildFailurePlugin(t), pluginID: "failure", behavior: testpluginapi.Env{CapabilitiesMode: "empty"}, run: expectHealthyStart},
+		{name: "heartbeat-unhealthy", plugin: buildFailurePlugin(t), pluginID: "failure", behavior: testpluginapi.Env{HeartbeatStatus: "unhealthy"}, run: expectUnhealthyHeartbeat},
+		{name: "heartbeat-error", plugin: buildFailurePlugin(t), pluginID: "failure", behavior: testpluginapi.Env{HeartbeatErrors: 1}, run: expectHeartbeatError},
+		{name: "timeout", plugin: buildFailurePlugin(t), pluginID: "failure", behavior: testpluginapi.Env{SleepScale: 2}, run: expectSleepTimeout},
+		{name: "mid-call-crash", plugin: buildFailurePlugin(t), pluginID: "failure", behavior: testpluginapi.Env{CrashOnEcho: true}, run: expectEchoFailure},
+		{name: "shutdown-delay", plugin: buildFailurePlugin(t), pluginID: "failure", behavior: testpluginapi.Env{ShutdownDelayMS: 500}, run: expectKillWorks},
+		{name: "startup-failure-close-on-accept", plugin: buildFailurePlugin(t), pluginID: "failure", behavior: testpluginapi.Env{CloseOnAccept: true}, run: expectStartFailure},
+		{name: "transport-close-on-echo", plugin: buildFailurePlugin(t), pluginID: "failure", behavior: testpluginapi.Env{CloseOnEcho: true}, run: expectEchoSuccess},
+		{name: "restart-churn", plugin: buildFailurePlugin(t), pluginID: "failure", run: expectRestartChurn},
 	}
 
 	for _, tc := range tests {
@@ -87,7 +88,8 @@ func TestFailurePluginSuite(t *testing.T) {
 			}
 			defer manager.Close()
 
-			oldEnv := setEnvMap(t, tc.env)
+			behaviorPath := writeBehaviorConfig(t, runtimeDir, tc.behavior)
+			oldEnv := setEnvMap(t, map[string]string{testpluginapi.BehaviorConfigEnv: behaviorPath})
 			os.Setenv("RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE", auth.Encode(token))
 			defer restoreEnvMap(oldEnv)
 			defer os.Unsetenv("RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE")
@@ -222,11 +224,8 @@ func expectRestartChurn(t *testing.T, m *Manager) {
 			t.Fatalf("restart %d: %v", i+1, err)
 		}
 		state := m.State()
-		if !state.Healthy {
-			t.Fatalf("restart %d did not return healthy state", i+1)
-		}
-		if state.GenerationID <= last.GenerationID {
-			t.Fatalf("restart %d generation did not advance: got %d want > %d", i+1, state.GenerationID, last.GenerationID)
+		if !state.Healthy || state.GenerationID <= last.GenerationID {
+			t.Fatalf("restart churn state invalid: prev=%+v next=%+v", last, state)
 		}
 		last = state
 	}
