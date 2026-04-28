@@ -89,10 +89,10 @@ func (p *failurePlugin) Crash(in plugin.CrashRequest, _ *plugin.Empty) error {
 
 func (p *failurePlugin) Shutdown(_ plugin.Empty, _ *plugin.Empty) error {
 	go func() {
-		if marker := os.Getenv("RPC_PLUGIN_SYSTEM_PLUGIN_SHUTDOWN_MARKER"); marker != "" {
+		if marker := os.Getenv(testpluginapi.ShutdownMarkerEnv); marker != "" {
 			_ = os.WriteFile(marker, []byte("shutdown\n"), 0o600)
 		}
-		time.Sleep(p.behavior.ShutdownDelay)
+		time.Sleep(p.behavior.ShutdownDelay())
 		os.Exit(0)
 	}()
 	return nil
@@ -118,7 +118,7 @@ func main() {
 		panic(err)
 	}
 	defer logger.Close()
-	behavior := testpluginapi.LoadEnv()
+	behavior := testpluginapi.LoadConfig()
 	_ = logger.Event(plugin.LogEvent{Event: plugin.EventPluginBootStarted, Message: "failure plugin process booting", Details: map[string]any{"behavior_version": behavior.Version}})
 	p := &failurePlugin{pluginID: cfg.PluginID, version: behavior.Version, generationID: cfg.GenerationID, startedAt: time.Now(), behavior: behavior}
 	if err := plugin.ServeWithConfig(cfg, p); err != nil {

@@ -45,7 +45,8 @@ func TestMixedFailureStormMaintainsIsolationAndCleansArtifacts(t *testing.T) {
 		t.Fatalf("manager steady: %v", err)
 	}
 
-	oldEnv := setEnvMap(t, map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_CLOSE_ON_ECHO": "true"})
+	behaviorPath := writeBehaviorConfig(t, runtimeDir, testpluginapi.Env{CloseOnEcho: true})
+	oldEnv := setEnvMap(t, map[string]string{testpluginapi.BehaviorConfigEnv: behaviorPath})
 	if err := chaos.Restart(); err != nil {
 		t.Fatalf("restart chaos into transport-break mode: %v", err)
 	}
@@ -60,7 +61,8 @@ func TestMixedFailureStormMaintainsIsolationAndCleansArtifacts(t *testing.T) {
 		t.Fatalf("recover chaos after transport break: %v", err)
 	}
 
-	oldEnv = setEnvMap(t, map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_HEARTBEAT_ERRORS": "2"})
+	behaviorPath = writeBehaviorConfig(t, runtimeDir, testpluginapi.Env{HeartbeatErrors: 2})
+	oldEnv = setEnvMap(t, map[string]string{testpluginapi.BehaviorConfigEnv: behaviorPath})
 	ctx, cancel := context.WithTimeout(context.Background(), 250*time.Millisecond)
 	go chaos.MonitorLoop(ctx)
 	<-ctx.Done()
@@ -235,9 +237,8 @@ func TestMixedFailureStormSteadyPluginStateStaysHealthy(t *testing.T) {
 	echoPlugin := buildPlugin(t)
 	failurePlugin := buildFailurePlugin(t)
 	runtimeDir := t.TempDir()
-	oldEnv := setEnvMap(t, map[string]string{
-		"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_CLOSE_ON_ECHO": "true",
-	})
+	behaviorPath := writeBehaviorConfig(t, runtimeDir, testpluginapi.Env{CloseOnEcho: true})
+	oldEnv := setEnvMap(t, map[string]string{testpluginapi.BehaviorConfigEnv: behaviorPath})
 	defer restoreEnvMap(oldEnv)
 
 	host, err := NewHost(HostConfig{

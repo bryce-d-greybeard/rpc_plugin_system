@@ -16,6 +16,8 @@ Current v0.1.0 startup environment:
 - `RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION`
 - `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
 
+No other daemon environment variables are inherited by the plugin process.
+
 ## Transport contract
 
 - Unix domain sockets only in v0.1.0

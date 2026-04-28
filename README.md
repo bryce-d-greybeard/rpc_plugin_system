@@ -197,11 +197,13 @@ That produces:
 
 ### Step 1b: understand the public plugin startup contract
 
-A plugin launched by the kernel receives these required environment variables:
+A plugin launched by the kernel receives only these required environment variables:
 - `RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET`
 - `RPC_PLUGIN_SYSTEM_PLUGIN_ID`
 - `RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION`
 - `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
+
+The daemon environment is not inherited by the plugin. Plugin authors must not depend on arbitrary parent environment variables.
 
 If one is missing or malformed, `plugin.LoadConfigFromEnv()` now fails with an explicit author-facing startup error naming the missing variable.
 
@@ -218,7 +220,7 @@ In one terminal:
 cd /tank/development/rpc_plugin_system
 .tmp-bin/rpcplugind \
   -runtime-dir /tmp/rpc_plugin_system-demo \
-  -plugin ./.tmp-bin/rpcplugin-echo \
+  -plugin $(pwd)/.tmp-bin/rpcplugin-echo \
   -plugin-id echo
 ```
 
@@ -488,3 +490,11 @@ Current honest status:
 - the local hardening story is real for the narrow Linux-first scope
 - the public docs and operator story are much closer to the code than they were before
 - the remaining work is mostly release-discipline polish, trust-boundary clarity, and final coherence review rather than core-mechanism rescue
+
+## Security hardening notes
+
+- plugin executable paths must be absolute
+- plugin executable paths must not be symlinks
+- plugin executable paths must point to regular executable files
+- group/world-writable plugin executables are rejected
+- runtime directories are private trust boundaries and must not be symlinks

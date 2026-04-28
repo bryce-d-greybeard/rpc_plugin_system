@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"rpc_plugin_system/internal/eventlog"
+	"rpc_plugin_system/internal/testpluginapi"
 )
 
 func TestRestartStormMaintainsMonotonicGenerationAndHealthyState(t *testing.T) {
@@ -102,7 +103,8 @@ func TestTransportBreakStormRecoversCleanly(t *testing.T) {
 	pluginBin := buildFailurePlugin(t)
 	runtimeDir := t.TempDir()
 	logPath := filepath.Join(runtimeDir, "events.jsonl")
-	oldEnv := setEnvMap(t, map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_CLOSE_ON_ECHO": "true"})
+	behaviorPath := writeBehaviorConfig(t, runtimeDir, testpluginapi.Env{CloseOnEcho: true})
+	oldEnv := setEnvMap(t, map[string]string{testpluginapi.BehaviorConfigEnv: behaviorPath})
 	defer restoreEnvMap(oldEnv)
 
 	manager, err := New(Config{
@@ -145,7 +147,8 @@ func TestMonitorLoopSurvivesRepeatedFailureRecovery(t *testing.T) {
 	pluginBin := buildFailurePlugin(t)
 	runtimeDir := t.TempDir()
 	logPath := filepath.Join(runtimeDir, "events.jsonl")
-	oldEnv := setEnvMap(t, map[string]string{"RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_HEARTBEAT_ERRORS": "10"})
+	behaviorPath := writeBehaviorConfig(t, runtimeDir, testpluginapi.Env{HeartbeatErrors: 10})
+	oldEnv := setEnvMap(t, map[string]string{testpluginapi.BehaviorConfigEnv: behaviorPath})
 	defer restoreEnvMap(oldEnv)
 
 	manager, err := New(Config{

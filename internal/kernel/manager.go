@@ -181,12 +181,18 @@ func (m *Manager) Start() error {
 	}
 
 	cmd := exec.Command(m.cfg.PluginPath)
-	cmd.Env = append(os.Environ(),
-		"RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET="+socketPath,
-		"RPC_PLUGIN_SYSTEM_PLUGIN_ID="+m.cfg.PluginID,
+	cmd.Env = []string{
+		"RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET=" + socketPath,
+		"RPC_PLUGIN_SYSTEM_PLUGIN_ID=" + m.cfg.PluginID,
 		fmt.Sprintf("RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION=%d", generation),
-		"RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE="+authPath,
-	)
+		"RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE=" + authPath,
+	}
+	if behaviorPath := os.Getenv(testpluginapi.BehaviorConfigEnv); behaviorPath != "" {
+		cmd.Env = append(cmd.Env, testpluginapi.BehaviorConfigEnv+"="+behaviorPath)
+	}
+	if shutdownMarker := os.Getenv(testpluginapi.ShutdownMarkerEnv); shutdownMarker != "" {
+		cmd.Env = append(cmd.Env, testpluginapi.ShutdownMarkerEnv+"="+shutdownMarker)
+	}
 	if err := cmd.Start(); err != nil {
 		m.rollbackGeneration(generation)
 		wrapped := fmt.Errorf("start plugin: %w", err)
