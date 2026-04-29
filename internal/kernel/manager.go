@@ -324,12 +324,12 @@ func (m *Manager) Start() error {
 			m.cleanupFailedStart(cmd, client, generation, "auth session key missing", err)
 			return err
 		}
-		if len(sess.SessionRootKey) == 0 {
-			err := fmt.Errorf("session root key missing after bootstrap validation")
-			m.cleanupFailedStart(cmd, client, generation, "auth session root key missing", err)
+		if sess.SessionKeys == nil || len(sess.SessionKeys.SendKey) == 0 {
+			err := fmt.Errorf("refreshed session keys missing after bootstrap validation")
+			m.cleanupFailedStart(cmd, client, generation, "auth refreshed session keys missing", err)
 			return err
 		}
-		if !auth.EqualToken(authResp.SessionKey, sess.SessionRootKey) {
+		if !auth.EqualToken(authResp.SessionKey, sess.SessionKeys.SendKey) {
 			err := fmt.Errorf("session key mismatch")
 			m.cleanupFailedStart(cmd, client, generation, "auth session key mismatch", err)
 			return err

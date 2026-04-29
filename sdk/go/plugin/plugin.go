@@ -85,6 +85,7 @@ type Config struct {
 	BootstrapEndpoint    string
 	BootstrapKeyPair     *bootstrap.KeyPair
 	BootstrapSessionKey  []byte
+	BootstrapSessionKeys *bootstrap.Keys
 }
 
 // ErrMissingEnv reports one required plugin startup environment variable that was not set.
@@ -193,6 +194,14 @@ func performBootstrapHandshake(cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("derive plugin session root key: %w", err)
 	}
+	keys, err := bootstrap.NewKeys(rootKey)
+	if err != nil {
+		return fmt.Errorf("derive plugin initial session keys: %w", err)
+	}
+	keys, err = bootstrap.Rekey(keys)
+	if err != nil {
+		return fmt.Errorf("refresh plugin session keys: %w", err)
+	}
 	respWriter, err := os.OpenFile(parts[1], os.O_WRONLY, 0)
 	if err != nil {
 		return fmt.Errorf("open bootstrap response fifo: %w", err)
@@ -203,7 +212,8 @@ func performBootstrapHandshake(cfg *Config) error {
 		return err
 	}
 	cfg.BootstrapKeyPair = kp
-	cfg.BootstrapSessionKey = rootKey
+	cfg.BootstrapSessionKey = keys.SendKey
+	cfg.BootstrapSessionKeys = keys
 	return nil
 }
 

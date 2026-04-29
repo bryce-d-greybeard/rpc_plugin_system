@@ -82,8 +82,17 @@ func ValidateResponse(session *Session, response Response, now time.Time) error 
 	if err != nil {
 		return fmt.Errorf("derive root key: %w", err)
 	}
+	keys, err := NewKeys(rootKey)
+	if err != nil {
+		return fmt.Errorf("derive initial session keys: %w", err)
+	}
+	keys, err = Rekey(keys)
+	if err != nil {
+		return fmt.Errorf("refresh session keys: %w", err)
+	}
 	session.PluginPublicKey = append([]byte(nil), response.PluginPublicKey...)
 	session.SharedSecret = sharedSecret
 	session.SessionRootKey = rootKey
+	session.SessionKeys = keys
 	return nil
 }

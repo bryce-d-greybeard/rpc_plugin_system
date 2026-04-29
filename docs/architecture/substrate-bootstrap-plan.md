@@ -13,9 +13,9 @@ Current properties:
 - peer credentials on the Unix socket are checked
 
 This is already a real bootstrap, but the boundary is still too thin:
-- bootstrap authorization is only a bearer token
-- no derived session key or refresh model exists
-- transport is filesystem-token-file based rather than explicit bootstrap endpoint based
+- bootstrap authorization still leans on a bearer token in the transitional auth step
+- session derivation now exists, but encrypted steady-state RPC and immediate refresh policy still need to be fully finished
+- transport was filesystem-token-file based rather than explicit bootstrap endpoint based, though the live POSIX path now uses explicit FIFO endpoints
 - Windows transport parity is not part of the contract
 - bootstrap/auth/session concerns are not separated clearly enough for future capability scoping
 
@@ -150,8 +150,14 @@ Track:
 
 Start with simple generation-based rekey.
 
+Current direction after the live DH cutover:
+- derive a real bootstrap shared secret during startup
+- immediately refresh key material before steady-state RPC trust is granted
+- treat the bootstrap token as bootstrap-only, not as the lasting trust root
+- move toward distinct keys for encrypted RPC communication rather than a single placeholder session blob
+
 ### Patch 7: collapse legacy token-only auth path
-Once bootstrap session establishment is real and tested, remove or sharply reduce the old token-only `Auth(Token)` role so the one-time token is bootstrap authorization only, not the lasting session trust mechanism.
+Once bootstrap session establishment and immediate post-bootstrap refresh are real and tested, remove or sharply reduce the old token-only `Auth(Token)` role so the one-time token is bootstrap authorization only, not the lasting session trust mechanism.
 
 ## Threat model for first pass
 
@@ -180,8 +186,9 @@ Before code lands beyond scaffolding, decide:
 ## Recommendation
 
 Do the simple thing:
-- preserve the existing one-time-token substrate baseline
+- preserve the existing one-time-token substrate baseline only for bootstrap authorization
 - add a real bootstrap transport seam
 - bind one-time tokens into a substrate-owned DH session bootstrap
-- add refresh scaffolding
+- immediately refresh derived key material before steady-state trust
+- use refreshed keys as the basis for encrypted RPC communication
 - keep the patch stack narrow and reviewable

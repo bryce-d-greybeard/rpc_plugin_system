@@ -15,7 +15,7 @@ This document defines the logical API contract between the rpc_plugin_system ker
 ## Required methods
 
 ### `Auth`
-Proves possession of the one-time bootstrap token for the current generation after the transport-backed bootstrap exchange.
+Finalizes the transitional handoff from bootstrap authorization into refreshed session key material for the current generation.
 
 Request fields:
 - `Token`
@@ -34,6 +34,8 @@ Rules:
 - successful auth spends the token for that generation
 - repeated auth attempts with the same token must not be accepted as a fresh bootstrap
 - session fields are generation-scoped and must not be replayed across generations
+- after bootstrap completes, the token is no longer the lasting trust anchor
+- session key material returned here should already reflect an immediate post-bootstrap refresh
 
 ### `Capabilities`
 Reports:
@@ -129,7 +131,9 @@ Current live shape:
 - plugin reads the generation-scoped auth token file
 - plugin opens the bootstrap request FIFO and reads one bootstrap record
 - plugin validates plugin id, session id, and encoded token
-- plugin opens the bootstrap response FIFO and writes one bootstrap response
+- plugin derives bootstrap session material from the substrate public key and its own ephemeral keypair
+- plugin opens the bootstrap response FIFO and writes one bootstrap response carrying plugin public key material
 - plugin then proceeds to normal RPC serving and `Auth`
+- kernel and plugin immediately refresh the derived session material before steady-state RPC trust is granted
 
 The bootstrap exchange is kernel-owned substrate behavior. Public plugin authors using `sdk/go/plugin` should normally consume it through `LoadConfigFromEnv()` and `ServeWithConfig(...)`, not by reimplementing the handshake manually.

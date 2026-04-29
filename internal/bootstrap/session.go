@@ -21,6 +21,7 @@ type Session struct {
 	PluginPublicKey   []byte
 	SharedSecret      []byte
 	SessionRootKey    []byte
+	SessionKeys       *Keys
 }
 
 type Manager struct {
@@ -116,5 +117,12 @@ func cloneSession(s *Session) *Session {
 	cp.PluginPublicKey = append([]byte(nil), s.PluginPublicKey...)
 	cp.SharedSecret = append([]byte(nil), s.SharedSecret...)
 	cp.SessionRootKey = append([]byte(nil), s.SessionRootKey...)
+	if s.SessionKeys != nil {
+		keysCopy := *s.SessionKeys
+		keysCopy.RootKey = append([]byte(nil), s.SessionKeys.RootKey...)
+		keysCopy.SendKey = append([]byte(nil), s.SessionKeys.SendKey...)
+		keysCopy.RecvKey = append([]byte(nil), s.SessionKeys.RecvKey...)
+		cp.SessionKeys = &keysCopy
+	}
 	return &cp
 }

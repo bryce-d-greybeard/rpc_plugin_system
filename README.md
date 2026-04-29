@@ -7,7 +7,8 @@ The current codebase is a kernel-first substrate that now proves:
 - per-plugin runtime isolation and explicit plugin-id routing
 - Unix socket RPC transport
 - transport-backed bootstrap session establishment before steady-state RPC trust
-- one-time bootstrap token trust on startup, enforced before non-auth RPC methods are served
+- one-time bootstrap token trust on startup, used only for bootstrap authorization
+- immediate post-bootstrap session-key refresh before steady-state trust
 - Linux peer credential verification on startup
 - heartbeat and health reporting
 - timeout handling and poisoned-client teardown
@@ -107,7 +108,7 @@ import plugin "rpc_plugin_system/sdk/go/plugin"
 
 That SDK is the intended public Go authoring surface. It provides:
 - bootstrap config loading from env
-- bootstrap session env loading and one-time token auth handling
+- bootstrap session env loading, DH session derivation, and transitional auth handling
 - RPC service/method constants
 - request/response types
 - adapter-based optional capability registration

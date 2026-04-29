@@ -77,4 +77,7 @@ func TestValidateResponse(t *testing.T) {
 	if len(s.SessionRootKey) == 0 {
 		t.Fatal("SessionRootKey missing")
 	}
+	if s.SessionKeys == nil || len(s.SessionKeys.SendKey) == 0 || s.SessionKeys.Generation != 2 {
+		t.Fatal("refreshed SessionKeys missing")
+	}
 }

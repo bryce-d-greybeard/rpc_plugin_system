@@ -42,12 +42,13 @@ The auth token file is generation-scoped. The kernel now writes one auth file pe
 5. plugin reads the bootstrap session id and endpoint from the startup env when present
 6. plugin completes the bootstrap record/response exchange on the bootstrap transport before normal RPC trust is established
 7. on Linux v1 paths, the kernel also verifies peer credentials through the runtime adapter before trusting the connection
-8. plugin proves the token once through the `Auth` RPC method
-9. `AuthRequest` may carry `SessionID` and `PluginPublicKey`
-10. `AuthResponse` may carry `SessionID` and `SessionKey` for the established bootstrap session
+8. plugin proves the bootstrap transcript once through the transitional `Auth` RPC method
+9. `AuthRequest` carries `SessionID` and plugin bootstrap public key material when session bootstrap is enabled
+10. `AuthResponse` carries `SessionID` and refreshed session key material derived from the bootstrap exchange
 11. kernel verifies exact token match, including decode/compare of the textual bootstrap token representation on the bootstrap wire
-12. kernel removes the auth token file after successful bootstrap
-13. only then does the instance qualify as trusted
+12. the one-time auth token is bootstrap-only and must not remain the long-lived trust anchor after bootstrap completes
+13. kernel removes the auth token file after successful bootstrap
+14. only then does the instance qualify as trusted
 
 ## Generation contract
 
@@ -115,6 +116,6 @@ Required bootstrap response fields:
 - plugin id
 - session id
 - token echoed back as encoded text on the bootstrap wire
-- plugin public key bytes or placeholder session bootstrap key material, depending on implementation stage
+- plugin public key bytes
 
-This bootstrap exchange is additive to the existing RPC `Auth` method. The token-only `Auth` step is still present for compatibility, but it is no longer the whole startup story.
+The bootstrap exchange establishes the initial shared secret. Before steady-state RPC trust is granted, the substrate immediately refreshes key material so the one-time token is bootstrap-only and not the lasting trust root.
