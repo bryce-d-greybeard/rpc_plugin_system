@@ -5,7 +5,21 @@ import (
 	"io"
 	"net"
 	"testing"
+	"time"
 )
+
+func TestSecureConnRekeyBoundaries(t *testing.T) {
+	policy := DefaultRekeyPolicy()
+	if err := checkRekeyBoundary(policy, time.Now().UTC().Add(-61*time.Minute), 0, 0, 0); err == nil {
+		t.Fatal("expected age limit error")
+	}
+	if err := checkRekeyBoundary(policy, time.Now().UTC(), policy.MaxFramesPerDirection, 0, 0); err == nil {
+		t.Fatal("expected frame limit error")
+	}
+	if err := checkRekeyBoundary(policy, time.Now().UTC(), 0, policy.MaxBytesPerDirection, 1); err == nil {
+		t.Fatal("expected byte limit error")
+	}
+}
 
 func TestSecureConnRoundTrip(t *testing.T) {
 	root := bytes.Repeat([]byte{0x42}, RootKeySize)

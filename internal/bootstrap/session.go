@@ -10,6 +10,52 @@ import (
 	"rpc_plugin_system/internal/auth"
 )
 
+func zeroBytes(b []byte) {
+	for i := range b {
+		b[i] = 0
+	}
+}
+
+func ZeroBytes(b []byte) {
+	zeroBytes(b)
+}
+
+func zeroKeyPair(kp *KeyPair) {
+	if kp == nil {
+		return
+	}
+	kp.Private = nil
+	zeroBytes(kp.Public)
+}
+
+func zeroKeys(keys *Keys) {
+	if keys == nil {
+		return
+	}
+	zeroBytes(keys.RootKey)
+	zeroBytes(keys.SendKey)
+	zeroBytes(keys.RecvKey)
+	keys.Generation = 0
+}
+
+func zeroSessionSecrets(s *Session) {
+	if s == nil {
+		return
+	}
+	zeroBytes(s.Token)
+	zeroBytes(s.PluginPublicKey)
+	zeroBytes(s.SharedSecret)
+	zeroBytes(s.SessionRootKey)
+	zeroKeyPair(s.SubstrateKeyPair)
+	zeroKeys(s.SessionKeys)
+	s.Token = nil
+	s.PluginPublicKey = nil
+	s.SharedSecret = nil
+	s.SessionRootKey = nil
+	s.SubstrateKeyPair = nil
+	s.SessionKeys = nil
+}
+
 type Session struct {
 	PluginID          string
 	SessionID         string
@@ -84,6 +130,7 @@ func (m *Manager) Consume(pluginID, sessionID string, token []byte, now time.Tim
 		return nil, fmt.Errorf("plugin id mismatch")
 	}
 	if now.After(s.ExpiresAt) {
+		zeroSessionSecrets(s)
 		delete(m.sessions, sessionID)
 		return nil, fmt.Errorf("session expired")
 	}
@@ -100,7 +147,10 @@ func (m *Manager) Consume(pluginID, sessionID string, token []byte, now time.Tim
 func (m *Manager) Delete(sessionID string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	delete(m.sessions, sessionID)
+	if s, ok := m.sessions[sessionID]; ok {
+		zeroSessionSecrets(s)
+		delete(m.sessions, sessionID)
+	}
 }
 
 func newSessionID() (string, error) {

@@ -8,12 +8,10 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 )
 
-const (
-	maxSecureFrameSize  = 16 << 20
-	maxSecureFrameCount = 1 << 20
-)
+const maxSecureFrameSize = 16 << 20
 
 type secureConn struct {
 	net.Conn
@@ -25,11 +23,13 @@ func NewSecureConn(conn net.Conn, writeKey, readKey []byte) (net.Conn, error) {
 	if conn == nil {
 		return nil, fmt.Errorf("conn is required")
 	}
-	writer, err := newSecureWriter(conn, writeKey, nil)
+	policy := DefaultRekeyPolicy()
+	startedAt := time.Now().UTC()
+	writer, err := newSecureWriter(conn, writeKey, nil, policy, startedAt)
 	if err != nil {
 		return nil, err
 	}
-	reader, err := newSecureReader(conn, readKey, nil)
+	reader, err := newSecureReader(conn, readKey, nil, policy, startedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -40,36 +40,42 @@ func (c *secureConn) Read(p []byte) (int, error)  { return c.reader.Read(p) }
 func (c *secureConn) Write(p []byte) (int, error) { return c.writer.Write(p) }
 
 type secureReader struct {
-	r    io.Reader
-	aead cipher.AEAD
-	aad  []byte
-	mu   sync.Mutex
-	seq  uint64
-	buf  []byte
+	r         io.Reader
+	aead      cipher.AEAD
+	aad       []byte
+	policy    RekeyPolicy
+	startedAt time.Time
+	mu        sync.Mutex
+	seq       uint64
+	bytesRead uint64
+	buf       []byte
 }
 
 type secureWriter struct {
-	w    io.Writer
-	aead cipher.AEAD
-	aad  []byte
-	mu   sync.Mutex
-	seq  uint64
+	w            io.Writer
+	aead         cipher.AEAD
+	aad          []byte
+	policy       RekeyPolicy
+	startedAt    time.Time
+	mu           sync.Mutex
+	seq          uint64
+	bytesWritten uint64
 }
 
-func newSecureReader(r io.Reader, key []byte, aad []byte) (*secureReader, error) {
+func newSecureReader(r io.Reader, key []byte, aad []byte, policy RekeyPolicy, startedAt time.Time) (*secureReader, error) {
 	aead, err := newAEAD(key)
 	if err != nil {
 		return nil, err
 	}
-	return &secureReader{r: r, aead: aead, aad: append([]byte(nil), aad...)}, nil
+	return &secureReader{r: r, aead: aead, aad: append([]byte(nil), aad...), policy: policy, startedAt: startedAt}, nil
 }
 
-func newSecureWriter(w io.Writer, key []byte, aad []byte) (*secureWriter, error) {
+func newSecureWriter(w io.Writer, key []byte, aad []byte, policy RekeyPolicy, startedAt time.Time) (*secureWriter, error) {
 	aead, err := newAEAD(key)
 	if err != nil {
 		return nil, err
 	}
-	return &secureWriter{w: w, aead: aead, aad: append([]byte(nil), aad...)}, nil
+	return &secureWriter{w: w, aead: aead, aad: append([]byte(nil), aad...), policy: policy, startedAt: startedAt}, nil
 }
 
 func newAEAD(key []byte) (cipher.AEAD, error) {
@@ -101,8 +107,8 @@ func (r *secureReader) Read(p []byte) (int, error) {
 }
 
 func (r *secureReader) fill() error {
-	if r.seq >= maxSecureFrameCount {
-		return fmt.Errorf("secure transport rekey required")
+	if err := r.checkRekeyBoundary(0); err != nil {
+		return err
 	}
 	var lenBuf [4]byte
 	if _, err := io.ReadFull(r.r, lenBuf[:]); err != nil {
@@ -121,6 +127,7 @@ func (r *secureReader) fill() error {
 		return fmt.Errorf("open secure frame: %w", err)
 	}
 	r.seq++
+	r.bytesRead += uint64(len(plain))
 	r.buf = plain
 	return nil
 }
@@ -128,11 +135,12 @@ func (r *secureReader) fill() error {
 func (w *secureWriter) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if w.seq >= maxSecureFrameCount {
-		return 0, fmt.Errorf("secure transport rekey required")
+	if err := w.checkRekeyBoundary(uint64(len(p))); err != nil {
+		return 0, err
 	}
 	sealed := w.aead.Seal(nil, nonceForSeq(w.seq), p, w.aad)
 	w.seq++
+	w.bytesWritten += uint64(len(p))
 	if len(sealed) > maxSecureFrameSize {
 		return 0, fmt.Errorf("secure frame too large: %d", len(sealed))
 	}
@@ -167,11 +175,13 @@ func NewLabeledSecureConn(conn net.Conn, writeKey, readKey []byte, connectionID 
 	if conn == nil {
 		return nil, fmt.Errorf("conn is required")
 	}
-	writer, err := newSecureWriter(conn, derivedWriteKey, writeAAD)
+	policy := DefaultRekeyPolicy()
+	startedAt := time.Now().UTC()
+	writer, err := newSecureWriter(conn, derivedWriteKey, writeAAD, policy, startedAt)
 	if err != nil {
 		return nil, err
 	}
-	reader, err := newSecureReader(conn, derivedReadKey, readAAD)
+	reader, err := newSecureReader(conn, derivedReadKey, readAAD, policy, startedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -180,4 +190,26 @@ func NewLabeledSecureConn(conn net.Conn, writeKey, readKey []byte, connectionID 
 
 func secureAAD(pluginID string, generationID uint64, sessionID string, connectionID uint64, direction string) []byte {
 	return []byte(fmt.Sprintf("rpc_plugin_system/secure/v1/%s/%d/%s/%d/%s", pluginID, generationID, sessionID, connectionID, direction))
+}
+
+func (r *secureReader) checkRekeyBoundary(nextBytes uint64) error {
+	return checkRekeyBoundary(r.policy, r.startedAt, r.seq, r.bytesRead, nextBytes)
+}
+
+func (w *secureWriter) checkRekeyBoundary(nextBytes uint64) error {
+	return checkRekeyBoundary(w.policy, w.startedAt, w.seq, w.bytesWritten, nextBytes)
+}
+
+func checkRekeyBoundary(policy RekeyPolicy, startedAt time.Time, seq uint64, totalBytes uint64, nextBytes uint64) error {
+	now := time.Now().UTC()
+	if policy.MaxConnectionAge > 0 && !startedAt.IsZero() && now.Sub(startedAt) >= policy.MaxConnectionAge {
+		return fmt.Errorf("secure transport rekey required: age limit")
+	}
+	if policy.MaxFramesPerDirection > 0 && seq >= policy.MaxFramesPerDirection {
+		return fmt.Errorf("secure transport rekey required: frame limit")
+	}
+	if policy.MaxBytesPerDirection > 0 && nextBytes > 0 && totalBytes > policy.MaxBytesPerDirection-nextBytes {
+		return fmt.Errorf("secure transport rekey required: byte limit")
+	}
+	return nil
 }

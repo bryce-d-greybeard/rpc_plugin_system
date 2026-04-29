@@ -1,6 +1,22 @@
 package bootstrap
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
+
+func TestDefaultRekeyPolicy(t *testing.T) {
+	policy := DefaultRekeyPolicy()
+	if policy.MaxFramesPerDirection != 1<<32 {
+		t.Fatalf("MaxFramesPerDirection = %d", policy.MaxFramesPerDirection)
+	}
+	if policy.MaxBytesPerDirection != 32<<30 {
+		t.Fatalf("MaxBytesPerDirection = %d", policy.MaxBytesPerDirection)
+	}
+	if policy.MaxConnectionAge != 60*time.Minute {
+		t.Fatalf("MaxConnectionAge = %s", policy.MaxConnectionAge)
+	}
+}
 
 func TestRekeyAdvancesGeneration(t *testing.T) {
 	root := make([]byte, RootKeySize)

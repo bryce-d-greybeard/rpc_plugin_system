@@ -270,7 +270,7 @@ func (m *Manager) Start() error {
 		GenerationID: generation,
 		PID:          cmd.Process.Pid,
 		SocketPath:   socketPath,
-		Message:      "authenticating plugin bootstrap token",
+		Message:      "verifying plugin startup continuity on secure channel",
 	})
 	var authResp testpluginapi.AuthResponse
 	if err := m.call(client, generation, testpluginapi.MethodAuth, testpluginapi.AuthRequest{Token: string(token), SessionID: sess.SessionID, PluginPublicKey: append([]byte(nil), sess.PluginPublicKey...)}, &authResp); err != nil {

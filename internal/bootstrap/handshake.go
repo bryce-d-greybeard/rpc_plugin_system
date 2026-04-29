@@ -88,11 +88,19 @@ func ValidateResponse(session *Session, response Response, now time.Time) error 
 	}
 	keys, err = Rekey(keys)
 	if err != nil {
+		zeroBytes(sharedSecret)
+		zeroBytes(rootKey)
 		return fmt.Errorf("refresh session keys: %w", err)
 	}
+	oldShared := session.SharedSecret
+	oldRoot := session.SessionRootKey
+	oldKeys := session.SessionKeys
 	session.PluginPublicKey = append([]byte(nil), response.PluginPublicKey...)
 	session.SharedSecret = sharedSecret
 	session.SessionRootKey = rootKey
 	session.SessionKeys = keys
+	zeroBytes(oldShared)
+	zeroBytes(oldRoot)
+	zeroKeys(oldKeys)
 	return nil
 }

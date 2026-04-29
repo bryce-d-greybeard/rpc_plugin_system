@@ -193,7 +193,8 @@ func performBootstrapHandshake(cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("derive plugin shared secret: %w", err)
 	}
-	rootKey, err := bootstrap.DeriveRootKey(sharedSecret, []byte(cfg.AuthToken), cfg.PluginID, cfg.BootstrapSessionID)
+	authTokenBytes := []byte(cfg.AuthToken)
+	rootKey, err := bootstrap.DeriveRootKey(sharedSecret, authTokenBytes, cfg.PluginID, cfg.BootstrapSessionID)
 	if err != nil {
 		return fmt.Errorf("derive plugin session root key: %w", err)
 	}
@@ -205,6 +206,7 @@ func performBootstrapHandshake(cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("refresh plugin session keys: %w", err)
 	}
+	bootstrap.ZeroBytes(authTokenBytes)
 	respWriter, err := os.OpenFile(parts[1], os.O_WRONLY, 0)
 	if err != nil {
 		return fmt.Errorf("open bootstrap response fifo: %w", err)

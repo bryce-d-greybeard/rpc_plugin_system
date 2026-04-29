@@ -5,7 +5,28 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"strconv"
+	"time"
 )
+
+const (
+	DefaultMaxFramesPerDirection uint64 = 1 << 32
+	DefaultMaxBytesPerDirection  uint64 = 32 << 30
+	DefaultMaxConnectionAge             = 60 * time.Minute
+)
+
+type RekeyPolicy struct {
+	MaxFramesPerDirection uint64
+	MaxBytesPerDirection  uint64
+	MaxConnectionAge      time.Duration
+}
+
+func DefaultRekeyPolicy() RekeyPolicy {
+	return RekeyPolicy{
+		MaxFramesPerDirection: DefaultMaxFramesPerDirection,
+		MaxBytesPerDirection:  DefaultMaxBytesPerDirection,
+		MaxConnectionAge:      DefaultMaxConnectionAge,
+	}
+}
 
 type Keys struct {
 	Generation uint64
