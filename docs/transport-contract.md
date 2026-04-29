@@ -71,7 +71,10 @@ Current frame format:
 2. ciphertext bytes
 
 Ciphertext contents:
-- AEAD-sealed plaintext RPC bytes for that write call
+- AEAD-sealed transport packet bytes
+- packet byte `0` is the transport packet type
+- data packet type `0` carries one wrapped RPC write as the remaining bytes
+- rekey packet type `1` carries the next unsigned 64-bit generation for that direction
 - no extra outer metadata bytes are currently appended beyond the ciphertext itself
 
 Authenticated associated data is still supplied to AEAD.
@@ -131,10 +134,12 @@ Current live policy is intentionally simple.
 
 - both sides perform an immediate post-bootstrap refresh before steady-state trust
 - each wrapped connection may carry at most `1 << 32` encrypted frames per direction under one transport-key generation
-- each wrapped connection may carry at most `32 GiB` of plaintext per direction under one transport-key generation
+- each wrapped connection may carry at most `32 GiB` of transport-packet plaintext per direction under one transport-key generation
 - each wrapped connection may live at most `60m` under one transport-key generation
-- when any bound is reached, the transport fails closed with `secure transport rekey required: <reason>`
-- the current implementation treats that as a reconnect/restart boundary rather than doing in-band seamless rekey negotiation
+- when the next application write would cross a bound, the writer first sends an in-band rekey packet under the current directional key
+- that rekey packet advances only that direction and causes both peers to derive the next directional transport key as `HKDF-SHA256(current-transport-key, info="rpc_plugin_system/transport-rekey/<direction-label>/<next-generation>")`
+- after a successful rekey packet, that direction resets its sequence number, byte counter, and age timer and resumes application traffic without reconnecting or restarting the plugin
+- if there is not enough remaining frame or byte budget to send the rekey packet itself, or if age has already expired before rekey traffic can be exchanged, the transport still fails closed with `secure transport rekey required: <reason>`
 
 This is not fancy, but it is explicit and inspectable.
 
@@ -148,7 +153,7 @@ Hard failures include:
 - invalid frame length prefix
 - ciphertext larger than max frame size
 - AEAD open failure
-- age-limit, frame-limit, or byte-limit rekey boundary reached
+- age-limit, frame-limit, or byte-limit rekey boundary reached and an in-band rekey packet could not be completed
 - write failure on length prefix or ciphertext
 - read shortfall while loading prefix or ciphertext
 
@@ -156,7 +161,7 @@ Required behavior on transport failure:
 - tear down the affected RPC connection
 - poison the current client/connection state
 - do not continue using partially failed transport state
-- require a fresh plugin start/reconnect path according to manager policy
+- require a fresh plugin start/reconnect path according to manager policy only if the in-band rekey path could not complete
 
 ## Observability expectations
 

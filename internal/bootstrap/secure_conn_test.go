@@ -22,28 +22,9 @@ func TestSecureConnRekeyBoundaries(t *testing.T) {
 }
 
 func TestSecureConnRoundTrip(t *testing.T) {
-	root := bytes.Repeat([]byte{0x42}, RootKeySize)
-	keys, err := NewKeys(root)
-	if err != nil {
-		t.Fatalf("NewKeys: %v", err)
-	}
-	keys, err = Rekey(keys)
-	if err != nil {
-		t.Fatalf("Rekey: %v", err)
-	}
-
-	a, b := net.Pipe()
-	defer a.Close()
-	defer b.Close()
-
-	client, err := NewLabeledSecureConn(a, keys.SendKey, keys.RecvKey, 1, "echo", 7, "s1", "kernel-to-plugin", "plugin-to-kernel")
-	if err != nil {
-		t.Fatalf("NewSecureConn client: %v", err)
-	}
-	server, err := NewLabeledSecureConn(b, keys.RecvKey, keys.SendKey, 1, "echo", 7, "s1", "plugin-to-kernel", "kernel-to-plugin")
-	if err != nil {
-		t.Fatalf("NewSecureConn server: %v", err)
-	}
+	client, server := testSecureConnPair(t, DefaultRekeyPolicy())
+	defer client.Close()
+	defer server.Close()
 
 	want := []byte("hello over secure conn")
 	errCh := make(chan error, 1)
@@ -66,4 +47,92 @@ func TestSecureConnRoundTrip(t *testing.T) {
 	if err := <-errCh; err != nil {
 		t.Fatalf("ReadFull: %v", err)
 	}
+}
+
+func TestSecureConnRekeysAcrossFrameBoundary(t *testing.T) {
+	client, server := testSecureConnPair(t, RekeyPolicy{MaxFramesPerDirection: 2, MaxBytesPerDirection: 1 << 20, MaxConnectionAge: time.Hour})
+	defer client.Close()
+	defer server.Close()
+
+	want := [][]byte{[]byte("one"), []byte("two"), []byte("three"), []byte("four")}
+	errCh := make(chan error, 1)
+	go func() {
+		for _, msg := range want {
+			buf := make([]byte, len(msg))
+			if _, err := io.ReadFull(server, buf); err != nil {
+				errCh <- err
+				return
+			}
+			if !bytes.Equal(buf, msg) {
+				errCh <- io.ErrUnexpectedEOF
+				return
+			}
+		}
+		errCh <- nil
+	}()
+
+	for _, msg := range want {
+		if _, err := client.Write(msg); err != nil {
+			t.Fatalf("Write(%q): %v", msg, err)
+		}
+	}
+	if err := <-errCh; err != nil {
+		t.Fatalf("ReadFull: %v", err)
+	}
+}
+
+func TestSecureConnRekeysAcrossByteBoundary(t *testing.T) {
+	client, server := testSecureConnPair(t, RekeyPolicy{MaxFramesPerDirection: 16, MaxBytesPerDirection: 20, MaxConnectionAge: time.Hour})
+	defer client.Close()
+	defer server.Close()
+
+	want := [][]byte{[]byte("abcd"), []byte("efgh"), []byte("ijkl")}
+	errCh := make(chan error, 1)
+	go func() {
+		for _, msg := range want {
+			buf := make([]byte, len(msg))
+			if _, err := io.ReadFull(server, buf); err != nil {
+				errCh <- err
+				return
+			}
+			if !bytes.Equal(buf, msg) {
+				errCh <- io.ErrUnexpectedEOF
+				return
+			}
+		}
+		errCh <- nil
+	}()
+
+	for _, msg := range want {
+		if _, err := client.Write(msg); err != nil {
+			t.Fatalf("Write(%q): %v", msg, err)
+		}
+	}
+	if err := <-errCh; err != nil {
+		t.Fatalf("ReadFull: %v", err)
+	}
+}
+
+func testSecureConnPair(t *testing.T, policy RekeyPolicy) (net.Conn, net.Conn) {
+	t.Helper()
+	root := bytes.Repeat([]byte{0x42}, RootKeySize)
+	keys, err := NewKeys(root)
+	if err != nil {
+		t.Fatalf("NewKeys: %v", err)
+	}
+	keys, err = Rekey(keys)
+	if err != nil {
+		t.Fatalf("Rekey: %v", err)
+	}
+
+	a, b := net.Pipe()
+	client, err := NewLabeledSecureConnWithPolicy(a, keys.SendKey, keys.RecvKey, 1, "echo", 7, "s1", "kernel-to-plugin", "plugin-to-kernel", policy)
+	if err != nil {
+		t.Fatalf("NewSecureConn client: %v", err)
+	}
+	server, err := NewLabeledSecureConnWithPolicy(b, keys.RecvKey, keys.SendKey, 1, "echo", 7, "s1", "plugin-to-kernel", "kernel-to-plugin", policy)
+	if err != nil {
+		t.Fatalf("NewSecureConn server: %v", err)
+	}
+	return client, server
 }

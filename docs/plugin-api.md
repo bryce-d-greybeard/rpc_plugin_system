@@ -150,8 +150,9 @@ Current live transport behavior:
 - manager sends an 8-byte big-endian connection identifier before secure framing starts
 - both sides derive per-connection transport keys from refreshed directional session keys plus that identifier and fixed direction labels
 - each RPC write becomes one encrypted/authenticated frame with a 4-byte big-endian ciphertext length prefix followed by AES-GCM ciphertext
-- each wrapped connection starts its frame sequence at zero, so per-connection key derivation is required to avoid nonce/key reuse across reconnects
-- each direction is bounded by `1 << 32` frames, `32 GiB` plaintext, or `60m` connection age, whichever comes first
-- when a bound is reached, the transport fails closed and rekey happens by reconnect/restart, not by in-band negotiation
+- each wrapped connection starts its frame sequence at zero, and each direction resets its own sequence when that direction completes an in-band transport rekey
+- each direction is bounded by `1 << 32` frames, `32 GiB` transport-packet plaintext, or `60m` connection age, whichever comes first
+- when the next write would cross a bound, that direction first sends an in-band rekey control packet, both peers derive the next directional transport key, and traffic continues on the same socket without reconnecting or restarting
+- if the rekey control packet cannot be exchanged before the bound is exhausted, the transport still fails closed
 
 Public plugin authors using the SDK should treat this as substrate-owned transport behavior rather than application-level message design. The full transport contract lives in `docs/transport-contract.md`.

@@ -114,8 +114,9 @@ Current live shape:
 - both sides derive per-connection transport keys from refreshed directional session keys plus the shared connection identifier and direction labels
 - manager uses refreshed send/recv-derived transport keys when dialing RPC
 - plugin uses the complementary refreshed recv/send-derived transport keys when serving RPC
-- each wrapped connection is bounded per direction by `1 << 32` frames and `32 GiB` plaintext, and is bounded overall by `60m` connection age
-- when any bound is reached, the connection fails closed and rekeys by reconnect/restart
+- each wrapped connection is bounded per direction by `1 << 32` frames and `32 GiB` transport-packet plaintext, and is bounded overall by `60m` connection age
+- when the next write would cross a bound, that direction sends an in-band rekey control packet under the current key, both peers derive the next directional transport key, and traffic continues on the same socket
+- if the rekey control packet cannot complete before the remaining budget is exhausted, the connection still fails closed
 
 The byte-level framing, nonce construction, per-connection key derivation, and authenticated metadata context are defined in `docs/transport-contract.md`.
 

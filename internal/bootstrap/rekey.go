@@ -81,3 +81,15 @@ func DeriveTransportKey(baseKey []byte, connectionID uint64, label string) ([]by
 	}
 	return out, nil
 }
+
+func DeriveTransportRekeyKey(currentKey []byte, label string, generation uint64) ([]byte, error) {
+	if len(currentKey) != RootKeySize {
+		return nil, fmt.Errorf("invalid transport rekey key size: %d", len(currentKey))
+	}
+	info := "rpc_plugin_system/transport-rekey/" + label + "/" + strconv.FormatUint(generation, 10)
+	out, err := hkdf.Key(sha256.New, currentKey, nil, info, RootKeySize)
+	if err != nil {
+		return nil, fmt.Errorf("derive transport rekey %s key: %w", label, err)
+	}
+	return out, nil
+}
