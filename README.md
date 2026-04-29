@@ -9,6 +9,7 @@ The current codebase is a kernel-first substrate that now proves:
 - transport-backed bootstrap session establishment before steady-state RPC trust
 - one-time bootstrap token trust on startup, used only for bootstrap authorization
 - immediate post-bootstrap session-key refresh before steady-state trust
+- refreshed directional keys used for encrypted/authenticated steady-state RPC framing
 - Linux peer credential verification on startup
 - heartbeat and health reporting
 - timeout handling and poisoned-client teardown

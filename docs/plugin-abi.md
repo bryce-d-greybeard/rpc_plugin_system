@@ -26,7 +26,7 @@ The auth token file is generation-scoped. The kernel now writes one auth file pe
 
 - Unix domain sockets for plugin RPC
 - Go `net/rpc`
-- gob encoding
+- gob encoding carried inside substrate-owned encrypted/authenticated framing
 - one live RPC connection per active plugin generation
 - bootstrap transport is a separate pre-RPC channel
 - on POSIX hosts the bootstrap transport uses two FIFOs, one request FIFO and one response FIFO
@@ -100,6 +100,17 @@ Any change to:
 - peer credential verification semantics on supported platforms
 
 must be treated as an API/ABI compatibility change and documented explicitly.
+
+## Secure RPC transport addendum
+
+After bootstrap and immediate refresh, steady-state plugin RPC traffic uses refreshed directional session keys for encrypted/authenticated framing over the Unix socket connection.
+
+Current live shape:
+- bootstrap derives the shared secret
+- both sides derive the root key
+- both sides immediately refresh once before steady-state trust
+- manager uses refreshed send/recv keys when dialing RPC
+- plugin uses the complementary refreshed recv/send keys when serving RPC
 
 ## Bootstrap wire addendum
 

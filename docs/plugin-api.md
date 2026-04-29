@@ -36,6 +36,7 @@ Rules:
 - session fields are generation-scoped and must not be replayed across generations
 - after bootstrap completes, the token is no longer the lasting trust anchor
 - session key material returned here should already reflect an immediate post-bootstrap refresh
+- steady-state RPC traffic after this point uses refreshed session keys, not the bootstrap token
 
 ### `Capabilities`
 Reports:
@@ -137,3 +138,7 @@ Current live shape:
 - kernel and plugin immediately refresh the derived session material before steady-state RPC trust is granted
 
 The bootstrap exchange is kernel-owned substrate behavior. Public plugin authors using `sdk/go/plugin` should normally consume it through `LoadConfigFromEnv()` and `ServeWithConfig(...)`, not by reimplementing the handshake manually.
+
+## Steady-state RPC transport
+
+After `Auth` finalizes the transitional bootstrap handoff, the live RPC connection is framed with refreshed directional session keys derived from the bootstrap exchange. Public plugin authors using the SDK should treat this as substrate-owned transport behavior rather than application-level message design.

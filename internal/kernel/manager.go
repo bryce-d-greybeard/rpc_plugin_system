@@ -238,7 +238,7 @@ func (m *Manager) Start() error {
 		m.cleanupFailedStart(cmd, nil, generation, "bootstrap consume failure", err)
 		return err
 	}
-	client, err := m.dial(socketPath, generation)
+	client, err := m.dial(socketPath, generation, sess)
 	if err != nil {
 		m.cleanupFailedStart(cmd, nil, generation, "dial failure", err)
 		return err
@@ -674,7 +674,7 @@ func (m *Manager) State() State {
 	return state
 }
 
-func (m *Manager) dial(socketPath string, generation uint64) (*rpcClient, error) {
+func (m *Manager) dial(socketPath string, generation uint64, sess *bootstrap.Session) (*rpcClient, error) {
 	m.logEvent(eventlog.Event{
 		Level:        eventlog.LevelInfo,
 		Component:    eventlog.ComponentRPC,
@@ -697,7 +697,12 @@ func (m *Manager) dial(socketPath string, generation uint64) (*rpcClient, error)
 				SocketPath:   socketPath,
 				Message:      "plugin socket dial succeeded",
 			})
-			return &rpcClient{client: rpc.NewClient(conn), conn: conn}, nil
+			secureConn, secureErr := bootstrap.NewSecureConn(conn, sess.SessionKeys.SendKey, sess.SessionKeys.RecvKey)
+			if secureErr != nil {
+				_ = conn.Close()
+				return nil, secureErr
+			}
+			return &rpcClient{client: rpc.NewClient(secureConn), conn: conn}, nil
 		}
 		time.Sleep(50 * time.Millisecond)
 	}

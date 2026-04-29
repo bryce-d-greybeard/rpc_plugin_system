@@ -260,7 +260,17 @@ func ServeWithConfig(cfg Config, core Core) error {
 			_ = logger.Event(LogEvent{Event: EventPluginServeStopped, Message: "plugin listener stopped", Reason: "listener closed", Error: err.Error()})
 			return nil
 		}
-		go rpcServer.ServeConn(conn)
+		serveConn := conn
+		if cfg.BootstrapSessionKeys != nil {
+			secureConn, secureErr := bootstrap.NewSecureConn(conn, cfg.BootstrapSessionKeys.RecvKey, cfg.BootstrapSessionKeys.SendKey)
+			if secureErr != nil {
+				_ = conn.Close()
+				_ = logger.Event(LogEvent{Level: LogLevelError, Event: EventPluginServeStopped, Message: "secure rpc wrapper failed", Error: secureErr.Error()})
+				return fmt.Errorf("wrap secure rpc conn: %w", secureErr)
+			}
+			serveConn = secureConn
+		}
+		go rpcServer.ServeConn(serveConn)
 	}
 }
 
