@@ -34,7 +34,8 @@ Rules:
 - successful auth spends the token for that generation
 - repeated auth attempts with the same token must not be accepted as a fresh bootstrap
 - session fields are generation-scoped and must not be replayed across generations
-- after bootstrap completes, the token is no longer the lasting trust anchor
+- after secure bootstrap is active, `Auth` is a bootstrap-completion verification step, not the lasting trust anchor
+- under secure bootstrap, session identity and bootstrap public-key continuity matter more than replaying the token itself
 - session key material returned here should already reflect an immediate post-bootstrap refresh
 - steady-state RPC traffic after this point uses refreshed session keys, not the bootstrap token
 

@@ -42,7 +42,7 @@ The auth token file is generation-scoped. The kernel now writes one auth file pe
 5. plugin reads the bootstrap session id and endpoint from the startup env when present
 6. plugin completes the bootstrap record/response exchange on the bootstrap transport before normal RPC trust is established
 7. on Linux v1 paths, the kernel also verifies peer credentials through the runtime adapter before trusting the connection
-8. plugin proves the bootstrap transcript once through the transitional `Auth` RPC method
+8. plugin proves bootstrap-completion continuity once through the transitional `Auth` RPC method
 9. `AuthRequest` carries `SessionID` and plugin bootstrap public key material when session bootstrap is enabled
 10. `AuthResponse` carries `SessionID` and refreshed session key material derived from the bootstrap exchange
 11. kernel verifies exact token match, including decode/compare of the textual bootstrap token representation on the bootstrap wire

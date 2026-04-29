@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"net/rpc"
@@ -305,7 +306,26 @@ func (s *server) Auth(in AuthRequest, out *AuthResponse) error {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.authUsed || !auth.EqualToken([]byte(in.Token), []byte(s.cfg.AuthToken)) {
+	if s.authUsed {
+		if s.logger != nil {
+			_ = s.logger.Event(LogEvent{Level: LogLevelWarn, Event: EventPluginAuthRejected, Method: MethodAuth, Message: "plugin auth replay rejected", Reason: "auth already used"})
+		}
+		return os.ErrPermission
+	}
+	if s.cfg.BootstrapSessionID != "" {
+		if in.SessionID != s.cfg.BootstrapSessionID {
+			if s.logger != nil {
+				_ = s.logger.Event(LogEvent{Level: LogLevelWarn, Event: EventPluginAuthRejected, Method: MethodAuth, Message: "plugin auth session rejected", Reason: "session mismatch"})
+			}
+			return os.ErrPermission
+		}
+		if s.cfg.BootstrapKeyPair == nil || !bytes.Equal(in.PluginPublicKey, s.cfg.BootstrapKeyPair.Public) {
+			if s.logger != nil {
+				_ = s.logger.Event(LogEvent{Level: LogLevelWarn, Event: EventPluginAuthRejected, Method: MethodAuth, Message: "plugin auth public key rejected", Reason: "plugin public key mismatch"})
+			}
+			return os.ErrPermission
+		}
+	} else if !auth.EqualToken([]byte(in.Token), []byte(s.cfg.AuthToken)) {
 		if s.logger != nil {
 			_ = s.logger.Event(LogEvent{Level: LogLevelWarn, Event: EventPluginAuthRejected, Method: MethodAuth, Message: "plugin auth token rejected", Reason: "used or mismatched token"})
 		}
