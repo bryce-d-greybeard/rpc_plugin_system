@@ -125,6 +125,17 @@ Current live mapping:
 
 If these direction rules are broken, or if plugin/session/generation metadata does not match the associated-data context expected by the peer, decryption fails and the RPC connection is unusable.
 
+## Rekey trigger policy
+
+Current live policy is intentionally simple.
+
+- both sides perform an immediate post-bootstrap refresh before steady-state trust
+- each wrapped connection may carry at most `1 << 20` encrypted frames per direction under one transport-key generation
+- when that bound is reached, the transport fails closed with `secure transport rekey required`
+- the current implementation treats that as a reconnect/restart boundary rather than doing in-band seamless rekey negotiation
+
+This is not fancy, but it is explicit and inspectable.
+
 ## Failure behavior
 
 The transport must fail closed.
@@ -135,6 +146,7 @@ Hard failures include:
 - invalid frame length prefix
 - ciphertext larger than max frame size
 - AEAD open failure
+- frame-count rekey boundary reached
 - write failure on length prefix or ciphertext
 - read shortfall while loading prefix or ciphertext
 

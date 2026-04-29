@@ -114,6 +114,7 @@ Current live shape:
 - both sides derive per-connection transport keys from refreshed directional session keys plus the shared connection identifier and direction labels
 - manager uses refreshed send/recv-derived transport keys when dialing RPC
 - plugin uses the complementary refreshed recv/send-derived transport keys when serving RPC
+- each wrapped connection has a bounded frame budget per direction and fails closed at the rekey boundary
 
 The byte-level framing, nonce construction, per-connection key derivation, and authenticated metadata context are defined in `docs/transport-contract.md`.
 

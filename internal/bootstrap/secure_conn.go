@@ -10,7 +10,10 @@ import (
 	"sync"
 )
 
-const maxSecureFrameSize = 16 << 20
+const (
+	maxSecureFrameSize  = 16 << 20
+	maxSecureFrameCount = 1 << 20
+)
 
 type secureConn struct {
 	net.Conn
@@ -98,6 +101,9 @@ func (r *secureReader) Read(p []byte) (int, error) {
 }
 
 func (r *secureReader) fill() error {
+	if r.seq >= maxSecureFrameCount {
+		return fmt.Errorf("secure transport rekey required")
+	}
 	var lenBuf [4]byte
 	if _, err := io.ReadFull(r.r, lenBuf[:]); err != nil {
 		return err
@@ -122,6 +128,9 @@ func (r *secureReader) fill() error {
 func (w *secureWriter) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.seq >= maxSecureFrameCount {
+		return 0, fmt.Errorf("secure transport rekey required")
+	}
 	sealed := w.aead.Seal(nil, nonceForSeq(w.seq), p, w.aad)
 	w.seq++
 	if len(sealed) > maxSecureFrameSize {
