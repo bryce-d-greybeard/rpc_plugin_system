@@ -10,7 +10,7 @@ This document defines compatibility expectations between the kernel and plugin e
 Method names, request/response shapes, health values, and capability semantics.
 
 ### ABI compatibility
-Startup environment, socket behavior, auth artifacts, transport expectations, teardown rules, runtime path conventions, and generation semantics.
+Startup environment, socket behavior, auth artifacts, transport expectations, teardown rules, runtime path conventions, generation semantics, and secure transport framing rules.
 
 ## Hard-fail conditions
 
@@ -23,6 +23,7 @@ The kernel should hard-fail a plugin start when any of these occur:
 - generation mismatch on startup registration
 - non-executable or invalid plugin path
 - incompatible transport/runtime assumptions
+- secure transport prelude, framing, nonce, or key-derivation mismatch
 - capabilities fetch failure or capability sentinel failure during startup
 
 ## Soft-fail / degraded conditions
@@ -46,6 +47,7 @@ The kernel may degrade rather than hard-fail when:
 | Optional capabilities | may be absent | no | yes |
 | Optional response fields | safe to ignore when additive | no | yes |
 | Logging schema | core event fields stay stable enough for operator tooling | yes for removals or semantic breakage | additive fields allowed |
+| Secure transport framing | connection prelude, frame format, nonce construction, and direction labels must match | yes | no |
 
 ## Versioning direction
 
@@ -69,6 +71,7 @@ The compatibility policy for v1 and later is:
 - transport-backed bootstrap env names and endpoint semantics are stable once published
 - non-auth RPC methods require successful bootstrap auth first
 - required wire method names are stable
+- documented secure transport framing semantics are stable unless intentionally revised
 - required core response shape/meaning is stable
 - published source release layout is stable
 - releases after `v1.0.0` should remain backward compatible by default

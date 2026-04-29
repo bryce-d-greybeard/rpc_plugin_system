@@ -109,8 +109,12 @@ Current live shape:
 - bootstrap derives the shared secret
 - both sides derive the root key
 - both sides immediately refresh once before steady-state trust
-- manager uses refreshed send/recv keys when dialing RPC
-- plugin uses the complementary refreshed recv/send keys when serving RPC
+- manager writes an 8-byte connection identifier before secure framing starts
+- both sides derive per-connection transport keys from refreshed directional session keys plus the shared connection identifier and direction labels
+- manager uses refreshed send/recv-derived transport keys when dialing RPC
+- plugin uses the complementary refreshed recv/send-derived transport keys when serving RPC
+
+The byte-level framing, nonce construction, key derivation labels, and failure behavior are defined in `docs/transport-contract.md`.
 
 ## Bootstrap wire addendum
 

@@ -142,4 +142,12 @@ The bootstrap exchange is kernel-owned substrate behavior. Public plugin authors
 
 ## Steady-state RPC transport
 
-After `Auth` finalizes the transitional bootstrap handoff, the live RPC connection is framed with refreshed directional session keys derived from the bootstrap exchange. Public plugin authors using the SDK should treat this as substrate-owned transport behavior rather than application-level message design.
+After `Auth` finalizes the transitional bootstrap handoff, the live RPC connection is framed with refreshed directional session keys derived from the bootstrap exchange.
+
+Current live transport behavior:
+- manager sends an 8-byte big-endian connection identifier before secure framing starts
+- both sides derive per-connection transport keys from refreshed directional session keys plus that identifier and fixed direction labels
+- each RPC write becomes one encrypted/authenticated frame with a 4-byte big-endian ciphertext length prefix followed by AES-GCM ciphertext
+- each wrapped connection starts its frame sequence at zero, so per-connection key derivation is required to avoid nonce/key reuse across reconnects
+
+Public plugin authors using the SDK should treat this as substrate-owned transport behavior rather than application-level message design. The full transport contract lives in `docs/transport-contract.md`.
