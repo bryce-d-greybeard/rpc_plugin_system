@@ -44,6 +44,7 @@ func (m *Manager) MonitorLoop(ctx context.Context) {
 						Reason:    "monitor loop heartbeat recovery",
 					})
 				}
+			} else {
 			}
 		}
 	}

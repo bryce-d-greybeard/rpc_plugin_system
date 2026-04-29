@@ -43,9 +43,14 @@ func SocketPath(root, pluginID string) string {
 	return filepath.Join(root, pluginID+".sock")
 }
 
-// AuthPath returns the auth challenge path for one plugin.
+// AuthPath returns the legacy shared auth challenge path for one plugin.
 func AuthPath(root, pluginID string) string {
 	return filepath.Join(root, pluginID+".auth")
+}
+
+// AuthPathForGeneration returns the auth challenge path for one plugin generation.
+func AuthPathForGeneration(root, pluginID string, generation uint64) string {
+	return filepath.Join(root, fmt.Sprintf("%s.%d.auth", pluginID, generation))
 }
 
 // ListenUnix binds one Unix socket path with private permissions.

@@ -5,6 +5,8 @@ package bootstrap
 import (
 	"testing"
 	"time"
+
+	"rpc_plugin_system/internal/auth"
 )
 
 func TestExchangeRecordAndResponse(t *testing.T) {
@@ -14,7 +16,7 @@ func TestExchangeRecordAndResponse(t *testing.T) {
 	}
 	defer tr.Cleanup()
 
-	record := Record{Version: ProtocolVersion, PluginID: "echo", SessionID: "session-handshake", Token: "tok"}
+	record := Record{Version: ProtocolVersion, PluginID: "echo", SessionID: "session-handshake", Token: auth.Encode([]byte("tok"))}
 
 	done := make(chan error, 1)
 	go func() {
@@ -29,7 +31,7 @@ func TestExchangeRecordAndResponse(t *testing.T) {
 			done <- err
 			return
 		}
-		if rec.Token != "tok" {
+		if rec.Token != auth.Encode([]byte("tok")) {
 			done <- err
 			return
 		}
@@ -56,7 +58,7 @@ func TestExchangeRecordAndResponse(t *testing.T) {
 
 func TestValidateResponse(t *testing.T) {
 	s := &Session{PluginID: "echo", SessionID: "s1", Token: []byte("tok"), ExpiresAt: time.Now().Add(time.Minute)}
-	if err := ValidateResponse(s, Response{Version: ProtocolVersion, PluginID: "echo", SessionID: "s1", Token: "tok"}, time.Now()); err != nil {
+	if err := ValidateResponse(s, Response{Version: ProtocolVersion, PluginID: "echo", SessionID: "s1", Token: auth.Encode([]byte("tok"))}, time.Now()); err != nil {
 		t.Fatalf("ValidateResponse: %v", err)
 	}
 }

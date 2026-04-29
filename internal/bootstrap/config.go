@@ -3,6 +3,8 @@ package bootstrap
 import (
 	"os"
 	"time"
+
+	"rpc_plugin_system/internal/auth"
 )
 
 const (
@@ -27,7 +29,7 @@ func NewRecordFromSession(s *Session, substratePublicKey []byte) Record {
 		Version:            ProtocolVersion,
 		PluginID:           s.PluginID,
 		SessionID:          s.SessionID,
-		Token:              string(s.Token),
+		Token:              auth.Encode(s.Token),
 		IssuedAt:           s.IssuedAt,
 		ExpiresAt:          s.ExpiresAt,
 		SubstratePublicKey: append([]byte(nil), substratePublicKey...),

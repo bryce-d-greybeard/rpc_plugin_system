@@ -6,10 +6,12 @@ import (
 	"net/rpc"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"rpc_plugin_system/internal/auth"
+	"rpc_plugin_system/internal/bootstrap"
 	"rpc_plugin_system/internal/runtime"
 )
 
@@ -75,12 +77,13 @@ type SleepRequest struct{ Duration time.Duration }
 type CrashRequest struct{ Code int }
 
 type Config struct {
-	SocketPath         string
-	PluginID           string
-	GenerationID       uint64
-	AuthToken          string
-	BootstrapSessionID string
-	PluginPublicKey    []byte
+	SocketPath           string
+	PluginID             string
+	GenerationID         uint64
+	AuthToken            string
+	BootstrapSessionID   string
+	BootstrapEndpoint    string
+	BootstrapResponseKey []byte
 }
 
 // ErrMissingEnv reports one required plugin startup environment variable that was not set.
@@ -147,11 +150,44 @@ func LoadConfigFromEnv() (Config, error) {
 		return Config{}, fmt.Errorf("read RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE %q: %w", authFile, err)
 	}
 	bootstrapSessionID := os.Getenv("RPC_PLUGIN_SYSTEM_BOOTSTRAP_SESSION_ID")
-	var pluginPublicKey []byte
-	if bootstrapSessionID != "" {
-		pluginPublicKey = []byte("plugin-bootstrap-public-key-placeholder")
+	bootstrapEndpoint := os.Getenv("RPC_PLUGIN_SYSTEM_BOOTSTRAP_ENDPOINT")
+	cfg := Config{SocketPath: sock, PluginID: pluginID, GenerationID: generationID, AuthToken: string(authTokenRaw), BootstrapSessionID: bootstrapSessionID, BootstrapEndpoint: bootstrapEndpoint}
+	if bootstrapEndpoint != "" && bootstrapSessionID != "" {
+		if err := performBootstrapHandshake(&cfg); err != nil {
+			return Config{}, err
+		}
 	}
-	return Config{SocketPath: sock, PluginID: pluginID, GenerationID: generationID, AuthToken: string(authTokenRaw), BootstrapSessionID: bootstrapSessionID, PluginPublicKey: pluginPublicKey}, nil
+	return cfg, nil
+}
+
+func performBootstrapHandshake(cfg *Config) error {
+			parts := strings.Split(cfg.BootstrapEndpoint, ":")
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid bootstrap endpoint")
+	}
+	reqReader, err := os.OpenFile(parts[0], os.O_RDONLY, 0)
+	if err != nil {
+		return fmt.Errorf("open bootstrap request fifo: %w", err)
+	}
+	record, err := bootstrap.ReadRecord(reqReader)
+			_ = reqReader.Close()
+	if err != nil {
+		return err
+	}
+	if record.PluginID != cfg.PluginID || record.SessionID != cfg.BootstrapSessionID || record.Token != auth.Encode([]byte(cfg.AuthToken)) {
+		return fmt.Errorf("bootstrap record mismatch: record plugin=%q session=%q token=%q cfg plugin=%q session=%q token=%q", record.PluginID, record.SessionID, record.Token, cfg.PluginID, cfg.BootstrapSessionID, auth.Encode([]byte(cfg.AuthToken)))
+	}
+			respWriter, err := os.OpenFile(parts[1], os.O_WRONLY, 0)
+	if err != nil {
+		return fmt.Errorf("open bootstrap response fifo: %w", err)
+	}
+	defer respWriter.Close()
+	response := bootstrap.NewResponse(cfg.PluginID, cfg.BootstrapSessionID, record.Token, []byte("plugin-bootstrap-public-key-placeholder"))
+			if err := bootstrap.WriteResponse(respWriter, response); err != nil {
+		return err
+	}
+	cfg.BootstrapResponseKey = append([]byte(nil), response.PluginPublicKey...)
+		return nil
 }
 
 func Serve(core Core) error {
@@ -247,7 +283,7 @@ func (s *server) Auth(in AuthRequest, out *AuthResponse) error {
 	resp := AuthResponse{PluginID: pluginID, Version: s.core.Version(), GenerationID: generationID}
 	if s.cfg.BootstrapSessionID != "" && in.SessionID == s.cfg.BootstrapSessionID {
 		resp.SessionID = s.cfg.BootstrapSessionID
-		resp.SessionKey = append([]byte(nil), s.cfg.PluginPublicKey...)
+		resp.SessionKey = append([]byte(nil), s.cfg.BootstrapResponseKey...)
 	}
 	*out = resp
 	if s.logger != nil {

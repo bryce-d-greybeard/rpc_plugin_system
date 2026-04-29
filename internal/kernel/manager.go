@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"rpc_plugin_system/internal/auth"
 	"rpc_plugin_system/internal/bootstrap"
 	"rpc_plugin_system/internal/eventlog"
 	amruntime "rpc_plugin_system/internal/runtime"
@@ -66,6 +67,7 @@ type Manager struct {
 	closedCh         chan struct{}
 	closeOnce        sync.Once
 	bootstrapManager *bootstrap.Manager
+	restarting       bool
 }
 
 // New constructs a plugin manager.
@@ -133,10 +135,9 @@ func (m *Manager) Start() error {
 	m.mu.Unlock()
 
 	socketPath := amruntime.SocketPath(m.cfg.RuntimeDir, m.cfg.PluginID)
-	authPath := amruntime.AuthPath(m.cfg.RuntimeDir, m.cfg.PluginID)
+	authPath := amruntime.AuthPathForGeneration(m.cfg.RuntimeDir, m.cfg.PluginID, generation)
 	_ = os.Remove(socketPath)
-	_ = os.Remove(authPath)
-
+	
 	m.logEvent(eventlog.Event{
 		Level:        eventlog.LevelInfo,
 		Component:    eventlog.ComponentKernel,
@@ -182,6 +183,12 @@ func (m *Manager) Start() error {
 		return wrapped
 	}
 
+	transport, err := bootstrap.NewFIFOTransport(m.cfg.RuntimeDir, m.cfg.PluginID, sess.SessionID)
+	if err != nil {
+		m.rollbackGeneration(generation)
+		return fmt.Errorf("create bootstrap transport: %w", err)
+	}
+	defer transport.Cleanup()
 	cmd := exec.Command(m.cfg.PluginPath)
 	cmd.Env = []string{
 		"RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET=" + socketPath,
@@ -189,6 +196,7 @@ func (m *Manager) Start() error {
 		fmt.Sprintf("RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION=%d", generation),
 		"RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE=" + authPath,
 		bootstrap.EnvSessionID + "=" + sess.SessionID,
+		"RPC_PLUGIN_SYSTEM_BOOTSTRAP_ENDPOINT=" + transport.Endpoint(),
 	}
 	if behaviorPath := os.Getenv(testpluginapi.BehaviorConfigEnv); behaviorPath != "" {
 		cmd.Env = append(cmd.Env, testpluginapi.BehaviorConfigEnv+"="+behaviorPath)
@@ -212,6 +220,24 @@ func (m *Manager) Start() error {
 		return wrapped
 	}
 
+	bootstrapResp, err := bootstrap.ExchangeRecordAndResponse(transport, bootstrap.NewRecordFromSession(sess, nil))
+	if err != nil {
+		m.cleanupFailedStart(cmd, nil, generation, "bootstrap exchange failure", err)
+		return err
+	}
+	if err := bootstrap.ValidateResponse(sess, bootstrapResp, time.Now().UTC()); err != nil {
+		m.cleanupFailedStart(cmd, nil, generation, "bootstrap response validation failure", err)
+		return err
+	}
+	decodedBootstrapToken, err := auth.Decode(bootstrapResp.Token)
+	if err != nil {
+		m.cleanupFailedStart(cmd, nil, generation, "bootstrap token decode failure", err)
+		return err
+	}
+	if _, err := m.bootstrapManager.Consume(m.cfg.PluginID, bootstrapResp.SessionID, decodedBootstrapToken, time.Now().UTC()); err != nil {
+		m.cleanupFailedStart(cmd, nil, generation, "bootstrap consume failure", err)
+		return err
+	}
 	client, err := m.dial(socketPath, generation)
 	if err != nil {
 		m.cleanupFailedStart(cmd, nil, generation, "dial failure", err)
@@ -545,15 +571,26 @@ func (m *Manager) Crash(code int) error {
 
 // Restart kills the current plugin process and starts a fresh generation.
 func (m *Manager) Restart() error {
-	m.mu.RLock()
+	m.mu.Lock()
 	closed := m.closed
+	if closed {
+		m.mu.Unlock()
+		return errors.New("manager closed")
+	}
+	if m.restarting {
+		m.mu.Unlock()
+		return errors.New("manager restart in progress")
+	}
+	m.restarting = true
 	generation := m.state.GenerationID
 	pid := m.state.PID
 	socketPath := m.state.SocketPath
-	m.mu.RUnlock()
-	if closed {
-		return errors.New("manager closed")
-	}
+	m.mu.Unlock()
+	defer func() {
+		m.mu.Lock()
+		m.restarting = false
+		m.mu.Unlock()
+	}()
 	m.logEvent(eventlog.Event{
 		Level:        eventlog.LevelWarn,
 		Component:    eventlog.ComponentKernel,
@@ -983,7 +1020,12 @@ func isRPCPoisonError(err error) bool {
 
 func (m *Manager) cleanupRuntimeArtifacts(generation uint64) {
 	socketPath := amruntime.SocketPath(m.cfg.RuntimeDir, m.cfg.PluginID)
-	authPath := amruntime.AuthPath(m.cfg.RuntimeDir, m.cfg.PluginID)
+	authPath := ""
+	if generation == 0 {
+		authPath = amruntime.AuthPath(m.cfg.RuntimeDir, m.cfg.PluginID)
+	} else {
+		authPath = amruntime.AuthPathForGeneration(m.cfg.RuntimeDir, m.cfg.PluginID, generation)
+	}
 	removed := make([]string, 0, 2)
 	failed := make(map[string]string)
 	for _, path := range []string{socketPath, authPath} {

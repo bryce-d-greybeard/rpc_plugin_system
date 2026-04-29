@@ -3,28 +3,19 @@ package bootstrap
 import (
 	"fmt"
 	"time"
+
+	"rpc_plugin_system/internal/auth"
 )
 
 func ExchangeRecordAndResponse(t Transport, record Record) (Response, error) {
-	writerDone := make(chan error, 1)
-	go func() {
-		w, err := t.OpenRequestWriter()
-		if err != nil {
-			writerDone <- err
-			return
-		}
-		defer w.Close()
-		writerDone <- WriteRecord(w, record)
-	}()
-
-	readerDone := make(chan struct {
+	responseReady := make(chan struct {
 		resp Response
 		err  error
 	}, 1)
 	go func() {
 		r, err := t.OpenResponseReader()
 		if err != nil {
-			readerDone <- struct {
+			responseReady <- struct {
 				resp Response
 				err  error
 			}{err: err}
@@ -32,16 +23,25 @@ func ExchangeRecordAndResponse(t Transport, record Record) (Response, error) {
 		}
 		defer r.Close()
 		resp, err := ReadResponse(r)
-		readerDone <- struct {
+		responseReady <- struct {
 			resp Response
 			err  error
 		}{resp: resp, err: err}
 	}()
 
-	if err := <-writerDone; err != nil {
+	w, err := t.OpenRequestWriter()
+	if err != nil {
+		return Response{}, fmt.Errorf("open request writer: %w", err)
+	}
+	if err := WriteRecord(w, record); err != nil {
+		_ = w.Close()
 		return Response{}, fmt.Errorf("write bootstrap record: %w", err)
 	}
-	result := <-readerDone
+	if err := w.Close(); err != nil {
+		return Response{}, fmt.Errorf("close request writer: %w", err)
+	}
+
+	result := <-responseReady
 	if result.err != nil {
 		return Response{}, fmt.Errorf("read bootstrap response: %w", result.err)
 	}
@@ -61,7 +61,11 @@ func ValidateResponse(session *Session, response Response, now time.Time) error 
 	if response.SessionID != session.SessionID {
 		return fmt.Errorf("session id mismatch: got %q want %q", response.SessionID, session.SessionID)
 	}
-	if response.Token != string(session.Token) {
+	decoded, err := auth.Decode(response.Token)
+	if err != nil {
+		return fmt.Errorf("decode token: %w", err)
+	}
+	if !auth.EqualToken(decoded, session.Token) {
 		return fmt.Errorf("token mismatch")
 	}
 	return nil
