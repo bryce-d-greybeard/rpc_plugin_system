@@ -25,6 +25,9 @@ func LoadEnvConfig() EnvConfig {
 }
 
 func NewRecordFromSession(s *Session, substratePublicKey []byte) Record {
+	if len(substratePublicKey) == 0 && s != nil && s.SubstrateKeyPair != nil {
+		substratePublicKey = s.SubstrateKeyPair.Public
+	}
 	return Record{
 		Version:            ProtocolVersion,
 		PluginID:           s.PluginID,

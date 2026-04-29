@@ -11,12 +11,16 @@ import (
 )
 
 type Session struct {
-	PluginID  string
-	SessionID string
-	Token     []byte
-	IssuedAt  time.Time
-	ExpiresAt time.Time
-	Consumed  bool
+	PluginID          string
+	SessionID         string
+	Token             []byte
+	IssuedAt          time.Time
+	ExpiresAt         time.Time
+	Consumed          bool
+	SubstrateKeyPair  *KeyPair
+	PluginPublicKey   []byte
+	SharedSecret      []byte
+	SessionRootKey    []byte
 }
 
 type Manager struct {
@@ -47,12 +51,17 @@ func (m *Manager) New(pluginID string, now time.Time) (*Session, error) {
 	if now.IsZero() {
 		now = time.Now().UTC()
 	}
+	kp, err := GenerateKeyPair()
+	if err != nil {
+		return nil, err
+	}
 	s := &Session{
-		PluginID:  pluginID,
-		SessionID: sid,
-		Token:     token,
-		IssuedAt:  now,
-		ExpiresAt: now.Add(m.ttl),
+		PluginID:         pluginID,
+		SessionID:        sid,
+		Token:            token,
+		IssuedAt:         now,
+		ExpiresAt:        now.Add(m.ttl),
+		SubstrateKeyPair: kp,
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -104,5 +113,8 @@ func newSessionID() (string, error) {
 func cloneSession(s *Session) *Session {
 	cp := *s
 	cp.Token = append([]byte(nil), s.Token...)
+	cp.PluginPublicKey = append([]byte(nil), s.PluginPublicKey...)
+	cp.SharedSecret = append([]byte(nil), s.SharedSecret...)
+	cp.SessionRootKey = append([]byte(nil), s.SessionRootKey...)
 	return &cp
 }

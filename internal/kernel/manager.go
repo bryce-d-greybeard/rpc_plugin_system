@@ -270,7 +270,7 @@ func (m *Manager) Start() error {
 		Message:      "authenticating plugin bootstrap token",
 	})
 	var authResp testpluginapi.AuthResponse
-	if err := m.call(client, generation, testpluginapi.MethodAuth, testpluginapi.AuthRequest{Token: string(token), SessionID: sess.SessionID}, &authResp); err != nil {
+	if err := m.call(client, generation, testpluginapi.MethodAuth, testpluginapi.AuthRequest{Token: string(token), SessionID: sess.SessionID, PluginPublicKey: append([]byte(nil), sess.PluginPublicKey...)}, &authResp); err != nil {
 		wrapped := fmt.Errorf("auth rpc: %w", err)
 		m.logEvent(eventlog.Event{
 			Level:        eventlog.LevelError,
@@ -317,6 +317,23 @@ func (m *Manager) Start() error {
 		})
 		m.cleanupFailedStart(cmd, client, generation, "auth generation mismatch", err)
 		return err
+	}
+	if sess.SessionID != "" && authResp.SessionID == sess.SessionID {
+		if len(authResp.SessionKey) == 0 {
+			err := fmt.Errorf("session key missing from auth response")
+			m.cleanupFailedStart(cmd, client, generation, "auth session key missing", err)
+			return err
+		}
+		if len(sess.SessionRootKey) == 0 {
+			err := fmt.Errorf("session root key missing after bootstrap validation")
+			m.cleanupFailedStart(cmd, client, generation, "auth session root key missing", err)
+			return err
+		}
+		if !auth.EqualToken(authResp.SessionKey, sess.SessionRootKey) {
+			err := fmt.Errorf("session key mismatch")
+			m.cleanupFailedStart(cmd, client, generation, "auth session key mismatch", err)
+			return err
+		}
 	}
 	m.logEvent(eventlog.Event{
 		Level:        eventlog.LevelInfo,

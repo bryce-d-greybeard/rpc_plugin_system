@@ -83,7 +83,8 @@ type Config struct {
 	AuthToken            string
 	BootstrapSessionID   string
 	BootstrapEndpoint    string
-	BootstrapResponseKey []byte
+	BootstrapKeyPair     *bootstrap.KeyPair
+	BootstrapSessionKey  []byte
 }
 
 // ErrMissingEnv reports one required plugin startup environment variable that was not set.
@@ -161,7 +162,7 @@ func LoadConfigFromEnv() (Config, error) {
 }
 
 func performBootstrapHandshake(cfg *Config) error {
-			parts := strings.Split(cfg.BootstrapEndpoint, ":")
+	parts := strings.Split(cfg.BootstrapEndpoint, ":")
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid bootstrap endpoint")
 	}
@@ -170,24 +171,40 @@ func performBootstrapHandshake(cfg *Config) error {
 		return fmt.Errorf("open bootstrap request fifo: %w", err)
 	}
 	record, err := bootstrap.ReadRecord(reqReader)
-			_ = reqReader.Close()
+	_ = reqReader.Close()
 	if err != nil {
 		return err
 	}
 	if record.PluginID != cfg.PluginID || record.SessionID != cfg.BootstrapSessionID || record.Token != auth.Encode([]byte(cfg.AuthToken)) {
 		return fmt.Errorf("bootstrap record mismatch: record plugin=%q session=%q token=%q cfg plugin=%q session=%q token=%q", record.PluginID, record.SessionID, record.Token, cfg.PluginID, cfg.BootstrapSessionID, auth.Encode([]byte(cfg.AuthToken)))
 	}
-			respWriter, err := os.OpenFile(parts[1], os.O_WRONLY, 0)
+	if len(record.SubstratePublicKey) == 0 {
+		return fmt.Errorf("bootstrap substrate public key missing")
+	}
+	kp, err := bootstrap.GenerateKeyPair()
+	if err != nil {
+		return fmt.Errorf("generate plugin bootstrap keypair: %w", err)
+	}
+	sharedSecret, err := bootstrap.DeriveSharedSecret(kp.Private, record.SubstratePublicKey)
+	if err != nil {
+		return fmt.Errorf("derive plugin shared secret: %w", err)
+	}
+	rootKey, err := bootstrap.DeriveRootKey(sharedSecret, []byte(cfg.AuthToken), cfg.PluginID, cfg.BootstrapSessionID)
+	if err != nil {
+		return fmt.Errorf("derive plugin session root key: %w", err)
+	}
+	respWriter, err := os.OpenFile(parts[1], os.O_WRONLY, 0)
 	if err != nil {
 		return fmt.Errorf("open bootstrap response fifo: %w", err)
 	}
 	defer respWriter.Close()
-	response := bootstrap.NewResponse(cfg.PluginID, cfg.BootstrapSessionID, record.Token, []byte("plugin-bootstrap-public-key-placeholder"))
-			if err := bootstrap.WriteResponse(respWriter, response); err != nil {
+	response := bootstrap.NewResponse(cfg.PluginID, cfg.BootstrapSessionID, record.Token, kp.Public)
+	if err := bootstrap.WriteResponse(respWriter, response); err != nil {
 		return err
 	}
-	cfg.BootstrapResponseKey = append([]byte(nil), response.PluginPublicKey...)
-		return nil
+	cfg.BootstrapKeyPair = kp
+	cfg.BootstrapSessionKey = rootKey
+	return nil
 }
 
 func Serve(core Core) error {
@@ -283,7 +300,7 @@ func (s *server) Auth(in AuthRequest, out *AuthResponse) error {
 	resp := AuthResponse{PluginID: pluginID, Version: s.core.Version(), GenerationID: generationID}
 	if s.cfg.BootstrapSessionID != "" && in.SessionID == s.cfg.BootstrapSessionID {
 		resp.SessionID = s.cfg.BootstrapSessionID
-		resp.SessionKey = append([]byte(nil), s.cfg.BootstrapResponseKey...)
+		resp.SessionKey = append([]byte(nil), s.cfg.BootstrapSessionKey...)
 	}
 	*out = resp
 	if s.logger != nil {

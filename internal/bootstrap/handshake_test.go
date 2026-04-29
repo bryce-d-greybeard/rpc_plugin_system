@@ -41,7 +41,12 @@ func TestExchangeRecordAndResponse(t *testing.T) {
 			return
 		}
 		defer w.Close()
-		done <- WriteResponse(w, Response{Version: ProtocolVersion, PluginID: "echo", SessionID: "session-handshake", Token: "tok"})
+		kp, err := GenerateKeyPair()
+		if err != nil {
+			done <- err
+			return
+		}
+		done <- WriteResponse(w, Response{Version: ProtocolVersion, PluginID: "echo", SessionID: "session-handshake", Token: auth.Encode([]byte("tok")), PluginPublicKey: kp.Public})
 	}()
 
 	resp, err := ExchangeRecordAndResponse(tr, record)
@@ -57,8 +62,19 @@ func TestExchangeRecordAndResponse(t *testing.T) {
 }
 
 func TestValidateResponse(t *testing.T) {
-	s := &Session{PluginID: "echo", SessionID: "s1", Token: []byte("tok"), ExpiresAt: time.Now().Add(time.Minute)}
-	if err := ValidateResponse(s, Response{Version: ProtocolVersion, PluginID: "echo", SessionID: "s1", Token: auth.Encode([]byte("tok"))}, time.Now()); err != nil {
+	substrateKP, err := GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair substrate: %v", err)
+	}
+	pluginKP, err := GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair plugin: %v", err)
+	}
+	s := &Session{PluginID: "echo", SessionID: "s1", Token: []byte("tok"), ExpiresAt: time.Now().Add(time.Minute), SubstrateKeyPair: substrateKP}
+	if err := ValidateResponse(s, Response{Version: ProtocolVersion, PluginID: "echo", SessionID: "s1", Token: auth.Encode([]byte("tok")), PluginPublicKey: pluginKP.Public}, time.Now()); err != nil {
 		t.Fatalf("ValidateResponse: %v", err)
+	}
+	if len(s.SessionRootKey) == 0 {
+		t.Fatal("SessionRootKey missing")
 	}
 }
