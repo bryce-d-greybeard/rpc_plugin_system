@@ -154,10 +154,16 @@ Current direction after the live DH cutover:
 - derive a real bootstrap shared secret during startup
 - immediately refresh key material before steady-state RPC trust is granted
 - treat the bootstrap token as bootstrap-only, not as the lasting trust root
-- move toward distinct keys for encrypted RPC communication rather than a single placeholder session blob
+- use distinct refreshed directional keys for encrypted/authenticated RPC communication
+- derive per-connection transport keys and bind frames to session/generation metadata context
 
 ### Patch 7: collapse legacy token-only auth path
 Once bootstrap session establishment and immediate post-bootstrap refresh are real and tested, remove or sharply reduce the old token-only `Auth(Token)` role so the one-time token is bootstrap authorization only, not the lasting session trust mechanism.
+
+Current state:
+- token authority is already spent at bootstrap session consume time
+- `Auth` is already reduced to continuity verification under secure bootstrap
+- further removal now depends more on API cleanup appetite than on missing trust primitives
 
 ## Threat model for first pass
 
@@ -179,7 +185,7 @@ This first pass should not pretend to solve:
 Before code lands beyond scaffolding, decide:
 1. exact crypto profile (`crypto/ecdh` curve choice, KDF, AEAD)
 2. whether persistent plugin identity is required or deferred
-3. exact rekey trigger policy
+3. whether the current explicit frame-budget rekey boundary should remain the long-term policy or later grow in-band rekey negotiation
 4. exact startup failure and replay persistence semantics
 5. whether Unix peer credential checks remain mandatory even after DH bootstrap
 

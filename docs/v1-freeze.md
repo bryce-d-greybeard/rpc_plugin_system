@@ -23,7 +23,8 @@ It exists to stop drift during the final audit and promotion work.
 ### Stable local kernel behavior
 - executable plugin supervision over Unix domain sockets
 - one process and one trusted RPC connection per generation
-- one-time token bootstrap auth enforced before non-auth RPC methods are served
+- transport-backed bootstrap with one-time token validation/consume enforced before non-auth RPC methods are served
+- secure steady-state RPC framing with refreshed directional keys, per-connection derivation, and authenticated metadata context
 - Linux peer credential verification through the runtime adapter path
 - timeout poisoning and stale-client rejection
 - restart supervision with generation advancement
