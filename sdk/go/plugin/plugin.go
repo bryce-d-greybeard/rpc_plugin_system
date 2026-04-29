@@ -2,7 +2,9 @@ package plugin
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
+	"io"
 	"net"
 	"net/rpc"
 	"os"
@@ -263,7 +265,14 @@ func ServeWithConfig(cfg Config, core Core) error {
 		}
 		serveConn := conn
 		if cfg.BootstrapSessionKeys != nil {
-			secureConn, secureErr := bootstrap.NewSecureConn(conn, cfg.BootstrapSessionKeys.RecvKey, cfg.BootstrapSessionKeys.SendKey)
+			var idBuf [8]byte
+			if _, err := io.ReadFull(conn, idBuf[:]); err != nil {
+				_ = conn.Close()
+				_ = logger.Event(LogEvent{Level: LogLevelError, Event: EventPluginServeStopped, Message: "secure rpc prelude read failed", Error: err.Error()})
+				return fmt.Errorf("read secure rpc prelude: %w", err)
+			}
+			connectionID := binary.BigEndian.Uint64(idBuf[:])
+			secureConn, secureErr := bootstrap.NewLabeledSecureConn(conn, cfg.BootstrapSessionKeys.RecvKey, cfg.BootstrapSessionKeys.SendKey, connectionID, "plugin-to-kernel", "kernel-to-plugin")
 			if secureErr != nil {
 				_ = conn.Close()
 				_ = logger.Event(LogEvent{Level: LogLevelError, Event: EventPluginServeStopped, Message: "secure rpc wrapper failed", Error: secureErr.Error()})

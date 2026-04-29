@@ -4,7 +4,7 @@ import (
 	"crypto/hkdf"
 	"crypto/sha256"
 	"fmt"
-		"strconv"
+	"strconv"
 )
 
 type Keys struct {
@@ -45,6 +45,18 @@ func deriveLabeled(rootKey []byte, label string, generation uint64) ([]byte, err
 	out, err := hkdf.Key(sha256.New, rootKey, nil, info, RootKeySize)
 	if err != nil {
 		return nil, fmt.Errorf("derive %s key: %w", label, err)
+	}
+	return out, nil
+}
+
+func DeriveTransportKey(baseKey []byte, connectionID uint64, label string) ([]byte, error) {
+	if len(baseKey) != RootKeySize {
+		return nil, fmt.Errorf("invalid transport base key size: %d", len(baseKey))
+	}
+	info := "rpc_plugin_system/transport/" + label + "/" + strconv.FormatUint(connectionID, 10)
+	out, err := hkdf.Key(sha256.New, baseKey, nil, info, RootKeySize)
+	if err != nil {
+		return nil, fmt.Errorf("derive transport %s key: %w", label, err)
 	}
 	return out, nil
 }

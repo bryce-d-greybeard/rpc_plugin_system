@@ -2,6 +2,7 @@
 package kernel
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -66,8 +68,9 @@ type Manager struct {
 	closed           bool
 	closedCh         chan struct{}
 	closeOnce        sync.Once
-	bootstrapManager *bootstrap.Manager
-	restarting       bool
+	bootstrapManager   *bootstrap.Manager
+	restarting         bool
+	transportConnCount uint64
 }
 
 // New constructs a plugin manager.
@@ -697,7 +700,14 @@ func (m *Manager) dial(socketPath string, generation uint64, sess *bootstrap.Ses
 				SocketPath:   socketPath,
 				Message:      "plugin socket dial succeeded",
 			})
-			secureConn, secureErr := bootstrap.NewSecureConn(conn, sess.SessionKeys.SendKey, sess.SessionKeys.RecvKey)
+			connectionID := atomic.AddUint64(&m.transportConnCount, 1)
+			var idBuf [8]byte
+			binary.BigEndian.PutUint64(idBuf[:], connectionID)
+			if _, writeErr := conn.Write(idBuf[:]); writeErr != nil {
+				_ = conn.Close()
+				return nil, writeErr
+			}
+			secureConn, secureErr := bootstrap.NewLabeledSecureConn(conn, sess.SessionKeys.SendKey, sess.SessionKeys.RecvKey, connectionID, "kernel-to-plugin", "plugin-to-kernel")
 			if secureErr != nil {
 				_ = conn.Close()
 				return nil, secureErr

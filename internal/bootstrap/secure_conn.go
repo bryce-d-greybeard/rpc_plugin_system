@@ -141,3 +141,15 @@ func nonceForSeq(seq uint64) []byte {
 	binary.BigEndian.PutUint64(nonce[4:], seq)
 	return nonce
 }
+
+func NewLabeledSecureConn(conn net.Conn, writeKey, readKey []byte, connectionID uint64, writeLabel, readLabel string) (net.Conn, error) {
+	derivedWriteKey, err := DeriveTransportKey(writeKey, connectionID, writeLabel)
+	if err != nil {
+		return nil, err
+	}
+	derivedReadKey, err := DeriveTransportKey(readKey, connectionID, readLabel)
+	if err != nil {
+		return nil, err
+	}
+	return NewSecureConn(conn, derivedWriteKey, derivedReadKey)
+}
