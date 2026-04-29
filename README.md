@@ -6,6 +6,7 @@ The current codebase is a kernel-first substrate that now proves:
 - multiple supervised plugin processes under one host
 - per-plugin runtime isolation and explicit plugin-id routing
 - Unix socket RPC transport
+- transport-backed bootstrap session establishment before steady-state RPC trust
 - one-time bootstrap token trust on startup, enforced before non-auth RPC methods are served
 - Linux peer credential verification on startup
 - heartbeat and health reporting
@@ -106,7 +107,7 @@ import plugin "rpc_plugin_system/sdk/go/plugin"
 
 That SDK is the intended public Go authoring surface. It provides:
 - bootstrap config loading from env
-- one-time token auth handling
+- bootstrap session env loading and one-time token auth handling
 - RPC service/method constants
 - request/response types
 - adapter-based optional capability registration
@@ -197,11 +198,15 @@ That produces:
 
 ### Step 1b: understand the public plugin startup contract
 
-A plugin launched by the kernel receives only these required environment variables:
+A plugin launched by the kernel receives these required environment variables:
 - `RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET`
 - `RPC_PLUGIN_SYSTEM_PLUGIN_ID`
 - `RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION`
 - `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
+
+When transport-backed bootstrap is enabled, the plugin also receives:
+- `RPC_PLUGIN_SYSTEM_BOOTSTRAP_SESSION_ID`
+- `RPC_PLUGIN_SYSTEM_BOOTSTRAP_ENDPOINT`
 
 The daemon environment is not inherited by the plugin. Plugin authors must not depend on arbitrary parent environment variables.
 
@@ -211,6 +216,7 @@ Examples:
 - missing socket env -> `RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET is required for plugin startup`
 - bad generation env -> parse error naming `RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION`
 - unreadable auth token file -> read error naming `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
+- malformed bootstrap endpoint -> startup error naming bootstrap endpoint parsing failure
 
 ### Step 2: start the daemon with the example plugin
 

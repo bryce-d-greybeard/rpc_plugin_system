@@ -17,6 +17,7 @@ Startup environment, socket behavior, auth artifacts, transport expectations, te
 The kernel should hard-fail a plugin start when any of these occur:
 - plugin id mismatch
 - auth verification failure
+- bootstrap transport/session verification failure
 - non-auth RPC use before successful bootstrap auth
 - invalid plugin id for runtime path use
 - generation mismatch on startup registration
@@ -39,8 +40,8 @@ The kernel may degrade rather than hard-fail when:
 | Wire namespace | `TestPlugin.*` | yes | no |
 | Required RPC methods | `Auth`, `Capabilities`, `Heartbeat`, `Shutdown` | yes | no |
 | Generation semantics | one process and one trusted connection per generation | yes | no |
-| Startup env contract | required env vars must be present and parseable | yes | no |
-| Bootstrap auth | one-time token proof is required before non-auth RPC methods are served | yes | no |
+| Startup env contract | required env vars must be present and parseable, including bootstrap env when transport-backed bootstrap is enabled | yes | no |
+| Bootstrap auth | transport-backed bootstrap plus one-time token proof is required before non-auth RPC methods are served | yes | additive bootstrap fields only |
 | Peer credential hardening | Linux `SO_PEERCRED` path supported in v1 | yes on supported Linux path when verification is enabled by the runtime; unsupported platforms are not v1 hardening targets | backend expansion post-v1 |
 | Optional capabilities | may be absent | no | yes |
 | Optional response fields | safe to ignore when additive | no | yes |
@@ -65,6 +66,7 @@ Post-v1 only, later versions may add:
 The compatibility policy for v1 and later is:
 - required lifecycle semantics are stable
 - required startup env names are stable
+- transport-backed bootstrap env names and endpoint semantics are stable once published
 - non-auth RPC methods require successful bootstrap auth first
 - required wire method names are stable
 - required core response shape/meaning is stable
