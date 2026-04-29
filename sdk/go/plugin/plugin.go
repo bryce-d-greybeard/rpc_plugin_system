@@ -129,6 +129,12 @@ type server struct {
 	logger       *Logger
 }
 
+func zeroBytes(b []byte) {
+	for i := range b {
+		b[i] = 0
+	}
+}
+
 func LoadConfigFromEnv() (Config, error) {
 	sock := os.Getenv("RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET")
 	if sock == "" {
@@ -206,7 +212,7 @@ func performBootstrapHandshake(cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("refresh plugin session keys: %w", err)
 	}
-	bootstrap.ZeroBytes(authTokenBytes)
+	zeroBytes(authTokenBytes)
 	respWriter, err := os.OpenFile(parts[1], os.O_WRONLY, 0)
 	if err != nil {
 		return fmt.Errorf("open bootstrap response fifo: %w", err)

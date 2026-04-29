@@ -130,8 +130,10 @@ If these direction rules are broken, or if plugin/session/generation metadata do
 Current live policy is intentionally simple.
 
 - both sides perform an immediate post-bootstrap refresh before steady-state trust
-- each wrapped connection may carry at most `1 << 20` encrypted frames per direction under one transport-key generation
-- when that bound is reached, the transport fails closed with `secure transport rekey required`
+- each wrapped connection may carry at most `1 << 32` encrypted frames per direction under one transport-key generation
+- each wrapped connection may carry at most `32 GiB` of plaintext per direction under one transport-key generation
+- each wrapped connection may live at most `60m` under one transport-key generation
+- when any bound is reached, the transport fails closed with `secure transport rekey required: <reason>`
 - the current implementation treats that as a reconnect/restart boundary rather than doing in-band seamless rekey negotiation
 
 This is not fancy, but it is explicit and inspectable.
@@ -146,7 +148,7 @@ Hard failures include:
 - invalid frame length prefix
 - ciphertext larger than max frame size
 - AEAD open failure
-- frame-count rekey boundary reached
+- age-limit, frame-limit, or byte-limit rekey boundary reached
 - write failure on length prefix or ciphertext
 - read shortfall while loading prefix or ciphertext
 

@@ -16,10 +16,6 @@ func zeroBytes(b []byte) {
 	}
 }
 
-func ZeroBytes(b []byte) {
-	zeroBytes(b)
-}
-
 func zeroKeyPair(kp *KeyPair) {
 	if kp == nil {
 		return

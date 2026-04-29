@@ -19,9 +19,9 @@ The current codebase is a kernel-first substrate that now proves:
 
 ## Release status
 
-Current stable release: `v1.0.0`
+Current stable release target: `v1.0.0`
 
-What `v1.0.0` means here:
+What `v1.0.0` means here once the final freeze pass is complete:
 - the standalone local plugin substrate has reached its frozen v1 scope
 - multi-plugin supervision, explicit routing, restart handling, and local operator control are part of the stable contract
 - the release is source-only, with compatibility/install/release discipline documented in `docs/compatibility.md`, `docs/install.md`, and `docs/release-promotion-checklist.md`
