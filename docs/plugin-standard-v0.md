@@ -40,10 +40,12 @@ Returns:
 - generation id
 
 Rules:
+- `Auth` remains the required startup continuity-verification method in the frozen v1 wire contract
 - bootstrap token auth is one-time-use per generation
 - in the historical v0 token-only model, successful auth spent the token for that generation
 - in the newer secure bootstrap path, token spend occurs earlier at bootstrap session consume time
 - a spent token must not be accepted as a fresh bootstrap
+- under secure bootstrap, `Auth` is no longer the primary trust root; it confirms continuity for the already-established secure session
 
 ### `Capabilities`
 Returns:
@@ -134,9 +136,10 @@ The kernel may provide environment variables such as:
 ### Healthy startup requires all of:
 1. process starts
 2. socket becomes reachable
-3. auth succeeds
-4. capabilities call succeeds
-5. heartbeat succeeds
+3. transport-backed bootstrap succeeds
+4. `Auth` continuity verification succeeds
+5. capabilities call succeeds
+6. heartbeat succeeds
 
 Only then may the kernel mark the plugin healthy.
 

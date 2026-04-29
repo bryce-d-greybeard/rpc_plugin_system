@@ -10,7 +10,7 @@ This document defines the logical API contract between the rpc_plugin_system ker
 - The kernel is the supervising authority.
 - Every plugin instance belongs to one generation.
 - Responses from stale generations must not be accepted.
-- A plugin is not considered healthy until full startup, authentication, capability registration, and heartbeat succeed.
+- A plugin is not considered healthy until full startup, transport-backed bootstrap, `Auth` continuity verification, capability registration, and heartbeat succeed.
 
 ## Required methods
 
@@ -144,7 +144,7 @@ The bootstrap exchange is kernel-owned substrate behavior. Public plugin authors
 
 ## Steady-state RPC transport
 
-After `Auth` finalizes the transitional bootstrap handoff, the live RPC connection is framed with refreshed directional session keys derived from the bootstrap exchange.
+After transport-backed bootstrap and the required `Auth` continuity check, the live RPC connection remains framed with refreshed directional session keys derived from the bootstrap exchange.
 
 Current live transport behavior:
 - manager sends an 8-byte big-endian connection identifier before secure framing starts
