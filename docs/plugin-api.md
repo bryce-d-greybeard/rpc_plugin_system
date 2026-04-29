@@ -27,7 +27,8 @@ Reports:
 - version
 - generation id
 - `SessionID` when bootstrap session transport is enabled
-- `SessionKey` when bootstrap session transport is enabled
+- `TransportKeyGeneration` when bootstrap session transport is enabled
+- `TransportProfile` when bootstrap session transport is enabled
 
 Rules:
 - the bootstrap token is one-time-use
@@ -36,7 +37,8 @@ Rules:
 - session fields are generation-scoped and must not be replayed across generations
 - after secure bootstrap is active, `Auth` is a bootstrap-completion verification step, not the lasting trust anchor
 - under secure bootstrap, session identity and bootstrap public-key continuity matter more than replaying the token itself
-- session key material returned here should already reflect an immediate post-bootstrap refresh
+- auth no longer pretends to return the full transport key blob
+- instead it confirms the transport key generation and profile that the secure channel is already using
 - steady-state RPC traffic after this point uses refreshed session keys, not the bootstrap token
 
 ### `Capabilities`

@@ -127,7 +127,11 @@ func TestServerAuthUsesBootstrapSessionIdentityOverTokenAfterSecureBootstrap(t *
 	if err != nil {
 		t.Fatalf("GenerateKeyPair: %v", err)
 	}
-	srv := &server{core: NewTemplate(Config{PluginID: "echo", GenerationID: 7}, "1.2.3"), cfg: Config{PluginID: "echo", GenerationID: 7, AuthToken: "secret", BootstrapSessionID: "s1", BootstrapKeyPair: kp, BootstrapSessionKey: []byte("01234567890123456789012345678901")}}
+	keys, err := bootstrap.NewKeys([]byte("01234567890123456789012345678901"))
+	if err != nil {
+		t.Fatalf("NewKeys: %v", err)
+	}
+	srv := &server{core: NewTemplate(Config{PluginID: "echo", GenerationID: 7}, "1.2.3"), cfg: Config{PluginID: "echo", GenerationID: 7, AuthToken: "secret", BootstrapSessionID: "s1", BootstrapKeyPair: kp, BootstrapSessionKeys: keys}}
 
 	var authOut AuthResponse
 	if err := srv.Auth(AuthRequest{Token: "wrong-now", SessionID: "s1", PluginPublicKey: append([]byte(nil), kp.Public...)}, &authOut); err != nil {
@@ -135,6 +139,12 @@ func TestServerAuthUsesBootstrapSessionIdentityOverTokenAfterSecureBootstrap(t *
 	}
 	if authOut.SessionID != "s1" {
 		t.Fatalf("SessionID = %q", authOut.SessionID)
+	}
+	if authOut.TransportKeyGeneration != keys.Generation {
+		t.Fatalf("TransportKeyGeneration = %d", authOut.TransportKeyGeneration)
+	}
+	if authOut.TransportProfile != "aes-256-gcm/hkdf-sha256" {
+		t.Fatalf("TransportProfile = %q", authOut.TransportProfile)
 	}
 }
 

@@ -321,20 +321,25 @@ func (m *Manager) Start() error {
 		m.cleanupFailedStart(cmd, client, generation, "auth generation mismatch", err)
 		return err
 	}
-	if sess.SessionID != "" && authResp.SessionID == sess.SessionID {
-		if len(authResp.SessionKey) == 0 {
-			err := fmt.Errorf("session key missing from auth response")
-			m.cleanupFailedStart(cmd, client, generation, "auth session key missing", err)
+	if sess.SessionID != "" {
+		if authResp.SessionID != sess.SessionID {
+			err := fmt.Errorf("session id mismatch: got %q want %q", authResp.SessionID, sess.SessionID)
+			m.cleanupFailedStart(cmd, client, generation, "auth session id mismatch", err)
 			return err
 		}
-		if sess.SessionKeys == nil || len(sess.SessionKeys.SendKey) == 0 {
+		if sess.SessionKeys == nil {
 			err := fmt.Errorf("refreshed session keys missing after bootstrap validation")
 			m.cleanupFailedStart(cmd, client, generation, "auth refreshed session keys missing", err)
 			return err
 		}
-		if !auth.EqualToken(authResp.SessionKey, sess.SessionKeys.SendKey) {
-			err := fmt.Errorf("session key mismatch")
-			m.cleanupFailedStart(cmd, client, generation, "auth session key mismatch", err)
+		if authResp.TransportKeyGeneration != sess.SessionKeys.Generation {
+			err := fmt.Errorf("transport key generation mismatch: got %d want %d", authResp.TransportKeyGeneration, sess.SessionKeys.Generation)
+			m.cleanupFailedStart(cmd, client, generation, "auth transport key generation mismatch", err)
+			return err
+		}
+		if authResp.TransportProfile != "aes-256-gcm/hkdf-sha256" {
+			err := fmt.Errorf("transport profile mismatch: got %q", authResp.TransportProfile)
+			m.cleanupFailedStart(cmd, client, generation, "auth transport profile mismatch", err)
 			return err
 		}
 	}
@@ -348,8 +353,9 @@ func (m *Manager) Start() error {
 		SocketPath:   socketPath,
 		Message:      "plugin authentication succeeded",
 		Details: map[string]any{
-			"bootstrap_session_id": authResp.SessionID,
-			"session_key_present": len(authResp.SessionKey) > 0,
+			"bootstrap_session_id":   authResp.SessionID,
+			"transport_key_generation": authResp.TransportKeyGeneration,
+			"transport_profile":      authResp.TransportProfile,
 		},
 	})
 	_ = os.Remove(authPath)

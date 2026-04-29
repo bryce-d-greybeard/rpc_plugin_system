@@ -49,11 +49,12 @@ type AuthRequest struct {
 }
 
 type AuthResponse struct {
-	PluginID     string
-	Version      string
-	GenerationID uint64
-	SessionID    string
-	SessionKey   []byte
+	PluginID                 string
+	Version                  string
+	GenerationID             uint64
+	SessionID                string
+	TransportKeyGeneration   uint64
+	TransportProfile         string
 }
 
 type CapabilitiesResponse struct {
@@ -87,7 +88,6 @@ type Config struct {
 	BootstrapSessionID   string
 	BootstrapEndpoint    string
 	BootstrapKeyPair     *bootstrap.KeyPair
-	BootstrapSessionKey  []byte
 	BootstrapSessionKeys *bootstrap.Keys
 }
 
@@ -215,7 +215,6 @@ func performBootstrapHandshake(cfg *Config) error {
 		return err
 	}
 	cfg.BootstrapKeyPair = kp
-	cfg.BootstrapSessionKey = keys.SendKey
 	cfg.BootstrapSessionKeys = keys
 	return nil
 }
@@ -349,7 +348,10 @@ func (s *server) Auth(in AuthRequest, out *AuthResponse) error {
 	resp := AuthResponse{PluginID: pluginID, Version: s.core.Version(), GenerationID: generationID}
 	if s.cfg.BootstrapSessionID != "" && in.SessionID == s.cfg.BootstrapSessionID {
 		resp.SessionID = s.cfg.BootstrapSessionID
-		resp.SessionKey = append([]byte(nil), s.cfg.BootstrapSessionKey...)
+		if s.cfg.BootstrapSessionKeys != nil {
+			resp.TransportKeyGeneration = s.cfg.BootstrapSessionKeys.Generation
+			resp.TransportProfile = "aes-256-gcm/hkdf-sha256"
+		}
 	}
 	*out = resp
 	if s.logger != nil {
