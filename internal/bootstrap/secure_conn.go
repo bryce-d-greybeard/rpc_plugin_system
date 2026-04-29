@@ -22,11 +22,11 @@ func NewSecureConn(conn net.Conn, writeKey, readKey []byte) (net.Conn, error) {
 	if conn == nil {
 		return nil, fmt.Errorf("conn is required")
 	}
-	writer, err := newSecureWriter(conn, writeKey)
+	writer, err := newSecureWriter(conn, writeKey, nil)
 	if err != nil {
 		return nil, err
 	}
-	reader, err := newSecureReader(conn, readKey)
+	reader, err := newSecureReader(conn, readKey, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -39,6 +39,7 @@ func (c *secureConn) Write(p []byte) (int, error) { return c.writer.Write(p) }
 type secureReader struct {
 	r    io.Reader
 	aead cipher.AEAD
+	aad  []byte
 	mu   sync.Mutex
 	seq  uint64
 	buf  []byte
@@ -47,24 +48,25 @@ type secureReader struct {
 type secureWriter struct {
 	w    io.Writer
 	aead cipher.AEAD
+	aad  []byte
 	mu   sync.Mutex
 	seq  uint64
 }
 
-func newSecureReader(r io.Reader, key []byte) (*secureReader, error) {
+func newSecureReader(r io.Reader, key []byte, aad []byte) (*secureReader, error) {
 	aead, err := newAEAD(key)
 	if err != nil {
 		return nil, err
 	}
-	return &secureReader{r: r, aead: aead}, nil
+	return &secureReader{r: r, aead: aead, aad: append([]byte(nil), aad...)}, nil
 }
 
-func newSecureWriter(w io.Writer, key []byte) (*secureWriter, error) {
+func newSecureWriter(w io.Writer, key []byte, aad []byte) (*secureWriter, error) {
 	aead, err := newAEAD(key)
 	if err != nil {
 		return nil, err
 	}
-	return &secureWriter{w: w, aead: aead}, nil
+	return &secureWriter{w: w, aead: aead, aad: append([]byte(nil), aad...)}, nil
 }
 
 func newAEAD(key []byte) (cipher.AEAD, error) {
@@ -108,7 +110,7 @@ func (r *secureReader) fill() error {
 	if _, err := io.ReadFull(r.r, ciphertext); err != nil {
 		return err
 	}
-	plain, err := r.aead.Open(nil, nonceForSeq(r.seq), ciphertext, nil)
+	plain, err := r.aead.Open(nil, nonceForSeq(r.seq), ciphertext, r.aad)
 	if err != nil {
 		return fmt.Errorf("open secure frame: %w", err)
 	}
@@ -120,7 +122,7 @@ func (r *secureReader) fill() error {
 func (w *secureWriter) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	sealed := w.aead.Seal(nil, nonceForSeq(w.seq), p, nil)
+	sealed := w.aead.Seal(nil, nonceForSeq(w.seq), p, w.aad)
 	w.seq++
 	if len(sealed) > maxSecureFrameSize {
 		return 0, fmt.Errorf("secure frame too large: %d", len(sealed))
@@ -142,7 +144,7 @@ func nonceForSeq(seq uint64) []byte {
 	return nonce
 }
 
-func NewLabeledSecureConn(conn net.Conn, writeKey, readKey []byte, connectionID uint64, writeLabel, readLabel string) (net.Conn, error) {
+func NewLabeledSecureConn(conn net.Conn, writeKey, readKey []byte, connectionID uint64, pluginID string, generationID uint64, sessionID, writeLabel, readLabel string) (net.Conn, error) {
 	derivedWriteKey, err := DeriveTransportKey(writeKey, connectionID, writeLabel)
 	if err != nil {
 		return nil, err
@@ -151,5 +153,22 @@ func NewLabeledSecureConn(conn net.Conn, writeKey, readKey []byte, connectionID 
 	if err != nil {
 		return nil, err
 	}
-	return NewSecureConn(conn, derivedWriteKey, derivedReadKey)
+	writeAAD := secureAAD(pluginID, generationID, sessionID, connectionID, writeLabel)
+	readAAD := secureAAD(pluginID, generationID, sessionID, connectionID, readLabel)
+	if conn == nil {
+		return nil, fmt.Errorf("conn is required")
+	}
+	writer, err := newSecureWriter(conn, derivedWriteKey, writeAAD)
+	if err != nil {
+		return nil, err
+	}
+	reader, err := newSecureReader(conn, derivedReadKey, readAAD)
+	if err != nil {
+		return nil, err
+	}
+	return &secureConn{Conn: conn, reader: reader, writer: writer}, nil
+}
+
+func secureAAD(pluginID string, generationID uint64, sessionID string, connectionID uint64, direction string) []byte {
+	return []byte(fmt.Sprintf("rpc_plugin_system/secure/v1/%s/%d/%s/%d/%s", pluginID, generationID, sessionID, connectionID, direction))
 }

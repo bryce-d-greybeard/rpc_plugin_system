@@ -22,11 +22,11 @@ func TestSecureConnRoundTrip(t *testing.T) {
 	defer a.Close()
 	defer b.Close()
 
-	client, err := NewLabeledSecureConn(a, keys.SendKey, keys.RecvKey, 1, "kernel-to-plugin", "plugin-to-kernel")
+	client, err := NewLabeledSecureConn(a, keys.SendKey, keys.RecvKey, 1, "echo", 7, "s1", "kernel-to-plugin", "plugin-to-kernel")
 	if err != nil {
 		t.Fatalf("NewSecureConn client: %v", err)
 	}
-	server, err := NewLabeledSecureConn(b, keys.RecvKey, keys.SendKey, 1, "plugin-to-kernel", "kernel-to-plugin")
+	server, err := NewLabeledSecureConn(b, keys.RecvKey, keys.SendKey, 1, "echo", 7, "s1", "plugin-to-kernel", "kernel-to-plugin")
 	if err != nil {
 		t.Fatalf("NewSecureConn server: %v", err)
 	}

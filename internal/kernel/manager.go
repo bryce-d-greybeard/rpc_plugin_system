@@ -713,7 +713,7 @@ func (m *Manager) dial(socketPath string, generation uint64, sess *bootstrap.Ses
 				_ = conn.Close()
 				return nil, writeErr
 			}
-			secureConn, secureErr := bootstrap.NewLabeledSecureConn(conn, sess.SessionKeys.SendKey, sess.SessionKeys.RecvKey, connectionID, "kernel-to-plugin", "plugin-to-kernel")
+			secureConn, secureErr := bootstrap.NewLabeledSecureConn(conn, sess.SessionKeys.SendKey, sess.SessionKeys.RecvKey, connectionID, m.cfg.PluginID, generation, sess.SessionID, "kernel-to-plugin", "plugin-to-kernel")
 			if secureErr != nil {
 				_ = conn.Close()
 				return nil, secureErr

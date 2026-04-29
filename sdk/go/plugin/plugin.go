@@ -271,7 +271,7 @@ func ServeWithConfig(cfg Config, core Core) error {
 				return fmt.Errorf("read secure rpc prelude: %w", err)
 			}
 			connectionID := binary.BigEndian.Uint64(idBuf[:])
-			secureConn, secureErr := bootstrap.NewLabeledSecureConn(conn, cfg.BootstrapSessionKeys.RecvKey, cfg.BootstrapSessionKeys.SendKey, connectionID, "plugin-to-kernel", "kernel-to-plugin")
+			secureConn, secureErr := bootstrap.NewLabeledSecureConn(conn, cfg.BootstrapSessionKeys.RecvKey, cfg.BootstrapSessionKeys.SendKey, connectionID, cfg.PluginID, cfg.GenerationID, cfg.BootstrapSessionID, "plugin-to-kernel", "kernel-to-plugin")
 			if secureErr != nil {
 				_ = conn.Close()
 				_ = logger.Event(LogEvent{Level: LogLevelError, Event: EventPluginServeStopped, Message: "secure rpc wrapper failed", Error: secureErr.Error()})

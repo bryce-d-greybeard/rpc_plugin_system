@@ -74,6 +74,15 @@ Ciphertext contents:
 - AEAD-sealed plaintext RPC bytes for that write call
 - no extra outer metadata bytes are currently appended beyond the ciphertext itself
 
+Authenticated associated data is still supplied to AEAD.
+Current associated-data binding includes:
+- transport protocol string/version
+- plugin id
+- generation id
+- session id
+- connection id
+- direction label
+
 Current limits:
 - maximum ciphertext frame size is `16 << 20` bytes
 - zero-length frames are invalid
@@ -106,7 +115,7 @@ Safety rule:
 
 ## Direction rules
 
-This transport is directional.
+This transport is directional and metadata-bound.
 
 Current live mapping:
 - manager write key: derived from refreshed substrate send key with `kernel-to-plugin`
@@ -114,7 +123,7 @@ Current live mapping:
 - plugin write key: derived from refreshed plugin send key with `plugin-to-kernel`
 - manager read key: derived from refreshed substrate receive key with `plugin-to-kernel`
 
-If these direction rules are broken, decryption fails and the RPC connection is unusable.
+If these direction rules are broken, or if plugin/session/generation metadata does not match the associated-data context expected by the peer, decryption fails and the RPC connection is unusable.
 
 ## Failure behavior
 

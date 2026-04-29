@@ -115,7 +115,7 @@ Current live shape:
 - manager uses refreshed send/recv-derived transport keys when dialing RPC
 - plugin uses the complementary refreshed recv/send-derived transport keys when serving RPC
 
-The byte-level framing, nonce construction, key derivation labels, and failure behavior are defined in `docs/transport-contract.md`.
+The byte-level framing, nonce construction, per-connection key derivation, and authenticated metadata context are defined in `docs/transport-contract.md`.
 
 ## Bootstrap wire addendum
 
