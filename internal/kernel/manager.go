@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	"rpc_plugin_system/internal/auth"
+	"rpc_plugin_system/internal/bootstrap"
 	"rpc_plugin_system/internal/eventlog"
 	amruntime "rpc_plugin_system/internal/runtime"
 	"rpc_plugin_system/internal/testpluginapi"
@@ -56,15 +56,16 @@ var errRPCPoisoned = errors.New("rpc client poisoned")
 
 // Manager supervises one plugin executable and its RPC connection.
 type Manager struct {
-	cfg       Config
-	mu        sync.RWMutex
-	state     State
-	cmd       *exec.Cmd
-	client    *rpcClient
-	log       *eventlog.Logger
-	closed    bool
-	closedCh  chan struct{}
-	closeOnce sync.Once
+	cfg              Config
+	mu               sync.RWMutex
+	state            State
+	cmd              *exec.Cmd
+	client           *rpcClient
+	log              *eventlog.Logger
+	closed           bool
+	closedCh         chan struct{}
+	closeOnce        sync.Once
+	bootstrapManager *bootstrap.Manager
 }
 
 // New constructs a plugin manager.
@@ -91,7 +92,7 @@ func New(cfg Config) (*Manager, error) {
 	if cfg.HeartbeatEvery == 0 {
 		cfg.HeartbeatEvery = 2 * time.Second
 	}
-	manager := &Manager{cfg: cfg, log: logger, closedCh: make(chan struct{})}
+	manager := &Manager{cfg: cfg, log: logger, closedCh: make(chan struct{}), bootstrapManager: bootstrap.NewManager(30 * time.Second)}
 	manager.logEvent(eventlog.Event{
 		Level:      eventlog.LevelInfo,
 		Component:  eventlog.ComponentKernel,
@@ -149,7 +150,7 @@ func (m *Manager) Start() error {
 		},
 	})
 
-	token, err := auth.NewToken()
+	sess, err := m.bootstrapManager.New(m.cfg.PluginID, time.Now().UTC())
 	if err != nil {
 		m.rollbackGeneration(generation)
 		m.logEvent(eventlog.Event{
@@ -159,11 +160,12 @@ func (m *Manager) Start() error {
 			PluginID:     m.cfg.PluginID,
 			GenerationID: generation,
 			SocketPath:   socketPath,
-			Message:      "failed to create bootstrap token",
+			Message:      "failed to create bootstrap session",
 			Error:        err.Error(),
 		})
 		return err
 	}
+	token := sess.Token
 	if err := os.WriteFile(authPath, token, 0o600); err != nil {
 		m.rollbackGeneration(generation)
 		wrapped := fmt.Errorf("write auth token file: %w", err)
@@ -186,6 +188,7 @@ func (m *Manager) Start() error {
 		"RPC_PLUGIN_SYSTEM_PLUGIN_ID=" + m.cfg.PluginID,
 		fmt.Sprintf("RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION=%d", generation),
 		"RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE=" + authPath,
+		bootstrap.EnvSessionID + "=" + sess.SessionID,
 	}
 	if behaviorPath := os.Getenv(testpluginapi.BehaviorConfigEnv); behaviorPath != "" {
 		cmd.Env = append(cmd.Env, testpluginapi.BehaviorConfigEnv+"="+behaviorPath)
@@ -241,7 +244,7 @@ func (m *Manager) Start() error {
 		Message:      "authenticating plugin bootstrap token",
 	})
 	var authResp testpluginapi.AuthResponse
-	if err := m.call(client, generation, testpluginapi.MethodAuth, testpluginapi.AuthRequest{Token: string(token)}, &authResp); err != nil {
+	if err := m.call(client, generation, testpluginapi.MethodAuth, testpluginapi.AuthRequest{Token: string(token), SessionID: sess.SessionID}, &authResp); err != nil {
 		wrapped := fmt.Errorf("auth rpc: %w", err)
 		m.logEvent(eventlog.Event{
 			Level:        eventlog.LevelError,
@@ -298,6 +301,10 @@ func (m *Manager) Start() error {
 		PID:          cmd.Process.Pid,
 		SocketPath:   socketPath,
 		Message:      "plugin authentication succeeded",
+		Details: map[string]any{
+			"bootstrap_session_id": authResp.SessionID,
+			"session_key_present": len(authResp.SessionKey) > 0,
+		},
 	})
 	_ = os.Remove(authPath)
 

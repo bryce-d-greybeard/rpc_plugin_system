@@ -38,13 +38,17 @@ const (
 type Empty struct{}
 
 type AuthRequest struct {
-	Token string
+	Token           string
+	SessionID       string
+	PluginPublicKey []byte
 }
 
 type AuthResponse struct {
 	PluginID     string
 	Version      string
 	GenerationID uint64
+	SessionID    string
+	SessionKey   []byte
 }
 
 type CapabilitiesResponse struct {
@@ -71,10 +75,12 @@ type SleepRequest struct{ Duration time.Duration }
 type CrashRequest struct{ Code int }
 
 type Config struct {
-	SocketPath   string
-	PluginID     string
-	GenerationID uint64
-	AuthToken    string
+	SocketPath         string
+	PluginID           string
+	GenerationID       uint64
+	AuthToken          string
+	BootstrapSessionID string
+	PluginPublicKey    []byte
 }
 
 // ErrMissingEnv reports one required plugin startup environment variable that was not set.
@@ -140,7 +146,12 @@ func LoadConfigFromEnv() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("read RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE %q: %w", authFile, err)
 	}
-	return Config{SocketPath: sock, PluginID: pluginID, GenerationID: generationID, AuthToken: string(authTokenRaw)}, nil
+	bootstrapSessionID := os.Getenv("RPC_PLUGIN_SYSTEM_BOOTSTRAP_SESSION_ID")
+	var pluginPublicKey []byte
+	if bootstrapSessionID != "" {
+		pluginPublicKey = []byte("plugin-bootstrap-public-key-placeholder")
+	}
+	return Config{SocketPath: sock, PluginID: pluginID, GenerationID: generationID, AuthToken: string(authTokenRaw), BootstrapSessionID: bootstrapSessionID, PluginPublicKey: pluginPublicKey}, nil
 }
 
 func Serve(core Core) error {
@@ -233,7 +244,12 @@ func (s *server) Auth(in AuthRequest, out *AuthResponse) error {
 	if hook, ok := s.core.(identityHook); ok {
 		pluginID, generationID = hook.Identity()
 	}
-	*out = AuthResponse{PluginID: pluginID, Version: s.core.Version(), GenerationID: generationID}
+	resp := AuthResponse{PluginID: pluginID, Version: s.core.Version(), GenerationID: generationID}
+	if s.cfg.BootstrapSessionID != "" && in.SessionID == s.cfg.BootstrapSessionID {
+		resp.SessionID = s.cfg.BootstrapSessionID
+		resp.SessionKey = append([]byte(nil), s.cfg.PluginPublicKey...)
+	}
+	*out = resp
 	if s.logger != nil {
 		_ = s.logger.Event(LogEvent{Event: EventPluginAuthAccepted, Method: MethodAuth, Message: "plugin auth accepted", Details: map[string]any{"version": s.core.Version()}})
 	}

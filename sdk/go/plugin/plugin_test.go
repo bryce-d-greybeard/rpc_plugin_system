@@ -77,7 +77,7 @@ func TestServerRejectsNonAuthMethodsBeforeAuth(t *testing.T) {
 	}
 
 	var authOut AuthResponse
-	if err := srv.Auth(AuthRequest{Token: "secret"}, &authOut); err != nil {
+	if err := srv.Auth(AuthRequest{Token: "secret", SessionID: "s1"}, &authOut); err != nil {
 		t.Fatalf("auth: %v", err)
 	}
 
@@ -117,5 +117,21 @@ func setValidPluginEnv(t *testing.T) {
 		if err := os.Setenv(name, value); err != nil {
 			t.Fatalf("set %s: %v", name, err)
 		}
+	}
+}
+
+func TestLoadConfigFromEnvIncludesBootstrapSessionID(t *testing.T) {
+	clearPluginEnv(t)
+	setValidPluginEnv(t)
+	if err := os.Setenv("RPC_PLUGIN_SYSTEM_BOOTSTRAP_SESSION_ID", "session-1"); err != nil {
+		t.Fatalf("set bootstrap session id: %v", err)
+	}
+	defer os.Unsetenv("RPC_PLUGIN_SYSTEM_BOOTSTRAP_SESSION_ID")
+	cfg, err := LoadConfigFromEnv()
+	if err != nil {
+		t.Fatalf("LoadConfigFromEnv: %v", err)
+	}
+	if cfg.BootstrapSessionID != "session-1" {
+		t.Fatalf("BootstrapSessionID = %q", cfg.BootstrapSessionID)
 	}
 }
