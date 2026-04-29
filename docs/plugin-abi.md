@@ -46,9 +46,10 @@ The auth token file is generation-scoped. The kernel now writes one auth file pe
 9. `AuthRequest` carries `SessionID` and plugin bootstrap public key material when session bootstrap is enabled
 10. `AuthResponse` carries `SessionID`, transport key generation, and transport profile metadata for the already-established secure channel
 11. kernel verifies exact token match, including decode/compare of the textual bootstrap token representation on the bootstrap wire
-12. the one-time auth token is bootstrap-only and must not remain the long-lived trust anchor after bootstrap completes
-13. kernel removes the auth token file after successful bootstrap
-14. only then does the instance qualify as trusted
+12. kernel spends token authority when it consumes the validated bootstrap session
+13. the one-time auth token is bootstrap-only and must not remain the long-lived trust anchor after bootstrap completes
+14. kernel removes the auth token file after successful bootstrap
+15. only then does the instance qualify as trusted
 
 ## Generation contract
 

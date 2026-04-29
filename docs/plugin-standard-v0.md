@@ -41,7 +41,8 @@ Returns:
 
 Rules:
 - bootstrap token auth is one-time-use per generation
-- successful auth spends the token for that generation
+- in the historical v0 token-only model, successful auth spent the token for that generation
+- in the newer secure bootstrap path, token spend occurs earlier at bootstrap session consume time
 - a spent token must not be accepted as a fresh bootstrap
 
 ### `Capabilities`
@@ -120,8 +121,8 @@ The kernel may provide environment variables such as:
 - kernel creates a one-time bootstrap token for the generation
 - kernel writes the token to a protected auth file
 - plugin reads the token through `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
-- plugin proves the token once through `Auth`
-- kernel verifies exact token match
+- in the historical token-only path, plugin proves the token once through `Auth`
+- in the newer secure bootstrap path, the token is validated and consumed during bootstrap session completion before `Auth` continuity verification
 - token file is removed after successful bootstrap
 - unverified plugin instances are not trusted
 - the runtime hardening path may also verify kernel-reported peer credentials through a platform adapter

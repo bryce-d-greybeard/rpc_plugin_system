@@ -237,7 +237,7 @@ What this does:
 - creates a one-time bootstrap token for this generation
 - launches the plugin executable
 - verifies Linux peer credentials for the connected Unix socket when supported
-- authenticates the plugin through the one-time token bootstrap before non-auth plugin RPC methods are trusted
+- authenticates the plugin through bootstrap session establishment before non-auth plugin RPC methods are trusted
 - opens the admin socket for local control
 - starts the monitor loop
 
@@ -337,7 +337,7 @@ In single-plugin host mode, `rpcpluginctl logs` will automatically fall back to 
 
 For v1, plugin-side `plugin-events.jsonl` remains an intentional shell-first inspection surface rather than a first-class CLI surface.
 
-The one-time auth token file is bootstrap-only and should be removed after successful auth.
+The one-time auth token file is bootstrap-only and should be removed after successful bootstrap completion. In the current secure bootstrap path, token spend happens when the kernel consumes the bootstrap session after validating the FIFO bootstrap response, before transitional `Auth` continuity verification runs.
 
 ### Step 6: stop the daemon
 
@@ -391,7 +391,7 @@ The supervisor passes runtime information to plugins through environment variabl
 - `RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION`
 - `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
 
-The auth token file is one-time-use per generation and is removed after successful bootstrap.
+The auth token file is one-time-use per generation and is removed after successful bootstrap. Under secure bootstrap, `Auth` is not the point where token authority is spent. It is a continuity check that runs after bootstrap session consume and secure transport establishment.
 
 ## Failure testing
 

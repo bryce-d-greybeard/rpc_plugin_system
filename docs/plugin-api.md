@@ -32,7 +32,7 @@ Reports:
 
 Rules:
 - the bootstrap token is one-time-use
-- successful auth spends the token for that generation
+- under secure bootstrap, token spend occurs when the kernel consumes the validated bootstrap session, before transitional `Auth` runs
 - repeated auth attempts with the same token must not be accepted as a fresh bootstrap
 - session fields are generation-scoped and must not be replayed across generations
 - after secure bootstrap is active, `Auth` is a bootstrap-completion verification step, not the lasting trust anchor

@@ -42,7 +42,7 @@ The kernel may degrade rather than hard-fail when:
 | Required RPC methods | `Auth`, `Capabilities`, `Heartbeat`, `Shutdown` | yes | no |
 | Generation semantics | one process and one trusted connection per generation | yes | no |
 | Startup env contract | required env vars must be present and parseable, including bootstrap env when transport-backed bootstrap is enabled | yes | no |
-| Bootstrap auth | transport-backed bootstrap plus one-time token proof is required before non-auth RPC methods are served | yes | additive bootstrap fields only |
+| Bootstrap auth | transport-backed bootstrap plus one-time token validation/consume is required before non-auth RPC methods are served; transitional `Auth` is continuity verification under secure bootstrap | yes | additive bootstrap fields only |
 | Peer credential hardening | Linux `SO_PEERCRED` path supported in v1 | yes on supported Linux path when verification is enabled by the runtime; unsupported platforms are not v1 hardening targets | backend expansion post-v1 |
 | Optional capabilities | may be absent | no | yes |
 | Optional response fields | safe to ignore when additive | no | yes |
