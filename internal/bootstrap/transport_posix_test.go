@@ -17,7 +17,7 @@ func TestFIFOTransportLifecycle(t *testing.T) {
 
 	done := make(chan error, 1)
 	go func() {
-		r, err := tr.OpenReader()
+		r, err := tr.OpenRequestReader()
 		if err != nil {
 			done <- err
 			return
@@ -35,7 +35,7 @@ func TestFIFOTransportLifecycle(t *testing.T) {
 		done <- nil
 	}()
 
-	w, err := tr.OpenWriter()
+	w, err := tr.OpenRequestWriter()
 	if err != nil {
 		t.Fatalf("OpenWriter: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestRecordRoundTrip(t *testing.T) {
 	defer tr.Cleanup()
 	done := make(chan error, 1)
 	go func() {
-		r, err := tr.OpenReader()
+		r, err := tr.OpenRequestReader()
 		if err != nil { done <- err; return }
 		defer r.Close()
 		rec, err := ReadRecord(r)
@@ -70,7 +70,7 @@ func TestRecordRoundTrip(t *testing.T) {
 		}
 		done <- nil
 	}()
-	w, err := tr.OpenWriter()
+	w, err := tr.OpenRequestWriter()
 	if err != nil {
 		t.Fatalf("OpenWriter: %v", err)
 	}

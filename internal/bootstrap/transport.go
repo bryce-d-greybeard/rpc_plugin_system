@@ -8,8 +8,10 @@ import (
 
 type Transport interface {
 	Endpoint() string
-	OpenWriter() (io.WriteCloser, error)
-	OpenReader() (io.ReadCloser, error)
+	OpenRequestWriter() (io.WriteCloser, error)
+	OpenRequestReader() (io.ReadCloser, error)
+	OpenResponseWriter() (io.WriteCloser, error)
+	OpenResponseReader() (io.ReadCloser, error)
 	Cleanup() error
 }
 

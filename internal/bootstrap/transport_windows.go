@@ -19,6 +19,8 @@ func NewNamedPipeTransport(runtimeDir, pluginID, sessionID string) (*NamedPipeTr
 }
 
 func (t *NamedPipeTransport) Endpoint() string { return t.endpoint }
-func (t *NamedPipeTransport) OpenWriter() (io.WriteCloser, error) { return nil, fmt.Errorf("not implemented on windows") }
-func (t *NamedPipeTransport) OpenReader() (io.ReadCloser, error) { return nil, fmt.Errorf("not implemented on windows") }
+func (t *NamedPipeTransport) OpenRequestWriter() (io.WriteCloser, error) { return nil, fmt.Errorf("not implemented on windows") }
+func (t *NamedPipeTransport) OpenRequestReader() (io.ReadCloser, error) { return nil, fmt.Errorf("not implemented on windows") }
+func (t *NamedPipeTransport) OpenResponseWriter() (io.WriteCloser, error) { return nil, fmt.Errorf("not implemented on windows") }
+func (t *NamedPipeTransport) OpenResponseReader() (io.ReadCloser, error) { return nil, fmt.Errorf("not implemented on windows") }
 func (t *NamedPipeTransport) Cleanup() error { return nil }
