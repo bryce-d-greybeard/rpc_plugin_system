@@ -25,18 +25,17 @@ func main() {
 	)
 	flag.Parse()
 
-	plugins, err := parsePlugins(*pluginsArg, *pluginID, *pluginPath)
+	cfg, err := parseDaemonConfig(daemonOptions{
+		RuntimeDir: *runtimeDir,
+		PluginsArg: *pluginsArg,
+		PluginID:   *pluginID,
+		PluginPath: *pluginPath,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	host, err := kernel.NewHost(kernel.HostConfig{
-		RuntimeDir:     *runtimeDir,
-		DialTimeout:    3 * time.Second,
-		CallTimeout:    500 * time.Millisecond,
-		HeartbeatEvery: 2 * time.Second,
-		Plugins:        plugins,
-	})
+	host, err := kernel.NewHost(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,6 +52,27 @@ func main() {
 	if err := adminrpc.Serve(ctx, filepath.Join(*runtimeDir, "admin.sock"), host); err != nil {
 		log.Fatal(err)
 	}
+}
+
+type daemonOptions struct {
+	RuntimeDir string
+	PluginsArg string
+	PluginID   string
+	PluginPath string
+}
+
+func parseDaemonConfig(opts daemonOptions) (kernel.HostConfig, error) {
+	plugins, err := parsePlugins(opts.PluginsArg, opts.PluginID, opts.PluginPath)
+	if err != nil {
+		return kernel.HostConfig{}, err
+	}
+	return kernel.HostConfig{
+		RuntimeDir:     opts.RuntimeDir,
+		DialTimeout:    3 * time.Second,
+		CallTimeout:    500 * time.Millisecond,
+		HeartbeatEvery: 2 * time.Second,
+		Plugins:        plugins,
+	}, nil
 }
 
 func parsePlugins(pluginsArg, pluginID, pluginPath string) ([]kernel.PluginConfig, error) {
