@@ -1,14 +1,26 @@
 package runtime
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 func TestEnsureDirRejectsEmptyPath(t *testing.T) {
 	if err := EnsureDir(""); err == nil {
 		t.Fatal("expected empty runtime dir rejection")
+	}
+}
+
+func TestEnsureDirRejectsInvalidPath(t *testing.T) {
+	err := EnsureDir("bad\x00")
+	if err == nil {
+		t.Fatal("expected invalid runtime dir rejection")
+	}
+	if !strings.Contains(err.Error(), "stat runtime dir") {
+		t.Fatalf("expected stat runtime dir error, got %v", err)
 	}
 }
 
@@ -43,6 +55,38 @@ func TestEnsureDirFixesExistingDirectoryPermissions(t *testing.T) {
 	}
 	if got := info.Mode().Perm(); got != dirMode {
 		t.Fatalf("expected mode %03o, got %03o", dirMode, got)
+	}
+}
+
+func TestEnsureDirReportsCreateFailure(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "runtime")
+	sentinel := errors.New("mkdir failed")
+	oldMkdirAll := mkdirAll
+	mkdirAll = func(string, os.FileMode) error { return sentinel }
+	t.Cleanup(func() { mkdirAll = oldMkdirAll })
+
+	err := EnsureDir(dir)
+	if err == nil {
+		t.Fatal("expected create failure")
+	}
+	if !strings.Contains(err.Error(), "create runtime dir") || !errors.Is(err, sentinel) {
+		t.Fatalf("expected wrapped create error, got %v", err)
+	}
+}
+
+func TestEnsureDirReportsChmodFailure(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "runtime")
+	sentinel := errors.New("chmod failed")
+	oldChmod := chmod
+	chmod = func(string, os.FileMode) error { return sentinel }
+	t.Cleanup(func() { chmod = oldChmod })
+
+	err := EnsureDir(dir)
+	if err == nil {
+		t.Fatal("expected chmod failure")
+	}
+	if !strings.Contains(err.Error(), "chmod runtime dir") || !errors.Is(err, sentinel) {
+		t.Fatalf("expected wrapped chmod error, got %v", err)
 	}
 }
 
@@ -136,6 +180,40 @@ func TestListenUnixBindsPrivateSocketAndRemovesStaleSocket(t *testing.T) {
 	}
 	if got := info.Mode().Perm(); got != socketMode {
 		t.Fatalf("expected socket mode %03o, got %03o", socketMode, got)
+	}
+}
+
+func TestListenUnixCleansUpAfterChmodFailure(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "plugin.sock")
+	sentinel := errors.New("chmod failed")
+	var chmodPath string
+	var chmodMode os.FileMode
+	oldChmod := chmod
+	chmod = func(path string, mode os.FileMode) error {
+		chmodPath = path
+		chmodMode = mode
+		return sentinel
+	}
+	t.Cleanup(func() { chmod = oldChmod })
+
+	listener, err := ListenUnix(path)
+	if err == nil {
+		if listener != nil {
+			_ = listener.Close()
+		}
+		t.Fatal("expected chmod failure")
+	}
+	if listener != nil {
+		t.Fatalf("expected nil listener on chmod failure, got %T", listener)
+	}
+	if !strings.Contains(err.Error(), "chmod unix socket") || !errors.Is(err, sentinel) {
+		t.Fatalf("expected wrapped chmod error, got %v", err)
+	}
+	if chmodPath != path || chmodMode != socketMode {
+		t.Fatalf("chmod called with path=%q mode=%03o, want path=%q mode=%03o", chmodPath, chmodMode, path, socketMode)
+	}
+	if _, statErr := os.Lstat(path); !os.IsNotExist(statErr) {
+		t.Fatalf("expected socket cleanup after chmod failure, stat err %v", statErr)
 	}
 }
 

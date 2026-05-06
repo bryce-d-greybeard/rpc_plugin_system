@@ -13,6 +13,11 @@ const (
 	socketMode = 0o600
 )
 
+var (
+	chmod    = os.Chmod
+	mkdirAll = os.MkdirAll
+)
+
 // EnsureDir creates a private runtime directory for plugin sockets and auth files.
 func EnsureDir(root string) error {
 	if root == "" {
@@ -29,10 +34,10 @@ func EnsureDir(root string) error {
 	} else if !os.IsNotExist(err) {
 		return fmt.Errorf("stat runtime dir: %w", err)
 	}
-	if err := os.MkdirAll(root, dirMode); err != nil {
+	if err := mkdirAll(root, dirMode); err != nil {
 		return fmt.Errorf("create runtime dir: %w", err)
 	}
-	if err := os.Chmod(root, dirMode); err != nil {
+	if err := chmod(root, dirMode); err != nil {
 		return fmt.Errorf("chmod runtime dir: %w", err)
 	}
 	return nil
@@ -55,7 +60,7 @@ func ListenUnix(socketPath string) (net.Listener, error) {
 	if err != nil {
 		return nil, fmt.Errorf("listen unix socket: %w", err)
 	}
-	if err := os.Chmod(socketPath, socketMode); err != nil {
+	if err := chmod(socketPath, socketMode); err != nil {
 		_ = listener.Close()
 		_ = os.Remove(socketPath)
 		return nil, fmt.Errorf("chmod unix socket: %w", err)

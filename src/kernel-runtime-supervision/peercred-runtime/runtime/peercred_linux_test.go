@@ -3,11 +3,66 @@
 package runtime
 
 import (
+	"errors"
 	"net"
 	"os"
 	"strings"
+	"syscall"
 	"testing"
+
+	"golang.org/x/sys/unix"
 )
+
+type fakeRawConn struct {
+	controlErr error
+}
+
+func (c fakeRawConn) Control(f func(uintptr)) error {
+	if c.controlErr != nil {
+		return c.controlErr
+	}
+	f(0)
+	return nil
+}
+
+func (c fakeRawConn) Read(func(uintptr) bool) error  { return nil }
+func (c fakeRawConn) Write(func(uintptr) bool) error { return nil }
+
+func newTestUnixConn(t *testing.T) *net.UnixConn {
+	t.Helper()
+	path := SocketPath(t.TempDir(), "peercred-seam")
+	listener, err := ListenUnix(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = listener.Close() })
+
+	accepted := make(chan net.Conn, 1)
+	acceptErr := make(chan error, 1)
+	go func() {
+		conn, err := listener.Accept()
+		if err != nil {
+			acceptErr <- err
+			return
+		}
+		accepted <- conn
+	}()
+
+	client, err := net.Dial("unix", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = client.Close() })
+
+	select {
+	case err := <-acceptErr:
+		t.Fatal(err)
+	case conn := <-accepted:
+		t.Cleanup(func() { _ = conn.Close() })
+		return conn.(*net.UnixConn)
+	}
+	panic("unreachable")
+}
 
 func TestReadPeerCredRejectsNonUnixConn(t *testing.T) {
 	server, client := net.Pipe()
@@ -20,6 +75,49 @@ func TestReadPeerCredRejectsNonUnixConn(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "requires unix conn") {
 		t.Fatalf("expected unix conn error, got %v", err)
+	}
+}
+
+func TestReadPeerCredReportsSyscallConnFailure(t *testing.T) {
+	conn := newTestUnixConn(t)
+	sentinel := errors.New("syscall conn failed")
+	oldSyscallConn := unixConnSyscallConn
+	unixConnSyscallConn = func(*net.UnixConn) (syscall.RawConn, error) {
+		return nil, sentinel
+	}
+	t.Cleanup(func() { unixConnSyscallConn = oldSyscallConn })
+
+	_, err := ReadPeerCred(conn)
+	if err == nil {
+		t.Fatal("expected SyscallConn failure")
+	}
+	if !strings.Contains(err.Error(), "peercred syscall conn") || !errors.Is(err, sentinel) {
+		t.Fatalf("expected wrapped SyscallConn error, got %v", err)
+	}
+}
+
+func TestReadPeerCredReportsGetsockoptFailure(t *testing.T) {
+	conn := newTestUnixConn(t)
+	sentinel := errors.New("getsockopt failed")
+	oldSyscallConn := unixConnSyscallConn
+	oldGetsockoptUcred := getsockoptUcred
+	unixConnSyscallConn = func(*net.UnixConn) (syscall.RawConn, error) {
+		return fakeRawConn{}, nil
+	}
+	getsockoptUcred = func(int, int, int) (*unix.Ucred, error) {
+		return nil, sentinel
+	}
+	t.Cleanup(func() {
+		unixConnSyscallConn = oldSyscallConn
+		getsockoptUcred = oldGetsockoptUcred
+	})
+
+	_, err := ReadPeerCred(conn)
+	if err == nil {
+		t.Fatal("expected GetsockoptUcred failure")
+	}
+	if !strings.Contains(err.Error(), "getsockopt SO_PEERCRED") || !errors.Is(err, sentinel) {
+		t.Fatalf("expected wrapped GetsockoptUcred error, got %v", err)
 	}
 }
 

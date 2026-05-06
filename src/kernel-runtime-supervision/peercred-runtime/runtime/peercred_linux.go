@@ -16,20 +16,25 @@ type PeerCred struct {
 	GID uint32
 }
 
+var (
+	unixConnSyscallConn = (*net.UnixConn).SyscallConn
+	getsockoptUcred     = unix.GetsockoptUcred
+)
+
 // ReadPeerCred returns kernel-reported peer credentials for one Unix socket connection.
 func ReadPeerCred(conn net.Conn) (PeerCred, error) {
 	unixConn, ok := conn.(*net.UnixConn)
 	if !ok {
 		return PeerCred{}, fmt.Errorf("peercred requires unix conn, got %T", conn)
 	}
-	rawConn, err := unixConn.SyscallConn()
+	rawConn, err := unixConnSyscallConn(unixConn)
 	if err != nil {
 		return PeerCred{}, fmt.Errorf("peercred syscall conn: %w", err)
 	}
 	var out PeerCred
 	var credErr error
 	if err := rawConn.Control(func(fd uintptr) {
-		cred, err := unix.GetsockoptUcred(int(fd), unix.SOL_SOCKET, unix.SO_PEERCRED)
+		cred, err := getsockoptUcred(int(fd), unix.SOL_SOCKET, unix.SO_PEERCRED)
 		if err != nil {
 			credErr = fmt.Errorf("getsockopt SO_PEERCRED: %w", err)
 			return
