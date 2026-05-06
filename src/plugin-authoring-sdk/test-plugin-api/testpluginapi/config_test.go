@@ -1,9 +1,11 @@
 package testpluginapi
 
 import (
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -174,6 +176,17 @@ func TestLoadConfigFallsBackToLegacyEnvWhenConfigUnavailableOrInvalid(t *testing
 				t.Fatalf("LoadConfig() fallback = %#v, want legacy env id/version", got)
 			}
 		})
+	}
+}
+
+func TestWriteConfigReportsMarshalErrors(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "behavior.json")
+	err := WriteConfig(path, Env{SleepScale: math.NaN()})
+	if err == nil {
+		t.Fatalf("WriteConfig(NaN sleep scale) error = nil, want failure")
+	}
+	if !strings.Contains(err.Error(), "marshal behavior config") {
+		t.Fatalf("WriteConfig(NaN sleep scale) error = %v, want marshal context", err)
 	}
 }
 
