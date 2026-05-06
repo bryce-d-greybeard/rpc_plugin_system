@@ -10,13 +10,13 @@ This is not a shared-library ABI. It is a process-boundary ABI.
 
 The kernel launches a plugin executable directly.
 
-Current v0.1.0 startup environment:
+Current v0.1.0 startup environment is intentionally minimal:
 - `RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET`
 - `RPC_PLUGIN_SYSTEM_PLUGIN_ID`
 - `RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION`
 - `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
 
-No other daemon environment variables are inherited by the plugin process.
+General daemon environment variables are not inherited by the plugin process. The current in-repo test harness may additionally forward test-only `RPC_PLUGIN_SYSTEM_TEST_*` controls when those variables are set in test builds; those are not part of the public plugin ABI.
 
 ## Transport contract
 

@@ -25,7 +25,8 @@ Current notes:
 From the repo root:
 
 ```bash
-cd /tank/development/rpc_plugin_system
+REPO=/path/to/rpc-plugin-system
+cd "$REPO"
 make build
 ```
 
@@ -38,7 +39,7 @@ The root `Makefile` delegates to the Go source root under `src/`. That produces 
 You can also build everything with plain Go from the source root:
 
 ```bash
-cd /tank/development/rpc_plugin_system/src
+cd "$REPO/src"
 go build ./...
 ```
 
@@ -66,7 +67,7 @@ Plugin id notes:
 ## Single-plugin launch
 
 ```bash
-cd /tank/development/rpc_plugin_system
+cd "$REPO"
 src/.tmp-bin/rpcplugind \
   -runtime-dir /tmp/rpc_plugin_system-demo \
   -plugin "$(pwd)/src/.tmp-bin/rpcplugin-echo" \
@@ -76,14 +77,14 @@ src/.tmp-bin/rpcplugind \
 Control from another shell:
 
 ```bash
-cd /tank/development/rpc_plugin_system
+cd "$REPO"
 src/.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo status
 ```
 
 ## Multi-plugin launch
 
 ```bash
-cd /tank/development/rpc_plugin_system
+cd "$REPO"
 src/.tmp-bin/rpcplugind \
   -runtime-dir /tmp/rpc_plugin_system-demo \
   -plugins "echo=$(pwd)/src/.tmp-bin/rpcplugin-echo,failure=$(pwd)/src/.tmp-bin/rpcplugin-failure"
@@ -92,7 +93,7 @@ src/.tmp-bin/rpcplugind \
 Inspect routes and plugin state:
 
 ```bash
-cd /tank/development/rpc_plugin_system
+cd "$REPO"
 src/.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo plugins
 src/.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo routes
 src/.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo plugin -plugin-id echo

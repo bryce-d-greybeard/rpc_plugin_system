@@ -103,12 +103,14 @@ A plugin must advertise optional methods through capability reporting.
 - logs must remain human-readable enough for direct operator inspection
 
 ### Startup environment
-The kernel may provide environment variables such as:
+The kernel provides a minimal startup environment:
 - `RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET`
 - `RPC_PLUGIN_SYSTEM_PLUGIN_ID`
 - `RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION`
 - `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
 - future protocol negotiation variables, if a later standard explicitly adds them
+
+General daemon environment is intentionally not inherited. Current in-repo test harness code may forward test-only `RPC_PLUGIN_SYSTEM_TEST_*` controls when set; those variables are not part of the public v0 plugin contract.
 
 ### Transport
 - v0 transport is Unix domain sockets plus Go `net/rpc`
