@@ -5,12 +5,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"rpc_plugin_system/internal/testroot"
 )
 
 func TestCLIAllowsSubcommandFlagsAfterCommand(t *testing.T) {
 	bin := filepath.Join(t.TempDir(), "rpcpluginctl")
 	cmd := exec.Command("go", "build", "-buildvcs=false", "-o", bin, "./cmd/rpcpluginctl")
-	cmd.Dir = filepath.Join("..", "..")
+	cmd.Dir = testroot.SourceRoot(t)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("build rpcpluginctl: %v\n%s", err, out)
 	}

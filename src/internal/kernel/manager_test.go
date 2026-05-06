@@ -12,6 +12,7 @@ import (
 	"rpc_plugin_system/internal/eventlog"
 	"rpc_plugin_system/internal/runtime"
 	"rpc_plugin_system/internal/testpluginapi"
+	"rpc_plugin_system/internal/testroot"
 )
 
 var (
@@ -30,7 +31,7 @@ func buildPlugin(t *testing.T) string {
 		}
 		pluginBuildPath = filepath.Join(cacheDir, "rpcplugin-echo")
 		cmd := exec.Command("go", "build", "-buildvcs=false", "-o", pluginBuildPath, "./cmd/rpcplugin-echo")
-		cmd.Dir = filepath.Clean(filepath.Join("..", ".."))
+		cmd.Dir = testroot.SourceRoot(t)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			pluginBuildErr = fmt.Errorf("build plugin: %w\n%s", err, string(out))

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"rpc_plugin_system/internal/kernel"
+	"rpc_plugin_system/internal/testroot"
 )
 
 func TestDaemonAndCLIEndToEnd(t *testing.T) {
@@ -176,7 +177,7 @@ func buildBinary(t *testing.T, name, pkg string) string {
 	binaryBuildMu.Unlock()
 
 	cmd := exec.Command("go", "build", "-buildvcs=false", "-o", bin, pkg)
-	cmd.Dir = filepath.Clean(filepath.Join("..", ".."))
+	cmd.Dir = testroot.SourceRoot(t)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		err = fmt.Errorf("build %s: %w\n%s", name, err, string(out))

@@ -10,6 +10,7 @@ import (
 
 	"rpc_plugin_system/internal/auth"
 	"rpc_plugin_system/internal/testpluginapi"
+	"rpc_plugin_system/internal/testroot"
 )
 
 var (
@@ -33,7 +34,7 @@ func buildFailurePlugin(t *testing.T) string {
 	}
 	failurePluginBuildPath = filepath.Join(cacheDir, "rpcplugin-failure")
 	cmd := exec.Command("go", "build", "-buildvcs=false", "-o", failurePluginBuildPath, "./cmd/rpcplugin-failure")
-	cmd.Dir = filepath.Clean(filepath.Join("..", ".."))
+	cmd.Dir = testroot.SourceRoot(t)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		failurePluginBuildErr = fmt.Errorf("build failure plugin: %w\n%s", err, string(out))
