@@ -75,3 +75,22 @@ The public Go plugin SDK lives at:
 ```go
 import plugin "rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin"
 ```
+
+That import path is the local Go module path used by this source release. It
+is meant for packages built inside this repository checkout; it is not a
+fetchable external module path and should not be used with `go get` as a
+published SDK dependency.
+
+Plugin capability strings are small routing/status vocabulary emitted by the
+SDK/runtime code:
+
+- `heartbeat` — required core health check support.
+- `shutdown` — required graceful shutdown support.
+- `echo` — optional echo RPC support.
+- `sleep` — optional sleep RPC support used by timeout/failure tests.
+- `crash` — optional crash RPC support used by supervision/failure tests.
+
+`TemplatePlugin` reports the required core capabilities (`heartbeat`,
+`shutdown`) through SDK detection. Plugins that implement optional interfaces
+add `echo`, `sleep`, and/or `crash`; plugins may also provide an explicit
+`Capabilities() []string` override for test and compatibility scenarios.
