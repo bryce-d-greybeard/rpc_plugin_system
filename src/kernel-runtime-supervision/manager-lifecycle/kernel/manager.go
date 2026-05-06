@@ -62,10 +62,12 @@ type Manager struct {
 	state       State
 	cmd         *exec.Cmd
 	client      *rpcClient
+	rpcEpoch    uint64
 	log         *eventlog.Logger
 	closed      bool
 	closedCh    chan struct{}
 	closeOnce   sync.Once
+	closeErr    error
 }
 
 // New constructs a plugin manager.
@@ -113,14 +115,20 @@ func (m *Manager) Close() error {
 	m.lifecycleMu.Lock()
 	defer m.lifecycleMu.Unlock()
 	m.closeOnce.Do(func() {
-		_ = m.stopCurrent(true, "manager close")
+		m.closeErr = m.stopCurrent(true, "manager close")
 		m.mu.Lock()
-		m.closed = true
+		if !m.closed {
+			m.closed = true
+			m.rpcEpoch++
+		}
 		close(m.closedCh)
 		m.mu.Unlock()
 		m.cleanupRuntimeArtifacts(0)
+		if err := m.log.Close(); m.closeErr == nil {
+			m.closeErr = err
+		}
 	})
-	return m.log.Close()
+	return m.closeErr
 }
 
 // Start launches the configured plugin, authenticates it, and opens the RPC connection.
@@ -258,7 +266,7 @@ func (m *Manager) startLocked() error {
 		Message:      "authenticating plugin bootstrap token",
 	})
 	var authResp testpluginapi.AuthResponse
-	if err := m.call(client, generation, testpluginapi.MethodAuth, testpluginapi.AuthRequest{Token: string(token)}, &authResp); err != nil {
+	if err := m.call(client, generation, 0, testpluginapi.MethodAuth, testpluginapi.AuthRequest{Token: string(token)}, &authResp); err != nil {
 		wrapped := fmt.Errorf("auth rpc: %w", err)
 		m.logEvent(eventlog.Event{
 			Level:        eventlog.LevelError,
@@ -329,7 +337,7 @@ func (m *Manager) startLocked() error {
 		Message:      "loading plugin capabilities",
 	})
 	var caps testpluginapi.CapabilitiesResponse
-	if err := m.call(client, generation, testpluginapi.MethodCapabilities, testpluginapi.Empty{}, &caps); err != nil {
+	if err := m.call(client, generation, 0, testpluginapi.MethodCapabilities, testpluginapi.Empty{}, &caps); err != nil {
 		wrapped := fmt.Errorf("capabilities rpc: %w", err)
 		m.logEvent(eventlog.Event{
 			Level:        eventlog.LevelError,
@@ -439,6 +447,7 @@ func (m *Manager) Heartbeat() (testpluginapi.HeartbeatResponse, error) {
 	m.mu.RLock()
 	client := m.client
 	generation := m.state.GenerationID
+	epoch := m.rpcEpoch
 	closed := m.closed
 	pid := m.state.PID
 	socketPath := m.state.SocketPath
@@ -450,7 +459,7 @@ func (m *Manager) Heartbeat() (testpluginapi.HeartbeatResponse, error) {
 	if client == nil {
 		return out, errors.New("plugin not started")
 	}
-	if err := m.call(client, generation, testpluginapi.MethodHeartbeat, testpluginapi.Empty{}, &out); err != nil {
+	if err := m.call(client, generation, epoch, testpluginapi.MethodHeartbeat, testpluginapi.Empty{}, &out); err != nil {
 		m.logEvent(eventlog.Event{
 			Level:        eventlog.LevelWarn,
 			Component:    eventlog.ComponentKernel,
@@ -467,6 +476,10 @@ func (m *Manager) Heartbeat() (testpluginapi.HeartbeatResponse, error) {
 	}
 	healthy := out.Status == testpluginapi.StatusHealthy
 	m.mu.Lock()
+	if m.closed || m.client != client || m.rpcEpoch != epoch || m.state.GenerationID != generation {
+		m.mu.Unlock()
+		return out, fmt.Errorf("stale heartbeat rejected: generation=%d epoch=%d", generation, epoch)
+	}
 	wasHealthy := m.state.Healthy
 	m.state.Healthy = healthy
 	m.mu.Unlock()
@@ -506,6 +519,7 @@ func (m *Manager) Echo(message string) (string, error) {
 	m.mu.RLock()
 	client := m.client
 	generation := m.state.GenerationID
+	epoch := m.rpcEpoch
 	closed := m.closed
 	m.mu.RUnlock()
 	if closed {
@@ -515,7 +529,7 @@ func (m *Manager) Echo(message string) (string, error) {
 		return "", errors.New("plugin not started")
 	}
 	var out testpluginapi.EchoResponse
-	if err := m.call(client, generation, testpluginapi.MethodEcho, testpluginapi.EchoRequest{Message: message}, &out); err != nil {
+	if err := m.call(client, generation, epoch, testpluginapi.MethodEcho, testpluginapi.EchoRequest{Message: message}, &out); err != nil {
 		return "", err
 	}
 	return out.Message, nil
@@ -526,6 +540,7 @@ func (m *Manager) Sleep(duration time.Duration) error {
 	m.mu.RLock()
 	client := m.client
 	generation := m.state.GenerationID
+	epoch := m.rpcEpoch
 	closed := m.closed
 	m.mu.RUnlock()
 	if closed {
@@ -534,7 +549,7 @@ func (m *Manager) Sleep(duration time.Duration) error {
 	if client == nil {
 		return errors.New("plugin not started")
 	}
-	return m.call(client, generation, testpluginapi.MethodSleep, testpluginapi.SleepRequest{Duration: duration}, &testpluginapi.Empty{})
+	return m.call(client, generation, epoch, testpluginapi.MethodSleep, testpluginapi.SleepRequest{Duration: duration}, &testpluginapi.Empty{})
 }
 
 // Crash asks the plugin to terminate itself with one exit code.
@@ -542,6 +557,7 @@ func (m *Manager) Crash(code int) error {
 	m.mu.RLock()
 	client := m.client
 	generation := m.state.GenerationID
+	epoch := m.rpcEpoch
 	closed := m.closed
 	m.mu.RUnlock()
 	if closed {
@@ -550,7 +566,7 @@ func (m *Manager) Crash(code int) error {
 	if client == nil {
 		return errors.New("plugin not started")
 	}
-	return m.call(client, generation, testpluginapi.MethodCrash, testpluginapi.CrashRequest{Code: code}, &testpluginapi.Empty{})
+	return m.call(client, generation, epoch, testpluginapi.MethodCrash, testpluginapi.CrashRequest{Code: code}, &testpluginapi.Empty{})
 }
 
 // Restart kills the current plugin process and starts a fresh generation.
@@ -676,7 +692,7 @@ func (m *Manager) dial(socketPath string, generation uint64) (*rpcClient, error)
 	return nil, err
 }
 
-func (m *Manager) call(client *rpcClient, generation uint64, method string, args any, reply any) error {
+func (m *Manager) call(client *rpcClient, generation, epoch uint64, method string, args any, reply any) error {
 	if client == nil {
 		return errors.New("rpc client unavailable")
 	}
@@ -719,9 +735,12 @@ func (m *Manager) call(client *rpcClient, generation uint64, method string, args
 		}
 		m.mu.RLock()
 		currentGeneration := m.state.GenerationID
+		currentEpoch := m.rpcEpoch
+		currentClient := m.client
+		closed := m.closed
 		m.mu.RUnlock()
-		if generation != currentGeneration {
-			err := fmt.Errorf("stale response rejected: generation=%d current=%d", generation, currentGeneration)
+		if generation != currentGeneration || (epoch != 0 && (closed || currentClient != client || currentEpoch != epoch)) {
+			err := fmt.Errorf("stale response rejected: generation=%d current=%d epoch=%d current_epoch=%d", generation, currentGeneration, epoch, currentEpoch)
 			m.logEvent(eventlog.Event{
 				Level:        eventlog.LevelWarn,
 				Component:    eventlog.ComponentRPC,
@@ -778,6 +797,7 @@ func (m *Manager) stopCurrent(markClosed bool, reason string) error {
 	generation := m.state.GenerationID
 	socketPath := m.state.SocketPath
 	pid := m.state.PID
+	m.rpcEpoch++
 	m.client = nil
 	m.cmd = nil
 	m.state.Healthy = false
@@ -811,7 +831,7 @@ func (m *Manager) stopCurrent(markClosed bool, reason string) error {
 			Method:       testpluginapi.MethodShutdown,
 			Message:      "requesting graceful shutdown",
 		})
-		if err := m.call(client, generation, testpluginapi.MethodShutdown, testpluginapi.Empty{}, &testpluginapi.Empty{}); err != nil {
+		if err := m.call(client, generation, 0, testpluginapi.MethodShutdown, testpluginapi.Empty{}, &testpluginapi.Empty{}); err != nil {
 			m.logEvent(eventlog.Event{
 				Level:        eventlog.LevelWarn,
 				Component:    eventlog.ComponentKernel,

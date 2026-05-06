@@ -19,12 +19,20 @@ type Env struct {
 	CapabilitiesMode string  `json:"capabilities_mode,omitempty"`
 	HeartbeatStatus  Status  `json:"heartbeat_status,omitempty"`
 	HeartbeatErrors  int     `json:"heartbeat_errors,omitempty"`
+	HeartbeatDelayMS int64   `json:"heartbeat_delay_ms,omitempty"`
 	SleepScale       float64 `json:"sleep_scale,omitempty"`
 	CrashOnEcho      bool    `json:"crash_on_echo,omitempty"`
 	ShutdownDelayMS  int64   `json:"shutdown_delay_ms,omitempty"`
 	FailAuth         bool    `json:"fail_auth,omitempty"`
 	CloseOnAccept    bool    `json:"close_on_accept,omitempty"`
 	CloseOnEcho      bool    `json:"close_on_echo,omitempty"`
+}
+
+func (e Env) HeartbeatDelay() time.Duration {
+	if e.HeartbeatDelayMS <= 0 {
+		return 0
+	}
+	return time.Duration(e.HeartbeatDelayMS) * time.Millisecond
 }
 
 func (e Env) ShutdownDelay() time.Duration {
@@ -76,6 +84,7 @@ func LoadEnv() Env {
 		CapabilitiesMode: getenvDefault("RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_CAPABILITIES_MODE", "normal"),
 		HeartbeatStatus:  Status(getenvDefault("RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_HEARTBEAT_STATUS", string(StatusHealthy))),
 		HeartbeatErrors:  int(getenvInt64("RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_HEARTBEAT_ERRORS", 0)),
+		HeartbeatDelayMS: getenvInt64("RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_HEARTBEAT_DELAY_MS", 0),
 		SleepScale:       getenvFloat64("RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_SLEEP_SCALE", 1),
 		CrashOnEcho:      getenvBool("RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_CRASH_ON_ECHO", false),
 		ShutdownDelayMS:  getenvInt64("RPC_PLUGIN_SYSTEM_PLUGIN_BEHAVIOR_SHUTDOWN_DELAY_MS", 50),

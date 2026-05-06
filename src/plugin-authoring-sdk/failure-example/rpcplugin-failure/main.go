@@ -44,6 +44,9 @@ func (p *failurePlugin) OnServeListener(listener net.Listener) {
 }
 
 func (p *failurePlugin) Heartbeat(_ plugin.Empty, out *plugin.HeartbeatResponse) error {
+	if delay := p.behavior.HeartbeatDelay(); delay > 0 {
+		time.Sleep(delay)
+	}
 	if p.behavior.HeartbeatErrors > 0 {
 		p.behavior.HeartbeatErrors--
 		return errors.New("heartbeat failure requested")
