@@ -1,16 +1,16 @@
 ok  	rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc	0.907s	coverage: 76.6% of statements
-ok  	rpc_plugin_system/control-plane-ops/cli-status-control/cli	0.006s	coverage: 70.2% of statements
-ok  	rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl	(cached)	coverage: 14.9% of statements
-ok  	rpc_plugin_system/control-plane-ops/event-log-write/eventlog	(cached)	coverage: 77.0% of statements
-ok  	rpc_plugin_system/kernel-runtime-supervision/daemon-entrypoint/rpcplugind	2.496s	coverage: 36.4% of statements
-ok  	rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel	16.633s	coverage: 79.8% of statements
-ok  	rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime	(cached)	coverage: 31.7% of statements
+ok  	rpc_plugin_system/control-plane-ops/cli-status-control/cli	0.010s	coverage: 70.2% of statements
+ok  	rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl	2.111s	coverage: 14.9% of statements
+ok  	rpc_plugin_system/control-plane-ops/event-log-write/eventlog	0.026s	coverage: 77.0% of statements
+ok  	rpc_plugin_system/kernel-runtime-supervision/daemon-entrypoint/rpcplugind	2.472s	coverage: 36.4% of statements
+ok  	rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel	16.713s	coverage: 80.2% of statements
+ok  	rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime	0.024s	coverage: 31.7% of statements
 	rpc_plugin_system/plugin-authoring-sdk/echo-example/rpcplugin-echo		coverage: 0.0% of statements
 	rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure		coverage: 0.0% of statements
-ok  	rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin	(cached)	coverage: 29.4% of statements
+ok  	rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin	0.010s	coverage: 29.4% of statements
 ok  	rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi	0.009s	coverage: 0.0% of statements
-ok  	rpc_plugin_system/release-packaging-governance/go-build-deps/testroot	(cached)	coverage: 76.9% of statements
-	rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth		coverage: 0.0% of statements
+ok  	rpc_plugin_system/release-packaging-governance/go-build-deps/testroot	0.052s	coverage: 76.9% of statements
+ok  	rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth	0.007s	coverage: 91.7% of statements
 rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc/adminrpc.go:64:				Status				75.0%
 rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc/adminrpc.go:73:				Plugins				0.0%
 rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc/adminrpc.go:82:				Plugin				77.8%
@@ -74,7 +74,7 @@ rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:114:		Close				85.7%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:135:		Start				100.0%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:141:		startLocked			70.2%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:446:		Heartbeat			86.2%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:446:		Heartbeat			89.7%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:518:		Echo				85.7%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:539:		Sleep				81.8%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:556:		Crash				81.8%
@@ -94,7 +94,7 @@ rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:1087:		rollbackGeneration		100.0%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:1098:		logEvent			66.7%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:1105:		errorString			66.7%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/monitor.go:12:		MonitorLoop			90.9%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/monitor.go:12:		MonitorLoop			100.0%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/plugin_id.go:12:		ValidatePluginID		100.0%
 rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/peercred_linux.go:20:	ReadPeerCred			0.0%
 rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/runtime.go:17:		EnsureDir			33.3%
@@ -151,8 +151,8 @@ rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:1
 rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:116:		getenvFloat64			0.0%
 rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:128:		getenvBool			0.0%
 rpc_plugin_system/release-packaging-governance/go-build-deps/testroot/root.go:11:		SourceRoot			76.9%
-rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:12:			NewToken			0.0%
-rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:21:			EqualToken			0.0%
-rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:29:			Encode				0.0%
-rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:34:			Decode				0.0%
-total:												(statements)			53.7%
+rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:12:			NewToken			75.0%
+rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:21:			EqualToken			100.0%
+rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:29:			Encode				100.0%
+rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:34:			Decode				100.0%
+total:												(statements)			54.6%
