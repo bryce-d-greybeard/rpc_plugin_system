@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -17,13 +18,60 @@ import (
 )
 
 func main() {
+	exitProcess(run(os.Args[0], os.Args[1:], daemonDepsForMain()))
+}
+
+var (
+	exitProcess       = os.Exit
+	daemonDepsForMain = productionDaemonDeps
+)
+
+type daemonHost interface {
+	StartAll() error
+	MonitorLoop(context.Context)
+	Close() error
+}
+
+type daemonDeps struct {
+	newHost      func(kernel.HostConfig) (daemonHost, error)
+	serve        func(context.Context, string, daemonHost) error
+	notifySignal func(context.Context, ...os.Signal) (context.Context, context.CancelFunc)
+	logOutput    io.Writer
+}
+
+func productionDaemonDeps() daemonDeps {
+	return daemonDeps{
+		newHost: func(cfg kernel.HostConfig) (daemonHost, error) {
+			return kernel.NewHost(cfg)
+		},
+		serve: func(ctx context.Context, socketPath string, host daemonHost) error {
+			kernelHost, ok := host.(*kernel.Host)
+			if !ok {
+				return fmt.Errorf("daemon host type %T cannot serve admin rpc", host)
+			}
+			return adminrpc.Serve(ctx, socketPath, kernelHost)
+		},
+		notifySignal: signal.NotifyContext,
+		logOutput:    os.Stderr,
+	}
+}
+
+func run(name string, args []string, deps daemonDeps) int {
 	var (
-		runtimeDir = flag.String("runtime-dir", filepath.Join(os.TempDir(), "rpc_plugin_system"), "runtime directory")
-		pluginsArg = flag.String("plugins", "", "comma-separated plugin specs in the form id=path")
-		pluginPath = flag.String("plugin", "", "path to plugin executable (single-plugin compatibility mode)")
-		pluginID   = flag.String("plugin-id", "echo", "plugin id for single-plugin compatibility mode")
+		flags      = flag.NewFlagSet(name, flag.ContinueOnError)
+		runtimeDir = flags.String("runtime-dir", filepath.Join(os.TempDir(), "rpc_plugin_system"), "runtime directory")
+		pluginsArg = flags.String("plugins", "", "comma-separated plugin specs in the form id=path")
+		pluginPath = flags.String("plugin", "", "path to plugin executable (single-plugin compatibility mode)")
+		pluginID   = flags.String("plugin-id", "echo", "plugin id for single-plugin compatibility mode")
 	)
-	flag.Parse()
+	logger := log.New(deps.logOutput, "", log.LstdFlags)
+	flags.SetOutput(deps.logOutput)
+	if err := flags.Parse(args); err != nil {
+		if err == flag.ErrHelp {
+			return 0
+		}
+		return 2
+	}
 
 	cfg, err := parseDaemonConfig(daemonOptions{
 		RuntimeDir: *runtimeDir,
@@ -32,26 +80,31 @@ func main() {
 		PluginPath: *pluginPath,
 	})
 	if err != nil {
-		log.Fatal(err)
+		logger.Print(err)
+		return 1
 	}
 
-	host, err := kernel.NewHost(cfg)
+	host, err := deps.newHost(cfg)
 	if err != nil {
-		log.Fatal(err)
+		logger.Print(err)
+		return 1
 	}
 	defer host.Close()
 
 	if err := host.StartAll(); err != nil {
-		log.Fatal(err)
+		logger.Print(err)
+		return 1
 	}
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := deps.notifySignal(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	host.MonitorLoop(ctx)
-	if err := adminrpc.Serve(ctx, filepath.Join(*runtimeDir, "admin.sock"), host); err != nil {
-		log.Fatal(err)
+	if err := deps.serve(ctx, filepath.Join(*runtimeDir, "admin.sock"), host); err != nil {
+		logger.Print(err)
+		return 1
 	}
+	return 0
 }
 
 type daemonOptions struct {
