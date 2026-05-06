@@ -239,6 +239,119 @@ func TestRotateIfNeededReportsRotationFailures(t *testing.T) {
 	})
 }
 
+func resetEventlogFaultSeams(t *testing.T) {
+	t.Helper()
+	originalJSONMarshal := jsonMarshal
+	originalOpenFile := openFile
+	originalRemoveFile := removeFile
+	originalRenameFile := renameFile
+	originalStatFile := statFile
+	originalCloseFile := closeFile
+	originalWriteFile := writeFile
+	originalSyncFile := syncFile
+	t.Cleanup(func() {
+		jsonMarshal = originalJSONMarshal
+		openFile = originalOpenFile
+		removeFile = originalRemoveFile
+		renameFile = originalRenameFile
+		statFile = originalStatFile
+		closeFile = originalCloseFile
+		writeFile = originalWriteFile
+		syncFile = originalSyncFile
+	})
+}
+
+func newRotatableSeededLogger(t *testing.T) *Logger {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "events.jsonl")
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		t.Fatalf("open log: %v", err)
+	}
+	if _, err := file.WriteString(strings.Repeat("x", 64)); err != nil {
+		t.Fatalf("seed log: %v", err)
+	}
+	return &Logger{path: path, file: file, maxBytes: 1, maxBackups: 1}
+}
+
+func TestRotateIfNeededReportsSeamedFaults(t *testing.T) {
+	t.Run("close before rotate", func(t *testing.T) {
+		resetEventlogFaultSeams(t)
+		logger := newRotatableSeededLogger(t)
+		defer logger.file.Close()
+		closeFile = func(*os.File) error { return errors.New("close blocked") }
+
+		err := logger.rotateIfNeeded(1)
+		if err == nil {
+			t.Fatal("expected close failure")
+		}
+		if !strings.Contains(err.Error(), "close event log before rotate") {
+			t.Fatalf("error = %q, want close context", err)
+		}
+	})
+
+	t.Run("open rotated log", func(t *testing.T) {
+		resetEventlogFaultSeams(t)
+		logger := newRotatableSeededLogger(t)
+		defer logger.file.Close()
+		openFile = func(string, int, os.FileMode) (*os.File, error) { return nil, errors.New("open blocked") }
+
+		err := logger.rotateIfNeeded(1)
+		if err == nil {
+			t.Fatal("expected open rotated failure")
+		}
+		if !strings.Contains(err.Error(), "open rotated event log") {
+			t.Fatalf("error = %q, want open rotated context", err)
+		}
+	})
+
+	t.Run("marshal rotation event", func(t *testing.T) {
+		resetEventlogFaultSeams(t)
+		logger := newRotatableSeededLogger(t)
+		defer logger.file.Close()
+		jsonMarshal = func(any) ([]byte, error) { return nil, errors.New("marshal blocked") }
+
+		err := logger.rotateIfNeeded(1)
+		if err == nil {
+			t.Fatal("expected rotation marshal failure")
+		}
+		if !strings.Contains(err.Error(), "marshal rotation event") {
+			t.Fatalf("error = %q, want marshal rotation context", err)
+		}
+	})
+
+	t.Run("write rotation event", func(t *testing.T) {
+		resetEventlogFaultSeams(t)
+		logger := newRotatableSeededLogger(t)
+		defer logger.file.Close()
+		writeFile = func(*os.File, []byte) (int, error) { return 0, errors.New("write blocked") }
+
+		err := logger.rotateIfNeeded(1)
+		if err == nil {
+			t.Fatal("expected rotation write failure")
+		}
+		if !strings.Contains(err.Error(), "write rotation event") {
+			t.Fatalf("error = %q, want write rotation context", err)
+		}
+	})
+
+	t.Run("sync rotation event", func(t *testing.T) {
+		resetEventlogFaultSeams(t)
+		logger := newRotatableSeededLogger(t)
+		defer logger.file.Close()
+		syncFile = func(*os.File) error { return errors.New("sync blocked") }
+
+		err := logger.rotateIfNeeded(1)
+		if err == nil {
+			t.Fatal("expected rotation sync failure")
+		}
+		if !strings.Contains(err.Error(), "sync rotation event") {
+			t.Fatalf("error = %q, want sync rotation context", err)
+		}
+	})
+}
+
 func TestRotationKeepsNewestBackupsAndWritesRotationEvent(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "events.jsonl")

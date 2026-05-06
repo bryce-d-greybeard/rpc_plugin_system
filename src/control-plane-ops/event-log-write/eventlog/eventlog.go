@@ -10,6 +10,17 @@ import (
 	"time"
 )
 
+var (
+	jsonMarshal = json.Marshal
+	openFile    = os.OpenFile
+	removeFile  = os.Remove
+	renameFile  = os.Rename
+	statFile    = os.Stat
+	closeFile   = func(f *os.File) error { return f.Close() }
+	writeFile   = func(f *os.File, data []byte) (int, error) { return f.Write(data) }
+	syncFile    = func(f *os.File) error { return f.Sync() }
+)
+
 const (
 	LevelDebug = "debug"
 	LevelInfo  = "info"
@@ -112,7 +123,7 @@ func NewWithOptions(path string, opts Options) (*Logger, error) {
 	if opts.MaxBackups <= 0 {
 		opts.MaxBackups = DefaultMaxBackups
 	}
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	f, err := openFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("open event log: %w", err)
 	}
@@ -121,7 +132,7 @@ func NewWithOptions(path string, opts Options) (*Logger, error) {
 
 // Close closes the underlying log file.
 func (l *Logger) Close() error {
-	return l.file.Close()
+	return closeFile(l.file)
 }
 
 // Path returns the current canonical log path.
@@ -145,7 +156,7 @@ func (l *Logger) Write(event Event) error {
 	if event.Component == "" {
 		event.Component = ComponentKernel
 	}
-	data, err := json.Marshal(event)
+	data, err := jsonMarshal(event)
 	if err != nil {
 		return fmt.Errorf("marshal event: %w", err)
 	}
@@ -153,10 +164,10 @@ func (l *Logger) Write(event Event) error {
 	if err := l.rotateIfNeeded(int64(len(data))); err != nil {
 		return err
 	}
-	if _, err := l.file.Write(data); err != nil {
+	if _, err := writeFile(l.file, data); err != nil {
 		return fmt.Errorf("append event: %w", err)
 	}
-	if err := l.file.Sync(); err != nil {
+	if err := syncFile(l.file); err != nil {
 		return fmt.Errorf("sync event log: %w", err)
 	}
 	return nil
@@ -173,28 +184,28 @@ func (l *Logger) rotateIfNeeded(nextWriteBytes int64) error {
 	if info.Size()+nextWriteBytes <= l.maxBytes {
 		return nil
 	}
-	if err := l.file.Close(); err != nil {
+	if err := closeFile(l.file); err != nil {
 		return fmt.Errorf("close event log before rotate: %w", err)
 	}
 	for i := l.maxBackups; i >= 1; i-- {
 		oldPath := backupPath(l.path, i)
 		if i == l.maxBackups {
-			_ = os.Remove(oldPath)
+			_ = removeFile(oldPath)
 			continue
 		}
 		newPath := backupPath(l.path, i+1)
-		if _, err := os.Stat(oldPath); err == nil {
-			if err := os.Rename(oldPath, newPath); err != nil {
+		if _, err := statFile(oldPath); err == nil {
+			if err := renameFile(oldPath, newPath); err != nil {
 				return reopenWithErr(l, fmt.Errorf("rotate backup %s -> %s: %w", oldPath, newPath, err))
 			}
 		}
 	}
-	if _, err := os.Stat(l.path); err == nil {
-		if err := os.Rename(l.path, backupPath(l.path, 1)); err != nil {
+	if _, err := statFile(l.path); err == nil {
+		if err := renameFile(l.path, backupPath(l.path, 1)); err != nil {
 			return reopenWithErr(l, fmt.Errorf("rotate current log: %w", err))
 		}
 	}
-	file, err := os.OpenFile(l.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	file, err := openFile(l.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("open rotated event log: %w", err)
 	}
@@ -211,14 +222,14 @@ func (l *Logger) rotateIfNeeded(nextWriteBytes int64) error {
 			"max_backups": l.maxBackups,
 		},
 	}
-	payload, err := json.Marshal(rotationEvent)
+	payload, err := jsonMarshal(rotationEvent)
 	if err != nil {
 		return fmt.Errorf("marshal rotation event: %w", err)
 	}
-	if _, err := l.file.Write(append(payload, '\n')); err != nil {
+	if _, err := writeFile(l.file, append(payload, '\n')); err != nil {
 		return fmt.Errorf("write rotation event: %w", err)
 	}
-	if err := l.file.Sync(); err != nil {
+	if err := syncFile(l.file); err != nil {
 		return fmt.Errorf("sync rotation event: %w", err)
 	}
 	return nil
@@ -234,7 +245,7 @@ func backupPath(path string, n int) string {
 }
 
 func reopenWithErr(l *Logger, cause error) error {
-	file, err := os.OpenFile(l.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	file, err := openFile(l.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err == nil {
 		l.file = file
 	}
