@@ -2,6 +2,7 @@ package eventlog
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -111,19 +112,29 @@ func readOne(path string, filters Filters) ([]Event, error) {
 	defer file.Close()
 
 	var events []Event
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
+	reader := bufio.NewReader(file)
+	lineNo := 0
+	for {
+		line, err := reader.ReadBytes('\n')
+		if err == io.EOF && len(line) == 0 {
+			break
+		}
+		lineNo++
+		if err != nil && err != io.EOF {
+			return nil, fmt.Errorf("read event log %s:%d: %w", path, lineNo, err)
+		}
+		line = bytes.TrimRight(line, "\r\n")
 		var event Event
-		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
-			return nil, fmt.Errorf("decode event log line: %w", err)
+		if err := json.Unmarshal(line, &event); err != nil {
+			return nil, fmt.Errorf("decode event log %s:%d: %w", path, lineNo, err)
 		}
 		if !match(event, filters) {
 			continue
 		}
 		events = append(events, event)
-	}
-	if err := scanner.Err(); err != nil && err != io.EOF {
-		return nil, fmt.Errorf("scan event log: %w", err)
+		if err == io.EOF {
+			break
+		}
 	}
 	return events, nil
 }

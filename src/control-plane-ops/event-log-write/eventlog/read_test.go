@@ -64,6 +64,51 @@ func TestReadAllIncludesRotatedBackups(t *testing.T) {
 	}
 }
 
+func TestReadAllHandlesLongJSONLLines(t *testing.T) {
+	path := t.TempDir() + "/events.jsonl"
+	logger, err := New(path)
+	if err != nil {
+		t.Fatalf("new logger: %v", err)
+	}
+	defer logger.Close()
+
+	message := strings.Repeat("x", 70<<10)
+	if err := logger.Write(Event{Time: time.Unix(1, 0).UTC(), Level: LevelInfo, Event: EventPluginStarted, Message: message}); err != nil {
+		t.Fatalf("write long event: %v", err)
+	}
+
+	events, err := ReadAll(path, Filters{})
+	if err != nil {
+		t.Fatalf("read long event: %v", err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("len(events) = %d, want 1", len(events))
+	}
+	if events[0].Message != message {
+		t.Fatalf("message length = %d, want %d", len(events[0].Message), len(message))
+	}
+}
+
+func TestReadAllReportsCorruptLinePathAndLine(t *testing.T) {
+	path := t.TempDir() + "/events.jsonl"
+	content := `{"time":"1970-01-01T00:00:01Z","level":"info","component":"kernel","event":"plugin_started"}` + "\n" +
+		`{"time":"broken"` + "\n"
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("write corrupt log: %v", err)
+	}
+
+	_, err := ReadAll(path, Filters{})
+	if err == nil {
+		t.Fatal("expected corrupt line error")
+	}
+	text := err.Error()
+	for _, want := range []string{path, ":2", "decode event log"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("error %q missing %q", text, want)
+		}
+	}
+}
+
 func TestFormatTextIncludesUsefulFields(t *testing.T) {
 	line := FormatText(Event{
 		Time:         time.Date(2026, 4, 17, 9, 0, 0, 0, time.UTC),
