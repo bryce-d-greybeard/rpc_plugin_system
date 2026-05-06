@@ -2,7 +2,9 @@ package adminrpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"net/rpc"
 	"os"
 	"os/exec"
@@ -257,6 +259,117 @@ func TestStatusAndRestart(t *testing.T) {
 	if restarted.PID == 0 {
 		t.Fatalf("restart did not leave plugin running: %+v", restarted)
 	}
+}
+
+func TestServeReturnsListenError(t *testing.T) {
+	want := errors.New("listen boom")
+	err := serve(context.Background(), filepath.Join(t.TempDir(), "admin.sock"), nil, func(string) (net.Listener, error) {
+		return nil, want
+	}, registerAdminService)
+	if !errors.Is(err, want) || !strings.Contains(err.Error(), "listen admin socket") {
+		t.Fatalf("err = %v, want wrapped listen error", err)
+	}
+}
+
+func TestServeReturnsRegisterError(t *testing.T) {
+	want := errors.New("register boom")
+	err := serve(context.Background(), filepath.Join(t.TempDir(), "admin.sock"), nil, func(string) (net.Listener, error) {
+		return failingListener{err: errors.New("unused")}, nil
+	}, func(*rpc.Server, *kernel.Host) error {
+		return want
+	})
+	if !errors.Is(err, want) {
+		t.Fatalf("err = %v, want register error", err)
+	}
+}
+
+func TestServeReturnsAcceptErrorWhenContextActive(t *testing.T) {
+	want := errors.New("accept boom")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err := serve(ctx, filepath.Join(t.TempDir(), "admin.sock"), nil, func(string) (net.Listener, error) {
+		return failingListener{err: want}, nil
+	}, registerAdminService)
+	if !errors.Is(err, want) || !strings.Contains(err.Error(), "accept admin socket") {
+		t.Fatalf("err = %v, want wrapped accept error", err)
+	}
+}
+
+func TestServeReturnsNilWhenAcceptFailsAfterContextCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	listener := newClosingListener(errors.New("closed"))
+
+	err := serve(ctx, filepath.Join(t.TempDir(), "admin.sock"), nil, func(string) (net.Listener, error) {
+		return listener, nil
+	}, registerAdminService)
+	if err != nil {
+		t.Fatalf("err = %v, want nil", err)
+	}
+}
+
+func TestRegisterAdminServiceReturnsDuplicateNameError(t *testing.T) {
+	server := rpc.NewServer()
+	if err := registerAdminService(server, nil); err != nil {
+		t.Fatalf("first register: %v", err)
+	}
+	err := registerAdminService(server, nil)
+	if err == nil || !strings.Contains(err.Error(), "register admin rpc") {
+		t.Fatalf("err = %v, want register admin rpc error", err)
+	}
+}
+
+type failingListener struct {
+	err error
+}
+
+func (l failingListener) Accept() (net.Conn, error) {
+	return nil, l.err
+}
+
+func (l failingListener) Close() error {
+	return nil
+}
+
+func (l failingListener) Addr() net.Addr {
+	return fakeAddr("admin")
+}
+
+type closingListener struct {
+	err       error
+	closed    chan struct{}
+	closeOnce sync.Once
+}
+
+func newClosingListener(err error) *closingListener {
+	return &closingListener{err: err, closed: make(chan struct{})}
+}
+
+func (l *closingListener) Accept() (net.Conn, error) {
+	<-l.closed
+	return nil, l.err
+}
+
+func (l *closingListener) Close() error {
+	l.closeOnce.Do(func() {
+		close(l.closed)
+	})
+	return nil
+}
+
+func (l *closingListener) Addr() net.Addr {
+	return fakeAddr("admin")
+}
+
+type fakeAddr string
+
+func (a fakeAddr) Network() string {
+	return "unix"
+}
+
+func (a fakeAddr) String() string {
+	return string(a)
 }
 
 var (

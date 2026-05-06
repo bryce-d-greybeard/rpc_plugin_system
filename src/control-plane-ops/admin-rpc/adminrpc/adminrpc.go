@@ -162,9 +162,16 @@ func (s *Service) Restart(in RestartRequest, out *kernel.State) error {
 	return nil
 }
 
+type listenUnixFunc func(string) (net.Listener, error)
+type registerAdminServiceFunc func(*rpc.Server, *kernel.Host) error
+
 // Serve exposes the admin RPC service on one Unix socket until the context ends or the listener fails.
 func Serve(ctx context.Context, socketPath string, host *kernel.Host) error {
-	listener, err := runtime.ListenUnix(socketPath)
+	return serve(ctx, socketPath, host, runtime.ListenUnix, registerAdminService)
+}
+
+func serve(ctx context.Context, socketPath string, host *kernel.Host, listenUnix listenUnixFunc, registerService registerAdminServiceFunc) error {
+	listener, err := listenUnix(socketPath)
 	if err != nil {
 		return fmt.Errorf("listen admin socket: %w", err)
 	}
@@ -174,8 +181,8 @@ func Serve(ctx context.Context, socketPath string, host *kernel.Host) error {
 	}()
 
 	server := rpc.NewServer()
-	if err := server.RegisterName(ServiceName, &Service{Host: host}); err != nil {
-		return fmt.Errorf("register admin rpc: %w", err)
+	if err := registerService(server, host); err != nil {
+		return err
 	}
 
 	go func() {
@@ -195,6 +202,13 @@ func Serve(ctx context.Context, socketPath string, host *kernel.Host) error {
 		}
 		go server.ServeConn(conn)
 	}
+}
+
+func registerAdminService(server *rpc.Server, host *kernel.Host) error {
+	if err := server.RegisterName(ServiceName, &Service{Host: host}); err != nil {
+		return fmt.Errorf("register admin rpc: %w", err)
+	}
+	return nil
 }
 
 // Dial connects an admin RPC client to one Unix socket path.
