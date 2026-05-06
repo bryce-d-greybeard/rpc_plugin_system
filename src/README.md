@@ -1,6 +1,6 @@
 # rpc-plugin-system source root
 
-`src/` is the workflow root and the source root. Implementation, docs, examples, tests, and workflow records live in the same root-feature / feature folders.
+`src/` is the workflow root and the source root. Implementation, examples, tests, and workflow records live in the same root-feature / feature folders. Project-level documentation lives at repository-root `docs/`.
 
 Root features / source-workflow roots:
 
