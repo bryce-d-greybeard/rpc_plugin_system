@@ -14,3 +14,15 @@ src/.tmp-bin/
 src/.tmp-logs/
 src/.tmp-smoke/
 src/docs/after-action-*.md
+
+# Generated worker/orchestration scratch.
+.worker-locks/
+.worker-notes/
+.worker-evidence/
+.agents/notes/
+.artifacts/worker-notes/
+src/.worker-locks/
+src/.worker-notes/
+src/.worker-evidence/
+src/.agents/notes/
+src/.artifacts/worker-notes/
