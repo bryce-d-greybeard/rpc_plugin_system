@@ -56,15 +56,16 @@ var errRPCPoisoned = errors.New("rpc client poisoned")
 
 // Manager supervises one plugin executable and its RPC connection.
 type Manager struct {
-	cfg       Config
-	mu        sync.RWMutex
-	state     State
-	cmd       *exec.Cmd
-	client    *rpcClient
-	log       *eventlog.Logger
-	closed    bool
-	closedCh  chan struct{}
-	closeOnce sync.Once
+	cfg         Config
+	lifecycleMu sync.Mutex
+	mu          sync.RWMutex
+	state       State
+	cmd         *exec.Cmd
+	client      *rpcClient
+	log         *eventlog.Logger
+	closed      bool
+	closedCh    chan struct{}
+	closeOnce   sync.Once
 }
 
 // New constructs a plugin manager.
@@ -109,6 +110,8 @@ func New(cfg Config) (*Manager, error) {
 
 // Close shuts down manager-owned resources.
 func (m *Manager) Close() error {
+	m.lifecycleMu.Lock()
+	defer m.lifecycleMu.Unlock()
 	m.closeOnce.Do(func() {
 		_ = m.stopCurrent(true, "manager close")
 		m.mu.Lock()
@@ -122,17 +125,31 @@ func (m *Manager) Close() error {
 
 // Start launches the configured plugin, authenticates it, and opens the RPC connection.
 func (m *Manager) Start() error {
+	m.lifecycleMu.Lock()
+	defer m.lifecycleMu.Unlock()
+	return m.startLocked()
+}
+
+func (m *Manager) startLocked() error {
 	m.mu.Lock()
 	if m.closed {
 		m.mu.Unlock()
 		return errors.New("manager closed")
 	}
+	if m.cmd != nil || m.client != nil {
+		m.mu.Unlock()
+		return errors.New("plugin already started")
+	}
 	generation := m.state.GenerationID + 1
-	m.state.GenerationID = generation
-	m.mu.Unlock()
-
 	socketPath := amruntime.SocketPath(m.cfg.RuntimeDir, m.cfg.PluginID)
 	authPath := amruntime.AuthPath(m.cfg.RuntimeDir, m.cfg.PluginID)
+	m.state = State{
+		PluginID:     m.cfg.PluginID,
+		GenerationID: generation,
+		SocketPath:   socketPath,
+	}
+	m.mu.Unlock()
+
 	_ = os.Remove(socketPath)
 	_ = os.Remove(authPath)
 
@@ -538,6 +555,9 @@ func (m *Manager) Crash(code int) error {
 
 // Restart kills the current plugin process and starts a fresh generation.
 func (m *Manager) Restart() error {
+	m.lifecycleMu.Lock()
+	defer m.lifecycleMu.Unlock()
+
 	m.mu.RLock()
 	closed := m.closed
 	generation := m.state.GenerationID
@@ -557,7 +577,7 @@ func (m *Manager) Restart() error {
 		SocketPath:   socketPath,
 		Message:      "restart requested",
 	})
-	if err := m.Kill(); err != nil {
+	if err := m.stopCurrent(false, "restart requested"); err != nil {
 		m.logEvent(eventlog.Event{
 			Level:        eventlog.LevelError,
 			Component:    eventlog.ComponentKernel,
@@ -571,7 +591,7 @@ func (m *Manager) Restart() error {
 		})
 		return err
 	}
-	if err := m.Start(); err != nil {
+	if err := m.startLocked(); err != nil {
 		m.logEvent(eventlog.Event{
 			Level:        eventlog.LevelError,
 			Component:    eventlog.ComponentKernel,
@@ -601,6 +621,8 @@ func (m *Manager) Restart() error {
 
 // Kill terminates the current plugin process and tears down its RPC connection.
 func (m *Manager) Kill() error {
+	m.lifecycleMu.Lock()
+	defer m.lifecycleMu.Unlock()
 	return m.stopCurrent(false, "kill requested")
 }
 
@@ -977,6 +999,21 @@ func isRPCPoisonError(err error) bool {
 func (m *Manager) cleanupRuntimeArtifacts(generation uint64) {
 	socketPath := amruntime.SocketPath(m.cfg.RuntimeDir, m.cfg.PluginID)
 	authPath := amruntime.AuthPath(m.cfg.RuntimeDir, m.cfg.PluginID)
+	if generation != 0 && !m.cleanupOwnsRuntimeArtifacts(generation) {
+		m.logEvent(eventlog.Event{
+			Level:        eventlog.LevelDebug,
+			Component:    eventlog.ComponentRuntime,
+			Event:        eventlog.EventRuntimeCleanup,
+			PluginID:     m.cfg.PluginID,
+			GenerationID: generation,
+			SocketPath:   socketPath,
+			Message:      "stale runtime artifact cleanup skipped",
+			Details: map[string]any{
+				"current_generation": m.State().GenerationID,
+			},
+		})
+		return
+	}
 	removed := make([]string, 0, 2)
 	failed := make(map[string]string)
 	for _, path := range []string{socketPath, authPath} {
@@ -1018,10 +1055,22 @@ func (m *Manager) cleanupRuntimeArtifacts(generation uint64) {
 	})
 }
 
+func (m *Manager) cleanupOwnsRuntimeArtifacts(generation uint64) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.state.GenerationID == generation {
+		return true
+	}
+	return m.state.PID == 0 && m.state.SocketPath == ""
+}
+
 func (m *Manager) rollbackGeneration(generation uint64) {
 	m.mu.Lock()
 	if m.state.GenerationID == generation {
-		m.state.GenerationID = generation - 1
+		m.state = State{
+			PluginID:     m.cfg.PluginID,
+			GenerationID: generation - 1,
+		}
 	}
 	m.mu.Unlock()
 }

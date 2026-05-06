@@ -98,6 +98,139 @@ func TestManagerStartHeartbeatEchoAndRestart(t *testing.T) {
 	}
 }
 
+func TestManagerSerializesConcurrentRestarts(t *testing.T) {
+	pluginBin := buildPlugin(t)
+	runtimeDir := t.TempDir()
+	logPath := filepath.Join(runtimeDir, "events.jsonl")
+
+	manager, err := New(Config{
+		RuntimeDir:   runtimeDir,
+		PluginPath:   pluginBin,
+		PluginID:     "echo",
+		DialTimeout:  2 * time.Second,
+		CallTimeout:  200 * time.Millisecond,
+		EventLogPath: logPath,
+	})
+	if err != nil {
+		t.Fatalf("new manager: %v", err)
+	}
+	defer manager.Close()
+
+	if err := manager.Start(); err != nil {
+		t.Fatalf("start manager: %v", err)
+	}
+	firstGen := manager.State().GenerationID
+
+	const restarts = 4
+	errCh := make(chan error, restarts)
+	var ready sync.WaitGroup
+	ready.Add(restarts)
+	start := make(chan struct{})
+	for i := 0; i < restarts; i++ {
+		go func() {
+			ready.Done()
+			<-start
+			errCh <- manager.Restart()
+		}()
+	}
+	ready.Wait()
+	close(start)
+	for i := 0; i < restarts; i++ {
+		if err := <-errCh; err != nil {
+			t.Fatalf("restart %d: %v", i, err)
+		}
+	}
+
+	state := manager.State()
+	if got, want := state.GenerationID, firstGen+restarts; got != want {
+		t.Fatalf("generation after concurrent restarts = %d, want %d", got, want)
+	}
+	if !state.Healthy || state.PID == 0 {
+		t.Fatalf("manager not healthy after concurrent restarts: %+v", state)
+	}
+	if got, err := manager.Echo("after-restarts"); err != nil || got != "after-restarts" {
+		t.Fatalf("echo after concurrent restarts = %q, %v", got, err)
+	}
+}
+
+func TestManagerSkipsStaleRuntimeArtifactCleanup(t *testing.T) {
+	pluginBin := buildPlugin(t)
+	runtimeDir := t.TempDir()
+	logPath := filepath.Join(runtimeDir, "events.jsonl")
+
+	manager, err := New(Config{
+		RuntimeDir:   runtimeDir,
+		PluginPath:   pluginBin,
+		PluginID:     "echo",
+		DialTimeout:  2 * time.Second,
+		CallTimeout:  200 * time.Millisecond,
+		EventLogPath: logPath,
+	})
+	if err != nil {
+		t.Fatalf("new manager: %v", err)
+	}
+	defer manager.Close()
+
+	if err := manager.Start(); err != nil {
+		t.Fatalf("start manager: %v", err)
+	}
+	staleGen := manager.State().GenerationID
+	if err := manager.Restart(); err != nil {
+		t.Fatalf("restart manager: %v", err)
+	}
+
+	socketPath := runtime.SocketPath(runtimeDir, "echo")
+	authPath := runtime.AuthPath(runtimeDir, "echo")
+	if err := os.WriteFile(authPath, []byte("current-generation-auth"), 0o600); err != nil {
+		t.Fatalf("write current auth artifact: %v", err)
+	}
+
+	manager.cleanupRuntimeArtifacts(staleGen)
+
+	if _, err := os.Stat(socketPath); err != nil {
+		t.Fatalf("stale cleanup removed current socket: %v", err)
+	}
+	if got, err := os.ReadFile(authPath); err != nil || string(got) != "current-generation-auth" {
+		t.Fatalf("stale cleanup changed current auth artifact: got %q err=%v", string(got), err)
+	}
+	if got, err := manager.Echo("still-current"); err != nil || got != "still-current" {
+		t.Fatalf("echo after stale cleanup = %q, %v", got, err)
+	}
+}
+
+func TestManagerStartRejectsAlreadyRunningPlugin(t *testing.T) {
+	pluginBin := buildPlugin(t)
+	runtimeDir := t.TempDir()
+	logPath := filepath.Join(runtimeDir, "events.jsonl")
+
+	manager, err := New(Config{
+		RuntimeDir:   runtimeDir,
+		PluginPath:   pluginBin,
+		PluginID:     "echo",
+		DialTimeout:  2 * time.Second,
+		CallTimeout:  200 * time.Millisecond,
+		EventLogPath: logPath,
+	})
+	if err != nil {
+		t.Fatalf("new manager: %v", err)
+	}
+	defer manager.Close()
+
+	if err := manager.Start(); err != nil {
+		t.Fatalf("start manager: %v", err)
+	}
+	state := manager.State()
+	if err := manager.Start(); err == nil {
+		t.Fatal("expected second start to fail while plugin is already running")
+	}
+	if got := manager.State(); got.GenerationID != state.GenerationID || got.PID != state.PID || !got.Healthy {
+		t.Fatalf("second start changed running generation: before=%+v after=%+v", state, got)
+	}
+	if got, err := manager.Echo("still-running"); err != nil || got != "still-running" {
+		t.Fatalf("echo after rejected second start = %q, %v", got, err)
+	}
+}
+
 func TestManagerSleepTimeout(t *testing.T) {
 	pluginBin := buildPlugin(t)
 	runtimeDir := t.TempDir()
