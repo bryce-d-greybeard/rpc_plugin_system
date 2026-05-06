@@ -14,7 +14,7 @@ It exists to stop drift during the final audit and promotion work.
 - stable generation and restart semantics
 
 ### Stable authoring path
-- `sdk/go/plugin` is the public Go authoring entrypoint
+- `rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin` is the public Go authoring entrypoint
 - `LoadConfigFromEnv()` is the supported config/bootstrap entrypoint
 - `NewTemplate(...)` is the supported minimal skeleton path
 - optional capabilities are added by implementing supported capability interfaces

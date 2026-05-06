@@ -35,6 +35,7 @@ Reports:
 - capability list
 
 Rules:
+- requires successful `Auth` first; it is not a pre-auth exception
 - optional methods must be advertised through capability reporting
 - capability names should be stable and documented
 
@@ -61,7 +62,7 @@ Requests graceful shutdown.
 
 For the substrate itself, the stable required wire methods are still the `TestPlugin.*` methods documented here.
 
-For public authors using `sdk/go/plugin`, the stable authoring path is:
+For public authors using `rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin`, the stable authoring path is:
 - load config with `LoadConfigFromEnv()`
 - build the minimal core with `NewTemplate(...)`
 - extend optional capabilities by implementing the matching optional interfaces

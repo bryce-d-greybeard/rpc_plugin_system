@@ -241,6 +241,9 @@ func (s *server) Auth(in AuthRequest, out *AuthResponse) error {
 }
 
 func (s *server) Capabilities(_ Empty, out *CapabilitiesResponse) error {
+	if err := s.requireAuth(MethodCapabilities); err != nil {
+		return err
+	}
 	pluginID := s.cfg.PluginID
 	generationID := s.cfg.GenerationID
 	if hook, ok := s.core.(identityHook); ok {

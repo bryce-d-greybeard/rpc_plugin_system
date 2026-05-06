@@ -51,7 +51,7 @@ The kernel may degrade rather than hard-fail when:
 For v1, versioning is still blunt:
 - exact documented behavior matters more than hand-wavy compatibility claims
 - explicit documented contract changes win over implicit compatibility assumptions
-- the current frozen wire namespace remains `TestPlugin.*` even though the public SDK package is `sdk/go/plugin`
+- the current frozen wire namespace remains `TestPlugin.*` even though the public Go authoring import is `rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin`
 - additive capability growth is allowed when it does not break the required contract
 
 Post-v1 only, later versions may add:
