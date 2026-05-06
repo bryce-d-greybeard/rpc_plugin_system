@@ -1,0 +1,404 @@
+schema_version = 1
+project = "rpc-plugin-system"
+repository = "agents/rpc-plugin-system"
+worktree_root = "/tank/development/linus/rpc-plugin-system-worktrees"
+active = ""
+
+[[root_features]]
+id = "plugin-contracts"
+branch = "workflow/root/plugin-contracts"
+path = "workflow/root/plugin-contracts"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/root/plugin-contracts"
+features = [
+  "plugin-contracts.standard-v0",
+  "plugin-contracts.api-surface",
+  "plugin-contracts.abi-startup",
+  "plugin-contracts.compatibility-versioning",
+  "plugin-contracts.secure-rpc-contract",
+]
+
+[[root_features]]
+id = "secure-bootstrap-transport"
+branch = "workflow/root/secure-bootstrap-transport"
+path = "workflow/root/secure-bootstrap-transport"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/root/secure-bootstrap-transport"
+features = [
+  "secure-bootstrap-transport.startup-handshake",
+  "secure-bootstrap-transport.session-identity",
+  "secure-bootstrap-transport.key-derivation",
+  "secure-bootstrap-transport.secure-framing",
+  "secure-bootstrap-transport.rekey-policy",
+  "secure-bootstrap-transport.posix-transport",
+  "secure-bootstrap-transport.windows-transport",
+]
+
+[[root_features]]
+id = "kernel-runtime-supervision"
+branch = "workflow/root/kernel-runtime-supervision"
+path = "workflow/root/kernel-runtime-supervision"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/root/kernel-runtime-supervision"
+features = [
+  "kernel-runtime-supervision.daemon-entrypoint",
+  "kernel-runtime-supervision.manager-lifecycle",
+  "kernel-runtime-supervision.multi-plugin-registry",
+  "kernel-runtime-supervision.routing",
+  "kernel-runtime-supervision.monitoring",
+  "kernel-runtime-supervision.failure-isolation",
+  "kernel-runtime-supervision.env-hardening",
+  "kernel-runtime-supervision.peercred-runtime",
+]
+
+[[root_features]]
+id = "control-plane-ops"
+branch = "workflow/root/control-plane-ops"
+path = "workflow/root/control-plane-ops"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/root/control-plane-ops"
+features = [
+  "control-plane-ops.admin-rpc",
+  "control-plane-ops.cli-argument-model",
+  "control-plane-ops.cli-status-control",
+  "control-plane-ops.event-log-write",
+  "control-plane-ops.event-log-read",
+  "control-plane-ops.local-observability",
+]
+
+[[root_features]]
+id = "plugin-authoring-sdk"
+branch = "workflow/root/plugin-authoring-sdk"
+path = "workflow/root/plugin-authoring-sdk"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/root/plugin-authoring-sdk"
+features = [
+  "plugin-authoring-sdk.go-runtime",
+  "plugin-authoring-sdk.logging",
+  "plugin-authoring-sdk.template-minimal",
+  "plugin-authoring-sdk.test-plugin-api",
+  "plugin-authoring-sdk.echo-example",
+  "plugin-authoring-sdk.failure-example",
+]
+
+[[root_features]]
+id = "release-packaging-governance"
+branch = "workflow/root/release-packaging-governance"
+path = "workflow/root/release-packaging-governance"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/root/release-packaging-governance"
+features = [
+  "release-packaging-governance.install-layout",
+  "release-packaging-governance.packaging-policy",
+  "release-packaging-governance.branch-promotion",
+  "release-packaging-governance.v0-baseline",
+  "release-packaging-governance.v1-freeze",
+  "release-packaging-governance.roadmap",
+  "release-packaging-governance.go-build-deps",
+]
+
+[[features]]
+id = "plugin-contracts.standard-v0"
+root = "plugin-contracts"
+state = "ready"
+branch = "workflow/feature/plugin-contracts.standard-v0"
+path = "workflow/features/plugin-contracts.standard-v0"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/plugin-contracts.standard-v0"
+
+[[features]]
+id = "plugin-contracts.api-surface"
+root = "plugin-contracts"
+state = "ready"
+branch = "workflow/feature/plugin-contracts.api-surface"
+path = "workflow/features/plugin-contracts.api-surface"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/plugin-contracts.api-surface"
+
+[[features]]
+id = "plugin-contracts.abi-startup"
+root = "plugin-contracts"
+state = "ready"
+branch = "workflow/feature/plugin-contracts.abi-startup"
+path = "workflow/features/plugin-contracts.abi-startup"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/plugin-contracts.abi-startup"
+
+[[features]]
+id = "plugin-contracts.compatibility-versioning"
+root = "plugin-contracts"
+state = "ready"
+branch = "workflow/feature/plugin-contracts.compatibility-versioning"
+path = "workflow/features/plugin-contracts.compatibility-versioning"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/plugin-contracts.compatibility-versioning"
+
+[[features]]
+id = "plugin-contracts.secure-rpc-contract"
+root = "plugin-contracts"
+state = "ready"
+branch = "workflow/feature/plugin-contracts.secure-rpc-contract"
+path = "workflow/features/plugin-contracts.secure-rpc-contract"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/plugin-contracts.secure-rpc-contract"
+
+[[features]]
+id = "secure-bootstrap-transport.startup-handshake"
+root = "secure-bootstrap-transport"
+state = "ready"
+branch = "workflow/feature/secure-bootstrap-transport.startup-handshake"
+path = "workflow/features/secure-bootstrap-transport.startup-handshake"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/secure-bootstrap-transport.startup-handshake"
+
+[[features]]
+id = "secure-bootstrap-transport.session-identity"
+root = "secure-bootstrap-transport"
+state = "ready"
+branch = "workflow/feature/secure-bootstrap-transport.session-identity"
+path = "workflow/features/secure-bootstrap-transport.session-identity"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/secure-bootstrap-transport.session-identity"
+
+[[features]]
+id = "secure-bootstrap-transport.key-derivation"
+root = "secure-bootstrap-transport"
+state = "ready"
+branch = "workflow/feature/secure-bootstrap-transport.key-derivation"
+path = "workflow/features/secure-bootstrap-transport.key-derivation"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/secure-bootstrap-transport.key-derivation"
+
+[[features]]
+id = "secure-bootstrap-transport.secure-framing"
+root = "secure-bootstrap-transport"
+state = "ready"
+branch = "workflow/feature/secure-bootstrap-transport.secure-framing"
+path = "workflow/features/secure-bootstrap-transport.secure-framing"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/secure-bootstrap-transport.secure-framing"
+
+[[features]]
+id = "secure-bootstrap-transport.rekey-policy"
+root = "secure-bootstrap-transport"
+state = "ready"
+branch = "workflow/feature/secure-bootstrap-transport.rekey-policy"
+path = "workflow/features/secure-bootstrap-transport.rekey-policy"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/secure-bootstrap-transport.rekey-policy"
+
+[[features]]
+id = "secure-bootstrap-transport.posix-transport"
+root = "secure-bootstrap-transport"
+state = "ready"
+branch = "workflow/feature/secure-bootstrap-transport.posix-transport"
+path = "workflow/features/secure-bootstrap-transport.posix-transport"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/secure-bootstrap-transport.posix-transport"
+
+[[features]]
+id = "secure-bootstrap-transport.windows-transport"
+root = "secure-bootstrap-transport"
+state = "ready"
+branch = "workflow/feature/secure-bootstrap-transport.windows-transport"
+path = "workflow/features/secure-bootstrap-transport.windows-transport"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/secure-bootstrap-transport.windows-transport"
+
+[[features]]
+id = "kernel-runtime-supervision.daemon-entrypoint"
+root = "kernel-runtime-supervision"
+state = "ready"
+branch = "workflow/feature/kernel-runtime-supervision.daemon-entrypoint"
+path = "workflow/features/kernel-runtime-supervision.daemon-entrypoint"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/kernel-runtime-supervision.daemon-entrypoint"
+
+[[features]]
+id = "kernel-runtime-supervision.manager-lifecycle"
+root = "kernel-runtime-supervision"
+state = "ready"
+branch = "workflow/feature/kernel-runtime-supervision.manager-lifecycle"
+path = "workflow/features/kernel-runtime-supervision.manager-lifecycle"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/kernel-runtime-supervision.manager-lifecycle"
+
+[[features]]
+id = "kernel-runtime-supervision.multi-plugin-registry"
+root = "kernel-runtime-supervision"
+state = "ready"
+branch = "workflow/feature/kernel-runtime-supervision.multi-plugin-registry"
+path = "workflow/features/kernel-runtime-supervision.multi-plugin-registry"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/kernel-runtime-supervision.multi-plugin-registry"
+
+[[features]]
+id = "kernel-runtime-supervision.routing"
+root = "kernel-runtime-supervision"
+state = "ready"
+branch = "workflow/feature/kernel-runtime-supervision.routing"
+path = "workflow/features/kernel-runtime-supervision.routing"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/kernel-runtime-supervision.routing"
+
+[[features]]
+id = "kernel-runtime-supervision.monitoring"
+root = "kernel-runtime-supervision"
+state = "ready"
+branch = "workflow/feature/kernel-runtime-supervision.monitoring"
+path = "workflow/features/kernel-runtime-supervision.monitoring"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/kernel-runtime-supervision.monitoring"
+
+[[features]]
+id = "kernel-runtime-supervision.failure-isolation"
+root = "kernel-runtime-supervision"
+state = "ready"
+branch = "workflow/feature/kernel-runtime-supervision.failure-isolation"
+path = "workflow/features/kernel-runtime-supervision.failure-isolation"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/kernel-runtime-supervision.failure-isolation"
+
+[[features]]
+id = "kernel-runtime-supervision.env-hardening"
+root = "kernel-runtime-supervision"
+state = "ready"
+branch = "workflow/feature/kernel-runtime-supervision.env-hardening"
+path = "workflow/features/kernel-runtime-supervision.env-hardening"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/kernel-runtime-supervision.env-hardening"
+
+[[features]]
+id = "kernel-runtime-supervision.peercred-runtime"
+root = "kernel-runtime-supervision"
+state = "ready"
+branch = "workflow/feature/kernel-runtime-supervision.peercred-runtime"
+path = "workflow/features/kernel-runtime-supervision.peercred-runtime"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/kernel-runtime-supervision.peercred-runtime"
+
+[[features]]
+id = "control-plane-ops.admin-rpc"
+root = "control-plane-ops"
+state = "ready"
+branch = "workflow/feature/control-plane-ops.admin-rpc"
+path = "workflow/features/control-plane-ops.admin-rpc"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/control-plane-ops.admin-rpc"
+
+[[features]]
+id = "control-plane-ops.cli-argument-model"
+root = "control-plane-ops"
+state = "ready"
+branch = "workflow/feature/control-plane-ops.cli-argument-model"
+path = "workflow/features/control-plane-ops.cli-argument-model"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/control-plane-ops.cli-argument-model"
+
+[[features]]
+id = "control-plane-ops.cli-status-control"
+root = "control-plane-ops"
+state = "ready"
+branch = "workflow/feature/control-plane-ops.cli-status-control"
+path = "workflow/features/control-plane-ops.cli-status-control"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/control-plane-ops.cli-status-control"
+
+[[features]]
+id = "control-plane-ops.event-log-write"
+root = "control-plane-ops"
+state = "ready"
+branch = "workflow/feature/control-plane-ops.event-log-write"
+path = "workflow/features/control-plane-ops.event-log-write"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/control-plane-ops.event-log-write"
+
+[[features]]
+id = "control-plane-ops.event-log-read"
+root = "control-plane-ops"
+state = "ready"
+branch = "workflow/feature/control-plane-ops.event-log-read"
+path = "workflow/features/control-plane-ops.event-log-read"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/control-plane-ops.event-log-read"
+
+[[features]]
+id = "control-plane-ops.local-observability"
+root = "control-plane-ops"
+state = "ready"
+branch = "workflow/feature/control-plane-ops.local-observability"
+path = "workflow/features/control-plane-ops.local-observability"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/control-plane-ops.local-observability"
+
+[[features]]
+id = "plugin-authoring-sdk.go-runtime"
+root = "plugin-authoring-sdk"
+state = "ready"
+branch = "workflow/feature/plugin-authoring-sdk.go-runtime"
+path = "workflow/features/plugin-authoring-sdk.go-runtime"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/plugin-authoring-sdk.go-runtime"
+
+[[features]]
+id = "plugin-authoring-sdk.logging"
+root = "plugin-authoring-sdk"
+state = "ready"
+branch = "workflow/feature/plugin-authoring-sdk.logging"
+path = "workflow/features/plugin-authoring-sdk.logging"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/plugin-authoring-sdk.logging"
+
+[[features]]
+id = "plugin-authoring-sdk.template-minimal"
+root = "plugin-authoring-sdk"
+state = "ready"
+branch = "workflow/feature/plugin-authoring-sdk.template-minimal"
+path = "workflow/features/plugin-authoring-sdk.template-minimal"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/plugin-authoring-sdk.template-minimal"
+
+[[features]]
+id = "plugin-authoring-sdk.test-plugin-api"
+root = "plugin-authoring-sdk"
+state = "ready"
+branch = "workflow/feature/plugin-authoring-sdk.test-plugin-api"
+path = "workflow/features/plugin-authoring-sdk.test-plugin-api"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/plugin-authoring-sdk.test-plugin-api"
+
+[[features]]
+id = "plugin-authoring-sdk.echo-example"
+root = "plugin-authoring-sdk"
+state = "ready"
+branch = "workflow/feature/plugin-authoring-sdk.echo-example"
+path = "workflow/features/plugin-authoring-sdk.echo-example"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/plugin-authoring-sdk.echo-example"
+
+[[features]]
+id = "plugin-authoring-sdk.failure-example"
+root = "plugin-authoring-sdk"
+state = "ready"
+branch = "workflow/feature/plugin-authoring-sdk.failure-example"
+path = "workflow/features/plugin-authoring-sdk.failure-example"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/plugin-authoring-sdk.failure-example"
+
+[[features]]
+id = "release-packaging-governance.install-layout"
+root = "release-packaging-governance"
+state = "ready"
+branch = "workflow/feature/release-packaging-governance.install-layout"
+path = "workflow/features/release-packaging-governance.install-layout"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/release-packaging-governance.install-layout"
+
+[[features]]
+id = "release-packaging-governance.packaging-policy"
+root = "release-packaging-governance"
+state = "ready"
+branch = "workflow/feature/release-packaging-governance.packaging-policy"
+path = "workflow/features/release-packaging-governance.packaging-policy"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/release-packaging-governance.packaging-policy"
+
+[[features]]
+id = "release-packaging-governance.branch-promotion"
+root = "release-packaging-governance"
+state = "ready"
+branch = "workflow/feature/release-packaging-governance.branch-promotion"
+path = "workflow/features/release-packaging-governance.branch-promotion"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/release-packaging-governance.branch-promotion"
+
+[[features]]
+id = "release-packaging-governance.v0-baseline"
+root = "release-packaging-governance"
+state = "ready"
+branch = "workflow/feature/release-packaging-governance.v0-baseline"
+path = "workflow/features/release-packaging-governance.v0-baseline"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/release-packaging-governance.v0-baseline"
+
+[[features]]
+id = "release-packaging-governance.v1-freeze"
+root = "release-packaging-governance"
+state = "ready"
+branch = "workflow/feature/release-packaging-governance.v1-freeze"
+path = "workflow/features/release-packaging-governance.v1-freeze"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/release-packaging-governance.v1-freeze"
+
+[[features]]
+id = "release-packaging-governance.roadmap"
+root = "release-packaging-governance"
+state = "ready"
+branch = "workflow/feature/release-packaging-governance.roadmap"
+path = "workflow/features/release-packaging-governance.roadmap"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/release-packaging-governance.roadmap"
+
+[[features]]
+id = "release-packaging-governance.go-build-deps"
+root = "release-packaging-governance"
+state = "ready"
+branch = "workflow/feature/release-packaging-governance.go-build-deps"
+path = "workflow/features/release-packaging-governance.go-build-deps"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/release-packaging-governance.go-build-deps"
