@@ -30,12 +30,12 @@ This baseline is not 100% line coverage. That is acceptable only because the pol
 
 | Subsystem | Required harness classes | Current evidence | Known gaps / next increments |
 | --- | --- | --- | --- |
-| `plugin-contracts` | docs/spec consistency checks, compatibility examples, negative contract tests when code is touched | existing package tests plus docs | add executable spec checks when contract docs change |
-| `secure-bootstrap-transport` | token generation, bad token rejection, replay/stale artifact rejection, transport permission checks | manager lifecycle tests exercise auth path indirectly | add direct auth package tests; add stale-generation artifact regression before runtime auth work is done |
-| `kernel-runtime-supervision` | lifecycle unit tests, integration start/auth/load tests, restart race tests, monitor/admin concurrency tests, cleanup ownership tests | manager lifecycle, daemon, monitor, hardening tests | high-risk gaps: generation-scoped cleanup invariant; serialized lifecycle restart invariant |
-| `control-plane-ops` | admin RPC integration, CLI argument/status tests, event-log read/write tests, negative malformed input tests | admin RPC, CLI, eventlog tests | add long-line event-log read regression; add admin restart concurrency regression |
-| `plugin-authoring-sdk` | SDK API unit tests, example build tests, auth-before-RPC behavior tests, public import examples | go-runtime and test-plugin-api tests; example binaries build in `make build` | resolve public import path contract; add explicit Capabilities auth-contract test/doc decision |
-| `release-packaging-governance` | build wrapper tests, install docs command validation, release checklist consistency checks | root/source Makefile verification | add docs quickstart validation for absolute plugin paths |
+| `plugin-contracts` | docs/spec consistency checks, compatibility examples, negative contract tests when code is touched | protocol-doc honesty check, capability-vocabulary docs, existing docs | add broader executable spec consistency checks when contract docs change |
+| `secure-bootstrap-transport` | token generation, bad token rejection, replay/stale artifact rejection, transport permission checks | auth exercised indirectly through manager lifecycle/startup tests | add direct auth package tests for token round trip, bad-token rejection, encode/decode edge cases |
+| `kernel-runtime-supervision` | lifecycle unit tests, integration start/auth/load tests, restart race tests, monitor/admin concurrency tests, cleanup ownership tests, stale RPC fencing tests | manager lifecycle, daemon, monitor, hardening, concurrent restart, stale cleanup, and RPC fence tests | add broader pairwise lifecycle matrix only when lifecycle surface changes again |
+| `control-plane-ops` | admin RPC integration, CLI argument/status tests, event-log read/write tests, negative malformed input tests | admin RPC, CLI pre-I/O validation, eventlog long-line/corrupt-line tests | add aggregate multi-plugin log read if/when it becomes a committed feature |
+| `plugin-authoring-sdk` | SDK API unit tests, example build tests, auth-before-RPC behavior tests, public import examples | go-runtime tests, Capabilities auth tests, local import docs, example binaries built in `make build` | add external-module packaging tests only if a real external module path is introduced |
+| `release-packaging-governance` | build wrapper tests, install docs command validation, release checklist consistency checks, coverage artifact checks | root/source Makefile tests, install-doc smoke check, coverage artifact tests, protocol honesty check | add release-promotion checklist automation when promotion process changes |
 
 ## Gap record format
 
@@ -55,62 +55,52 @@ Unrecorded gaps are failures. Green tests without behavior coverage are not evid
 
 These records cover known baseline gaps present in the generated coverage artifacts. They do not excuse missing coverage for newly touched behavior; new work still needs its own behavior-specific evidence or a narrower gap record.
 
-### `plugin-contracts` executable spec checks
-
-- feature or issue id: `plugin-contracts.*`
-- behavior not covered: executable validation that checked-in contract documents, compatibility examples, and negative contract cases remain mutually consistent after contract edits
-- why full relevant coverage is impossible or wasteful now: current baseline has mostly static contract text; adding executable checks before the next contract change would be speculative harness work rather than coverage of touched behavior
-- risk level: medium
-- owner/reviewer accepting the gap: workflow maintainer/orchestrator at feature review
-- smallest next coverage increment: add a doc/spec consistency test in the specific contract feature when that document changes
-- expiry or review trigger: any edit under `src/plugin-contracts/**`
-
-### `secure-bootstrap-transport.startup-handshake` direct auth coverage
+### `secure-bootstrap-transport.startup-handshake` direct auth package coverage
 
 - feature or issue id: `secure-bootstrap-transport.startup-handshake`
-- behavior not covered: direct token generation, token decode/reject paths, replay/stale artifact rejection, and transport permission checks in the auth package
-- why full relevant coverage is impossible or wasteful now: current exercised auth behavior is indirect through manager lifecycle tests; direct auth tests belong with startup-handshake runtime/auth work, not this release-packaging Makefile coverage issue
+- behavior not covered: direct `auth` package token generation, encode/decode edge cases, and bad-token/replay rejection tests
+- why full relevant coverage is impossible or wasteful now: current runtime auth behavior is covered indirectly through manager startup/auth tests; direct package coverage belongs with the startup-handshake/auth feature, not unrelated release/docs changes
 - risk level: high
 - owner/reviewer accepting the gap: workflow maintainer/orchestrator at feature review
-- smallest next coverage increment: add direct `auth` package tests for valid token round trip and bad token rejection
-- expiry or review trigger: any runtime auth/startup-handshake change or before declaring startup-handshake complete
+- smallest next coverage increment: add direct `auth` package tests for valid token round trip, malformed token rejection, and constant-time comparison behavior
+- expiry or review trigger: any edit under `src/secure-bootstrap-transport/startup-handshake/**` or manager auth/startup code
 
-### `kernel-runtime-supervision.manager-lifecycle` cleanup/restart invariants
+### `kernel-runtime-supervision` lifecycle matrix breadth
 
 - feature or issue id: `kernel-runtime-supervision.manager-lifecycle`
-- behavior not covered: generation-scoped runtime artifact cleanup invariants and serialized lifecycle restart concurrency invariants
-- why full relevant coverage is impossible or wasteful now: existing manager tests cover broad lifecycle behavior, but race-focused invariant tests require deliberately structured concurrent harnesses and should be added with the lifecycle issue that touches those mechanisms
-- risk level: high
-- owner/reviewer accepting the gap: workflow maintainer/orchestrator at feature review
-- smallest next coverage increment: add one regression that proves cleanup only removes artifacts owned by the active generation
-- expiry or review trigger: any manager cleanup, restart, monitor, or generation-handling change
-
-### `control-plane-ops.event-log-read` and `control-plane-ops.admin-rpc` regressions
-
-- feature or issue id: `control-plane-ops.event-log-read`, `control-plane-ops.admin-rpc`
-- behavior not covered: long-line event-log read handling and admin restart concurrency behavior
-- why full relevant coverage is impossible or wasteful now: the current touched surface is coverage artifact generation; adding these control-plane regressions here would chase repo-wide coverage outside the assigned feature boundary
+- behavior not covered: exhaustive pairwise matrix across every lifecycle/data-plane method interleaving
+- why full relevant coverage is impossible or wasteful now: current tests cover the known bug classes fixed here: concurrent restart serialization, stale cleanup ownership, in-flight heartbeat vs kill/restart, and idempotent close. Exhaustive pairwise interleaving would be expensive and brittle without a specific newly touched lifecycle edge
 - risk level: medium
 - owner/reviewer accepting the gap: workflow maintainer/orchestrator at feature review
-- smallest next coverage increment: add the long-line event-log read regression before event-log read is marked complete
-- expiry or review trigger: any event-log read parser change, admin restart change, or control-plane completion review
+- smallest next coverage increment: add one focused interleaving regression for the next lifecycle/data-plane method changed
+- expiry or review trigger: any edit to `Manager.Start`, `Kill`, `Restart`, `Close`, `call`, or data-plane RPC methods
 
-### `plugin-authoring-sdk.go-runtime` public import/auth-contract decisions
+### `control-plane-ops` aggregate multi-plugin logs
 
-- feature or issue id: `plugin-authoring-sdk.go-runtime`, `plugin-authoring-sdk.test-plugin-api`
-- behavior not covered: public import path contract examples and explicit Capabilities-before/after-auth contract decision
-- why full relevant coverage is impossible or wasteful now: the missing behavior includes an unresolved API contract decision; tests added before that decision would either encode the wrong contract or create churn
+- feature or issue id: `control-plane-ops.event-log-read`, `control-plane-ops.local-observability`
+- behavior not covered: aggregate multi-plugin log reading across all plugin event logs
+- why full relevant coverage is impossible or wasteful now: current committed behavior supports explicit plugin log reads and robust single-log parsing; aggregate log reads are a separate feature decision, not required for the long-line/corrupt-line parser fixes
+- risk level: low
+- owner/reviewer accepting the gap: workflow maintainer/orchestrator at feature review
+- smallest next coverage increment: implement and test aggregate log discovery only if aggregate logs are admitted as a feature
+- expiry or review trigger: any change claiming aggregate/multi-plugin log read support
+
+### `plugin-authoring-sdk` external module packaging
+
+- feature or issue id: `plugin-authoring-sdk.go-runtime`, `release-packaging-governance.packaging-policy`
+- behavior not covered: consuming the SDK through a fetchable external Go module path
+- why full relevant coverage is impossible or wasteful now: the current source release deliberately documents the SDK import as an in-repo/local-module path; external module packaging is not implemented
 - risk level: medium
 - owner/reviewer accepting the gap: workflow maintainer/orchestrator at feature review
-- smallest next coverage increment: decide and document the Capabilities auth contract, then add a focused test for that behavior
-- expiry or review trigger: any SDK public API/import path change or auth contract change
+- smallest next coverage increment: add an external consumer fixture only when a real external module path is introduced
+- expiry or review trigger: any documentation or packaging change claiming a public external Go module path
 
-### `release-packaging-governance.install-layout` docs quickstart validation
+### `plugin-contracts` broad executable spec consistency
 
-- feature or issue id: `release-packaging-governance.install-layout`
-- behavior not covered: executable validation that quickstart/install documentation uses absolute plugin paths correctly
-- why full relevant coverage is impossible or wasteful now: current `release-packaging-governance.go-build-deps` coverage evidence covers root/source `make coverage` delegation and artifact writing; docs quickstart validation belongs with install-layout documentation changes
+- feature or issue id: `plugin-contracts.*`
+- behavior not covered: broad executable validation that all contract documents, compatibility examples, and negative cases remain mutually consistent after arbitrary contract edits
+- why full relevant coverage is impossible or wasteful now: current checks cover the specific protocol-version honesty regression and capability vocabulary docs; a broader spec checker should be added with the next substantive contract change
 - risk level: medium
 - owner/reviewer accepting the gap: workflow maintainer/orchestrator at feature review
-- smallest next coverage increment: add one docs command validation test for an absolute plugin path quickstart example
-- expiry or review trigger: any install-layout or quickstart documentation change
+- smallest next coverage increment: add a doc/spec consistency check for the next contract feature edited
+- expiry or review trigger: any substantive edit under `docs/plugin-*.md`, `docs/compatibility.md`, or `src/plugin-contracts/**`
