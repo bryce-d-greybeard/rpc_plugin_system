@@ -36,8 +36,9 @@ Every standard plugin must expose these required RPC methods:
 Returns:
 - plugin id
 - plugin version
-- protocol version where applicable later
 - generation id
+
+v1 does not define a wire protocol version field; compatibility is behavior/documentation based unless protocol negotiation is added later.
 
 Rules:
 - bootstrap token auth is one-time-use per generation
@@ -48,7 +49,6 @@ Rules:
 Returns:
 - plugin id
 - plugin version
-- protocol version
 - generation id
 - capability list
 - optional capability metadata
@@ -57,7 +57,6 @@ Returns:
 Returns:
 - plugin id
 - plugin version
-- protocol version
 - generation id
 - health status
 - uptime
@@ -85,7 +84,7 @@ A plugin must advertise optional methods through capability reporting.
 
 - Every response is generation-scoped.
 - Plugin id must match expected plugin id.
-- Protocol version must be compatible.
+- v1 does not define a wire protocol version field or protocol negotiation check; compatibility is enforced through documented behavior, required RPC names, auth, plugin id, generation, capabilities, and lifecycle checks.
 - Capability names should be stable and documented.
 - Required fields must always be present.
 - Optional fields must be additive and safe to ignore.
@@ -109,7 +108,7 @@ The kernel may provide environment variables such as:
 - `RPC_PLUGIN_SYSTEM_PLUGIN_ID`
 - `RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION`
 - `RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE`
-- future protocol/version variables
+- future protocol negotiation variables, if a later standard explicitly adds them
 
 ### Transport
 - v0 transport is Unix domain sockets plus Go `net/rpc`
@@ -169,7 +168,7 @@ Restart means:
 The kernel should hard-fail startup when any of these occur:
 - plugin id mismatch
 - auth failure
-- protocol version incompatibility
+- documented behavior or compatibility violation
 - required API missing
 - generation mismatch during startup
 - invalid or missing executable
@@ -189,16 +188,16 @@ Any change to:
 - generation semantics
 - lifecycle semantics
 
-requires a new protocol/plugin-standard version.
+requires a new plugin-standard version, and only a later standard may add explicit protocol negotiation.
 
 ## Versioning model
 
 For now, standardize these version concepts:
 - plugin implementation version
-- plugin standard / protocol version
+- plugin standard version documented by the release
 - capability set versioning only where needed later
 
-The kernel should compare protocol version compatibility during startup.
+v1 does not define a wire protocol version field, so the kernel cannot honestly compare one during startup. v1 compatibility is behavior/documentation based unless and until a later standard adds explicit protocol negotiation.
 
 ## Acceptance expectations for the kernel
 
