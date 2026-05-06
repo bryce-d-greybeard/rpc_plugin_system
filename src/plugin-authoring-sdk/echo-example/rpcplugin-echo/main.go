@@ -22,7 +22,11 @@ func (p *echoPlugin) Sleep(in plugin.SleepRequest, _ *plugin.Empty) error {
 	return nil
 }
 
-var exitProcess = os.Exit
+var (
+	exitProcess     = os.Exit
+	serveWithConfig = plugin.ServeWithConfig
+	runPlugin       = run
+)
 
 func (p *echoPlugin) Crash(in plugin.CrashRequest, _ *plugin.Empty) error {
 	exitProcess(in.Code)
@@ -53,7 +57,7 @@ func run() error {
 	_ = logger.Event(plugin.LogEvent{Event: plugin.EventPluginBootStarted, Message: "echo plugin process booting"})
 
 	p := &echoPlugin{TemplatePlugin: plugin.NewTemplate(cfg, "0.1.0")}
-	if err := plugin.ServeWithConfig(cfg, p); err != nil {
+	if err := serveWithConfig(cfg, p); err != nil {
 		_ = logger.Event(plugin.LogEvent{Level: plugin.LogLevelError, Event: plugin.EventPluginBootFailed, Message: "echo plugin serve failed", Error: err.Error()})
 		return err
 	}
@@ -61,7 +65,7 @@ func run() error {
 }
 
 func main() {
-	if err := run(); err != nil {
+	if err := runPlugin(); err != nil {
 		panic(err)
 	}
 }

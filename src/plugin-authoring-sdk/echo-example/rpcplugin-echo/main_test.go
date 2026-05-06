@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -26,6 +27,20 @@ func TestRunReportsMissingConfig(t *testing.T) {
 	}
 }
 
+func setValidRunEnv(t *testing.T) plugin.Config {
+	t.Helper()
+	dir := t.TempDir()
+	tokenFile := filepath.Join(dir, "token")
+	if err := os.WriteFile(tokenFile, []byte("token"), 0o600); err != nil {
+		t.Fatalf("write token file: %v", err)
+	}
+	t.Setenv("RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET", filepath.Join(dir, "plugin.sock"))
+	t.Setenv("RPC_PLUGIN_SYSTEM_PLUGIN_ID", "echo-test")
+	t.Setenv("RPC_PLUGIN_SYSTEM_PLUGIN_GENERATION", "42")
+	t.Setenv("RPC_PLUGIN_SYSTEM_AUTH_TOKEN_FILE", tokenFile)
+	return plugin.Config{SocketPath: filepath.Join(dir, "plugin.sock"), PluginID: "echo-test", GenerationID: 42, AuthToken: "token"}
+}
+
 func TestRunReportsLoggerOpenFailure(t *testing.T) {
 	tokenFile := filepath.Join(t.TempDir(), "token")
 	if err := os.WriteFile(tokenFile, []byte("token"), 0o600); err != nil {
@@ -39,6 +54,80 @@ func TestRunReportsLoggerOpenFailure(t *testing.T) {
 	if err := run(); err == nil {
 		t.Fatalf("run succeeded with socket directory that cannot host plugin log")
 	}
+}
+
+func TestRunServesEchoPlugin(t *testing.T) {
+	wantCfg := setValidRunEnv(t)
+	served := false
+	oldServeWithConfig := serveWithConfig
+	serveWithConfig = func(cfg plugin.Config, core plugin.Core) error {
+		served = true
+		if !reflect.DeepEqual(cfg, wantCfg) {
+			t.Fatalf("serve cfg = %#v, want %#v", cfg, wantCfg)
+		}
+		p, ok := core.(*echoPlugin)
+		if !ok {
+			t.Fatalf("serve core type = %T, want *echoPlugin", core)
+		}
+		if p.Version() != "0.1.0" {
+			t.Fatalf("serve plugin version = %q, want 0.1.0", p.Version())
+		}
+		return nil
+	}
+	t.Cleanup(func() { serveWithConfig = oldServeWithConfig })
+
+	if err := run(); err != nil {
+		t.Fatalf("run returned error: %v", err)
+	}
+	if !served {
+		t.Fatalf("run did not call serveWithConfig")
+	}
+}
+
+func TestRunReportsServeFailure(t *testing.T) {
+	setValidRunEnv(t)
+	serveErr := errors.New("serve failed")
+	oldServeWithConfig := serveWithConfig
+	serveWithConfig = func(plugin.Config, plugin.Core) error { return serveErr }
+	t.Cleanup(func() { serveWithConfig = oldServeWithConfig })
+
+	if err := run(); !errors.Is(err, serveErr) {
+		t.Fatalf("run error = %v, want %v", err, serveErr)
+	}
+}
+
+func TestMainReturnsAfterSuccessfulRun(t *testing.T) {
+	called := false
+	oldRunPlugin := runPlugin
+	runPlugin = func() error {
+		called = true
+		return nil
+	}
+	t.Cleanup(func() { runPlugin = oldRunPlugin })
+
+	main()
+	if !called {
+		t.Fatalf("main did not call runPlugin")
+	}
+}
+
+func TestMainPanicsOnRunFailure(t *testing.T) {
+	runErr := errors.New("run failed")
+	oldRunPlugin := runPlugin
+	runPlugin = func() error { return runErr }
+	t.Cleanup(func() { runPlugin = oldRunPlugin })
+
+	defer func() {
+		got := recover()
+		if got == nil {
+			t.Fatalf("main did not panic")
+		}
+		err, ok := got.(error)
+		if !ok || !errors.Is(err, runErr) {
+			t.Fatalf("panic = %v, want %v", got, runErr)
+		}
+	}()
+	main()
 }
 
 func TestEchoPluginImplementsExpectedAPI(t *testing.T) {
