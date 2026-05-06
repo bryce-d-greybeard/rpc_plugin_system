@@ -111,14 +111,14 @@ func (p *failurePlugin) Capabilities() []string {
 	return []string{"heartbeat", "shutdown", "echo", "sleep", "crash"}
 }
 
-func main() {
+func run() error {
 	cfg, err := plugin.LoadConfigFromEnv()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	logger, err := plugin.NewLogger(cfg)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer logger.Close()
 	behavior := testpluginapi.LoadConfig()
@@ -126,6 +126,13 @@ func main() {
 	p := &failurePlugin{pluginID: cfg.PluginID, version: behavior.Version, generationID: cfg.GenerationID, startedAt: time.Now(), behavior: behavior}
 	if err := plugin.ServeWithConfig(cfg, p); err != nil {
 		_ = logger.Event(plugin.LogEvent{Level: plugin.LogLevelError, Event: plugin.EventPluginBootFailed, Message: "failure plugin serve failed", Error: err.Error()})
+		return err
+	}
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
 		panic(err)
 	}
 }
