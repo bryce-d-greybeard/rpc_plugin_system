@@ -1,16 +1,16 @@
-ok  	rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc	0.999s	coverage: 76.6% of statements
-ok  	rpc_plugin_system/control-plane-ops/cli-status-control/cli	0.009s	coverage: 70.2% of statements
-ok  	rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl	2.048s	coverage: 14.9% of statements
-ok  	rpc_plugin_system/control-plane-ops/event-log-write/eventlog	(cached)	coverage: 77.0% of statements
-ok  	rpc_plugin_system/kernel-runtime-supervision/daemon-entrypoint/rpcplugind	2.591s	coverage: 36.4% of statements
-ok  	rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel	16.808s	coverage: 79.4% of statements
-ok  	rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime	(cached)	coverage: 31.7% of statements
+ok  	rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc	(cached)	coverage: 76.6% of statements
+ok  	rpc_plugin_system/control-plane-ops/cli-status-control/cli	0.006s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl	2.093s	coverage: 39.9% of statements
+ok  	rpc_plugin_system/control-plane-ops/event-log-write/eventlog	0.012s	coverage: 97.6% of statements
+ok  	rpc_plugin_system/kernel-runtime-supervision/daemon-entrypoint/rpcplugind	(cached)	coverage: 36.4% of statements
+ok  	rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel	(cached)	coverage: 79.4% of statements
+ok  	rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime	0.011s	coverage: 85.0% of statements
 	rpc_plugin_system/plugin-authoring-sdk/echo-example/rpcplugin-echo		coverage: 0.0% of statements
 	rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure		coverage: 0.0% of statements
-ok  	rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin	0.007s	coverage: 30.5% of statements
-ok  	rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi	0.007s	coverage: 0.0% of statements
+ok  	rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin	(cached)	coverage: 30.5% of statements
+ok  	rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi	0.012s	coverage: 98.0% of statements
 ok  	rpc_plugin_system/release-packaging-governance/go-build-deps/testroot	(cached)	coverage: 76.9% of statements
-ok  	rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth	0.006s	coverage: 91.7% of statements
+ok  	rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth	(cached)	coverage: 91.7% of statements
 rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc/adminrpc.go:64:				Status				75.0%
 rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc/adminrpc.go:73:				Plugins				0.0%
 rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc/adminrpc.go:82:				Plugin				77.8%
@@ -21,35 +21,35 @@ rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc/adminrpc.go:134:				Heart
 rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc/adminrpc.go:150:				Restart				77.8%
 rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc/adminrpc.go:166:				Serve				84.2%
 rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc/adminrpc.go:201:				Dial				100.0%
-rpc_plugin_system/control-plane-ops/cli-status-control/cli/any.go:10:				WriteAny			0.0%
-rpc_plugin_system/control-plane-ops/cli-status-control/cli/cli.go:12:				WriteState			80.0%
-rpc_plugin_system/control-plane-ops/cli-status-control/cli/cli.go:22:				WriteHostState			80.0%
-rpc_plugin_system/control-plane-ops/cli-status-control/cli/cli.go:32:				WriteCapabilities		80.0%
-rpc_plugin_system/control-plane-ops/cli-status-control/cli/logs.go:13:				WriteEventsText			75.0%
-rpc_plugin_system/control-plane-ops/cli-status-control/cli/logs.go:23:				WriteEventsJSON			80.0%
-rpc_plugin_system/control-plane-ops/cli-status-control/cli/logs.go:33:				WriteSummaryText		76.9%
-rpc_plugin_system/control-plane-ops/cli-status-control/cli/logs.go:63:				WriteSummaryJSON		80.0%
-rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl/args.go:23:			splitCommandArgs		80.0%
+rpc_plugin_system/control-plane-ops/cli-status-control/cli/any.go:10:				WriteAny			100.0%
+rpc_plugin_system/control-plane-ops/cli-status-control/cli/cli.go:12:				WriteState			100.0%
+rpc_plugin_system/control-plane-ops/cli-status-control/cli/cli.go:22:				WriteHostState			100.0%
+rpc_plugin_system/control-plane-ops/cli-status-control/cli/cli.go:32:				WriteCapabilities		100.0%
+rpc_plugin_system/control-plane-ops/cli-status-control/cli/logs.go:13:				WriteEventsText			100.0%
+rpc_plugin_system/control-plane-ops/cli-status-control/cli/logs.go:23:				WriteEventsJSON			100.0%
+rpc_plugin_system/control-plane-ops/cli-status-control/cli/logs.go:33:				WriteSummaryText		100.0%
+rpc_plugin_system/control-plane-ops/cli-status-control/cli/logs.go:63:				WriteSummaryJSON		100.0%
+rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl/args.go:23:			splitCommandArgs		100.0%
 rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl/args.go:47:			takesValue			100.0%
-rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl/args.go:59:			isBoolFlag			66.7%
+rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl/args.go:59:			isBoolFlag			100.0%
 rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl/main.go:18:			main				0.0%
-rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl/main.go:183:		validateOptions			0.0%
-rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl/main.go:208:		resolveLogPath			0.0%
+rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl/main.go:183:		validateOptions			100.0%
+rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl/main.go:208:		resolveLogPath			100.0%
 rpc_plugin_system/control-plane-ops/event-log-write/eventlog/eventlog.go:103:			New				100.0%
-rpc_plugin_system/control-plane-ops/event-log-write/eventlog/eventlog.go:108:			NewWithOptions			87.5%
+rpc_plugin_system/control-plane-ops/event-log-write/eventlog/eventlog.go:108:			NewWithOptions			100.0%
 rpc_plugin_system/control-plane-ops/event-log-write/eventlog/eventlog.go:123:			Close				100.0%
-rpc_plugin_system/control-plane-ops/event-log-write/eventlog/eventlog.go:128:			Path				0.0%
-rpc_plugin_system/control-plane-ops/event-log-write/eventlog/eventlog.go:136:			Write				68.4%
-rpc_plugin_system/control-plane-ops/event-log-write/eventlog/eventlog.go:165:			rotateIfNeeded			73.5%
-rpc_plugin_system/control-plane-ops/event-log-write/eventlog/eventlog.go:227:			backupPath			80.0%
-rpc_plugin_system/control-plane-ops/event-log-write/eventlog/eventlog.go:236:			reopenWithErr			0.0%
-rpc_plugin_system/control-plane-ops/event-log-write/eventlog/read.go:35:			ReadAll				78.6%
+rpc_plugin_system/control-plane-ops/event-log-write/eventlog/eventlog.go:128:			Path				100.0%
+rpc_plugin_system/control-plane-ops/event-log-write/eventlog/eventlog.go:136:			Write				100.0%
+rpc_plugin_system/control-plane-ops/event-log-write/eventlog/eventlog.go:165:			rotateIfNeeded			88.2%
+rpc_plugin_system/control-plane-ops/event-log-write/eventlog/eventlog.go:227:			backupPath			100.0%
+rpc_plugin_system/control-plane-ops/event-log-write/eventlog/eventlog.go:236:			reopenWithErr			100.0%
+rpc_plugin_system/control-plane-ops/event-log-write/eventlog/read.go:35:			ReadAll				100.0%
 rpc_plugin_system/control-plane-ops/event-log-write/eventlog/read.go:58:			Summarize			100.0%
 rpc_plugin_system/control-plane-ops/event-log-write/eventlog/read.go:74:			FormatText			100.0%
-rpc_plugin_system/control-plane-ops/event-log-write/eventlog/read.go:107:			readOne				87.5%
-rpc_plugin_system/control-plane-ops/event-log-write/eventlog/read.go:142:			existingLogPaths		90.0%
-rpc_plugin_system/control-plane-ops/event-log-write/eventlog/read.go:159:			match				61.5%
-rpc_plugin_system/control-plane-ops/event-log-write/eventlog/read.go:181:			reverse				0.0%
+rpc_plugin_system/control-plane-ops/event-log-write/eventlog/read.go:107:			readOne				100.0%
+rpc_plugin_system/control-plane-ops/event-log-write/eventlog/read.go:142:			existingLogPaths		100.0%
+rpc_plugin_system/control-plane-ops/event-log-write/eventlog/read.go:159:			match				100.0%
+rpc_plugin_system/control-plane-ops/event-log-write/eventlog/read.go:181:			reverse				100.0%
 rpc_plugin_system/kernel-runtime-supervision/daemon-entrypoint/rpcplugind/main.go:19:		main				0.0%
 rpc_plugin_system/kernel-runtime-supervision/daemon-entrypoint/rpcplugind/main.go:58:		parsePlugins			70.6%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/host.go:54:		CapabilityMap			0.0%
@@ -96,12 +96,12 @@ rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:1105:		errorString			66.7%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/monitor.go:12:		MonitorLoop			81.8%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/plugin_id.go:12:		ValidatePluginID		100.0%
-rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/peercred_linux.go:20:	ReadPeerCred			0.0%
-rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/runtime.go:17:		EnsureDir			33.3%
-rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/runtime.go:42:		SocketPath			0.0%
-rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/runtime.go:47:		AuthPath			0.0%
-rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/runtime.go:52:		ListenUnix			0.0%
-rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/runtime.go:67:		ValidateExecutable		87.5%
+rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/peercred_linux.go:20:	ReadPeerCred			77.8%
+rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/runtime.go:17:		EnsureDir			86.7%
+rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/runtime.go:42:		SocketPath			100.0%
+rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/runtime.go:47:		AuthPath			100.0%
+rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/runtime.go:52:		ListenUnix			66.7%
+rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/runtime.go:67:		ValidateExecutable		100.0%
 rpc_plugin_system/plugin-authoring-sdk/echo-example/rpcplugin-echo/main.go:15:			Echo				0.0%
 rpc_plugin_system/plugin-authoring-sdk/echo-example/rpcplugin-echo/main.go:20:			Sleep				0.0%
 rpc_plugin_system/plugin-authoring-sdk/echo-example/rpcplugin-echo/main.go:25:			Crash				0.0%
@@ -141,18 +141,18 @@ rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin/template.go:16:			NewTe
 rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin/template.go:29:			Version				100.0%
 rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin/template.go:34:			Heartbeat			100.0%
 rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin/template.go:46:			Shutdown			0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:31:		HeartbeatDelay			0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:38:		ShutdownDelay			0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:45:		LoadConfig			0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:67:		WriteConfig			0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:79:		LoadEnv				0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:97:		getenvDefault			0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:104:		getenvInt64			0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:116:		getenvFloat64			0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:128:		getenvBool			0.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:31:		HeartbeatDelay			100.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:38:		ShutdownDelay			100.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:45:		LoadConfig			100.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:67:		WriteConfig			83.3%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:79:		LoadEnv				100.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:97:		getenvDefault			100.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:104:		getenvInt64			100.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:116:		getenvFloat64			100.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:128:		getenvBool			100.0%
 rpc_plugin_system/release-packaging-governance/go-build-deps/testroot/root.go:11:		SourceRoot			76.9%
 rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:12:			NewToken			75.0%
 rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:21:			EqualToken			100.0%
 rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:29:			Encode				100.0%
 rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:34:			Decode				100.0%
-total:												(statements)			54.5%
+total:												(statements)			66.5%
