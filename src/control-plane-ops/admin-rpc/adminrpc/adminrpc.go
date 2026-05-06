@@ -83,8 +83,8 @@ func (s *Service) Plugin(in PluginRequest, out *kernel.State) error {
 	if s.Host == nil {
 		return fmt.Errorf("host is required")
 	}
-	if in.PluginID == "" {
-		return fmt.Errorf("plugin id is required")
+	if err := kernel.ValidatePluginID(in.PluginID); err != nil {
+		return err
 	}
 	state, err := s.Host.Plugin(in.PluginID)
 	if err != nil {
@@ -119,8 +119,8 @@ func (s *Service) Echo(in EchoRequest, out *testpluginapi.EchoResponse) error {
 	if s.Host == nil {
 		return fmt.Errorf("host is required")
 	}
-	if in.PluginID == "" {
-		return fmt.Errorf("plugin id is required")
+	if err := kernel.ValidatePluginID(in.PluginID); err != nil {
+		return err
 	}
 	message, err := s.Host.Echo(in.PluginID, in.Message)
 	if err != nil {
@@ -135,8 +135,8 @@ func (s *Service) Heartbeat(in HeartbeatRequest, out *testpluginapi.HeartbeatRes
 	if s.Host == nil {
 		return fmt.Errorf("host is required")
 	}
-	if in.PluginID == "" {
-		return fmt.Errorf("plugin id is required")
+	if err := kernel.ValidatePluginID(in.PluginID); err != nil {
+		return err
 	}
 	state, err := s.Host.Heartbeat(in.PluginID)
 	if err != nil {
@@ -151,8 +151,8 @@ func (s *Service) Restart(in RestartRequest, out *kernel.State) error {
 	if s.Host == nil {
 		return fmt.Errorf("host is required")
 	}
-	if in.PluginID == "" {
-		return fmt.Errorf("plugin id is required")
+	if err := kernel.ValidatePluginID(in.PluginID); err != nil {
+		return err
 	}
 	state, err := s.Host.RestartPlugin(in.PluginID)
 	if err != nil {

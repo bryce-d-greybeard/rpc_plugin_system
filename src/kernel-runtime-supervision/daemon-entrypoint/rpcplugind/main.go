@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -56,8 +55,6 @@ func main() {
 	}
 }
 
-var pluginIDPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
-
 func parsePlugins(pluginsArg, pluginID, pluginPath string) ([]kernel.PluginConfig, error) {
 	if pluginsArg != "" {
 		parts := strings.Split(pluginsArg, ",")
@@ -68,7 +65,7 @@ func parsePlugins(pluginsArg, pluginID, pluginPath string) ([]kernel.PluginConfi
 			if len(fields) != 2 || fields[0] == "" || fields[1] == "" {
 				return nil, fmt.Errorf("invalid plugin spec %q, want id=path", part)
 			}
-			if err := validatePluginID(fields[0]); err != nil {
+			if err := kernel.ValidatePluginID(fields[0]); err != nil {
 				return nil, err
 			}
 			plugins = append(plugins, kernel.PluginConfig{PluginID: fields[0], PluginPath: fields[1]})
@@ -78,18 +75,8 @@ func parsePlugins(pluginsArg, pluginID, pluginPath string) ([]kernel.PluginConfi
 	if pluginPath == "" {
 		return nil, fmt.Errorf("-plugin is required when -plugins is not set")
 	}
-	if err := validatePluginID(pluginID); err != nil {
+	if err := kernel.ValidatePluginID(pluginID); err != nil {
 		return nil, err
 	}
 	return []kernel.PluginConfig{{PluginID: pluginID, PluginPath: pluginPath}}, nil
-}
-
-func validatePluginID(pluginID string) error {
-	if pluginID == "" {
-		return fmt.Errorf("plugin id is required")
-	}
-	if !pluginIDPattern.MatchString(pluginID) {
-		return fmt.Errorf("invalid plugin id %q: use only letters, digits, dot, underscore, and dash, and start with a letter or digit", pluginID)
-	}
-	return nil
 }

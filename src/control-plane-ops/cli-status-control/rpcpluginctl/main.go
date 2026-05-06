@@ -46,6 +46,9 @@ func main() {
 	if fs.NArg() != 0 {
 		log.Fatalf("unexpected extra args: %v", fs.Args())
 	}
+	if err := validateOptions(command, *pluginID, *limit, *format); err != nil {
+		log.Fatal(err)
+	}
 
 	switch command {
 	case "status", "plugins", "plugin", "capabilities", "routes", "heartbeat", "echo", "restart":
@@ -66,9 +69,6 @@ func main() {
 				log.Fatal(err)
 			}
 		case "plugin":
-			if *pluginID == "" {
-				log.Fatal("-plugin-id is required for plugin")
-			}
 			var state kernel.State
 			err = client.Call(adminrpc.MethodPlugin, adminrpc.PluginRequest{PluginID: *pluginID}, &state)
 			if err != nil {
@@ -96,9 +96,6 @@ func main() {
 				log.Fatal(err)
 			}
 		case "heartbeat":
-			if *pluginID == "" {
-				log.Fatal("-plugin-id is required for heartbeat")
-			}
 			var hb testpluginapi.HeartbeatResponse
 			err = client.Call(adminrpc.MethodHeartbeat, adminrpc.HeartbeatRequest{PluginID: *pluginID}, &hb)
 			if err != nil {
@@ -108,9 +105,6 @@ func main() {
 				log.Fatal(err)
 			}
 		case "echo":
-			if *pluginID == "" {
-				log.Fatal("-plugin-id is required for echo")
-			}
 			var out testpluginapi.EchoResponse
 			err = client.Call(adminrpc.MethodEcho, adminrpc.EchoRequest{PluginID: *pluginID, Message: *echoMsg}, &out)
 			if err != nil {
@@ -120,9 +114,6 @@ func main() {
 				log.Fatal(err)
 			}
 		case "restart":
-			if *pluginID == "" {
-				log.Fatal("-plugin-id is required for restart")
-			}
 			var state kernel.State
 			err = client.Call(adminrpc.MethodRestart, adminrpc.RestartRequest{PluginID: *pluginID}, &state)
 			if err != nil {
@@ -187,6 +178,31 @@ func main() {
 	default:
 		log.Fatalf("unknown command %q, want status, plugins, plugin, capabilities, routes, heartbeat, echo, restart, or logs", command)
 	}
+}
+
+func validateOptions(command, pluginID string, limit int, format string) error {
+	switch command {
+	case "plugin", "heartbeat", "echo", "restart":
+		if pluginID == "" {
+			return fmt.Errorf("-plugin-id is required for %s", command)
+		}
+	}
+	if pluginID != "" {
+		if err := kernel.ValidatePluginID(pluginID); err != nil {
+			return err
+		}
+	}
+	if command == "logs" {
+		if limit < 0 {
+			return fmt.Errorf("-limit must be non-negative")
+		}
+		switch format {
+		case "text", "json":
+		default:
+			return fmt.Errorf("unknown log format %q, want text or json", format)
+		}
+	}
+	return nil
 }
 
 func resolveLogPath(runtimeDir, pluginID string) (string, error) {

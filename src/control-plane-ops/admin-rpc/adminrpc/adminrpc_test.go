@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -15,6 +16,38 @@ import (
 	"rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi"
 	"rpc_plugin_system/release-packaging-governance/go-build-deps/testroot"
 )
+
+func TestPluginIDMethodsRejectInvalidPluginID(t *testing.T) {
+	service := Service{Host: &kernel.Host{}}
+	for _, tc := range []struct {
+		name string
+		run  func() error
+	}{
+		{name: "plugin", run: func() error {
+			var out kernel.State
+			return service.Plugin(PluginRequest{PluginID: "../echo"}, &out)
+		}},
+		{name: "heartbeat", run: func() error {
+			var out testpluginapi.HeartbeatResponse
+			return service.Heartbeat(HeartbeatRequest{PluginID: "echo/test"}, &out)
+		}},
+		{name: "echo", run: func() error {
+			var out testpluginapi.EchoResponse
+			return service.Echo(EchoRequest{PluginID: "../echo", Message: "ping"}, &out)
+		}},
+		{name: "restart", run: func() error {
+			var out kernel.State
+			return service.Restart(RestartRequest{PluginID: "echo/test"}, &out)
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.run()
+			if err == nil || !strings.Contains(err.Error(), "invalid plugin id") {
+				t.Fatalf("err = %v, want invalid plugin id", err)
+			}
+		})
+	}
+}
 
 func TestStatusAndRestart(t *testing.T) {
 	pluginBin := buildPlugin(t)

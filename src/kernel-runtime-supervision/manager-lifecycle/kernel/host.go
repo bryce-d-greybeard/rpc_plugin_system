@@ -80,8 +80,11 @@ func NewHost(cfg HostConfig) (*Host, error) {
 	host := &Host{managers: map[string]*Manager{}}
 	seen := map[string]struct{}{}
 	for _, plugin := range cfg.Plugins {
-		if plugin.PluginID == "" || plugin.PluginPath == "" {
-			return nil, fmt.Errorf("plugin id and path are required")
+		if err := ValidatePluginID(plugin.PluginID); err != nil {
+			return nil, err
+		}
+		if plugin.PluginPath == "" {
+			return nil, fmt.Errorf("plugin path is required")
 		}
 		if _, ok := seen[plugin.PluginID]; ok {
 			return nil, fmt.Errorf("duplicate plugin id: %s", plugin.PluginID)
