@@ -1,8 +1,8 @@
 # rpc-plugin-system source root
 
-`src/` mirrors the workflow root-feature / feature topology. Build metadata stays at this source root; implementation, docs, examples, and tests live under feature folders.
+`src/` is the workflow root and the source root. Implementation, docs, examples, tests, and workflow records live in the same root-feature / feature folders.
 
-Root features:
+Root features / source-workflow roots:
 
 - `plugin-contracts/`
 - `secure-bootstrap-transport/`
