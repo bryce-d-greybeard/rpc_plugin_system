@@ -1,4 +1,7 @@
 BINDIR := .tmp-bin
+ARTIFACTS_DIR := artifacts
+COVERAGE_PROFILE := $(ARTIFACTS_DIR)/coverage.out
+COVERAGE_SUMMARY := $(ARTIFACTS_DIR)/coverage-summary.txt
 
 .PHONY: all build daemon ctl echo failure clean test coverage
 
@@ -30,7 +33,12 @@ test:
 	go test ./...
 
 coverage:
-	go test -cover ./...
+	mkdir -p $(ARTIFACTS_DIR)
+	go test -coverprofile=$(COVERAGE_PROFILE).tmp ./... > $(COVERAGE_SUMMARY).tmp
+	go tool cover -func=$(COVERAGE_PROFILE).tmp >> $(COVERAGE_SUMMARY).tmp
+	mv $(COVERAGE_PROFILE).tmp $(COVERAGE_PROFILE)
+	mv $(COVERAGE_SUMMARY).tmp $(COVERAGE_SUMMARY)
+	cat $(COVERAGE_SUMMARY)
 
 clean:
 	rm -rf $(BINDIR)

@@ -14,8 +14,13 @@ Canonical policy lives in [`src/workflow.toml`](../workflow.toml).
 Command run from `src/` on 2026-05-06:
 
 ```bash
-go test -cover ./...
+make coverage
 ```
+
+Evidence artifacts written by the target:
+
+- `src/artifacts/coverage.out`
+- `src/artifacts/coverage-summary.txt`
 
 Observed package statement coverage:
 
@@ -25,13 +30,13 @@ ok   rpc_plugin_system/control-plane-ops/cli-status-control/cli             cove
 ok   rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl    coverage: 15.5% of statements
 ok   rpc_plugin_system/control-plane-ops/event-log-write/eventlog           coverage: 75.2% of statements
 ok   rpc_plugin_system/kernel-runtime-supervision/daemon-entrypoint/rpcplugind coverage: 42.1% of statements
-ok   rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel  coverage: 79.5% of statements
+ok   rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel  coverage: 79.3% of statements
 ok   rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime  coverage: 31.7% of statements
      rpc_plugin_system/plugin-authoring-sdk/echo-example/rpcplugin-echo     coverage: 0.0% of statements
      rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure coverage: 0.0% of statements
 ok   rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin               coverage: 25.4% of statements
 ok   rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi    coverage: 0.0% of statements
-     rpc_plugin_system/release-packaging-governance/go-build-deps/testroot   coverage: 0.0% of statements
+ok   rpc_plugin_system/release-packaging-governance/go-build-deps/testroot   coverage: 76.9% of statements
      rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth     coverage: 0.0% of statements
 ```
 

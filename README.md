@@ -41,11 +41,16 @@ Coverage policy:
 - Any coverage gap must be recorded with reason, risk, and the smallest next coverage increment before the work can be considered done.
 - Project coverage posture is tracked in [`src/artifacts/global-coverage-map.md`](src/artifacts/global-coverage-map.md).
 
-Run the current package coverage report:
+Run the current package coverage report and write reusable evidence:
 
 ```bash
 make coverage
 ```
+
+The coverage target writes:
+
+- `src/artifacts/coverage.out` — Go coverage profile for `go tool cover`/HTML inspection.
+- `src/artifacts/coverage-summary.txt` — package coverage plus `go tool cover -func` totals, also printed to the terminal.
 
 Run tests:
 

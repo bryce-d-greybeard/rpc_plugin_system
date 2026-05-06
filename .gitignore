@@ -5,6 +5,7 @@
 *.out
 coverage.txt
 coverage.out
+!src/artifacts/coverage.out
 POSTMORTEM*.md
 TASKS.md
 ForReview.txt
