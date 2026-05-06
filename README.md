@@ -1,10 +1,11 @@
 # rpc-plugin-system
 
-This repository uses `src/` as the project source root.
+This repository uses `src/` as the source and workflow root.
 
-- Source root: [`src/`](src/)
-- Workflow manifest: [`workflow.toml`](workflow.toml)
-- Workflow folders: [`workflow/`](workflow/)
+- Source/workflow root: [`src/`](src/)
+- Workflow manifest: [`src/workflow.toml`](src/workflow.toml)
+- Workflow folders: [`src/workflow/`](src/workflow/)
+- Source feature folders: `src/<root-feature>/<feature>/`
 
 Run source commands from `src/`, or use the root Makefile wrapper:
 
