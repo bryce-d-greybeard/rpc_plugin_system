@@ -607,6 +607,76 @@ func TestServeWithConfigAcceptsOneConnectionBeforeClose(t *testing.T) {
 	}
 }
 
+func TestServeWithConfigReportsRPCRegistrationFailure(t *testing.T) {
+	oldRegister := registerRPCService
+	t.Cleanup(func() { registerRPCService = oldRegister })
+	sentinel := fmt.Errorf("register failed")
+	registerRPCService = func(*rpc.Server, string, any) error { return sentinel }
+
+	err := ServeWithConfig(Config{SocketPath: filepath.Join(t.TempDir(), "plugin.sock"), PluginID: "p", GenerationID: 1}, sdkBaseCore{})
+	if !errors.Is(err, sentinel) || !strings.Contains(err.Error(), "register rpc service") {
+		t.Fatalf("ServeWithConfig registration err = %v, want wrapped sentinel", err)
+	}
+}
+
+func TestExampleMinimalLoadsTemplateAndServes(t *testing.T) {
+	clearPluginEnv(t)
+	setValidPluginEnv(t)
+	oldServe := serveExampleWithConfig
+	t.Cleanup(func() { serveExampleWithConfig = oldServe })
+
+	called := false
+	serveExampleWithConfig = func(cfg Config, core Core) error {
+		called = true
+		if cfg.PluginID != "echo" || cfg.GenerationID != 7 || cfg.AuthToken != "secret-token" || cfg.SocketPath == "" {
+			t.Fatalf("unexpected example config: %+v", cfg)
+		}
+		tpl, ok := core.(*TemplatePlugin)
+		if !ok {
+			t.Fatalf("example core = %T, want *TemplatePlugin", core)
+		}
+		if tpl.PluginID != "echo" || tpl.GenerationID != 7 || tpl.Version() != "0.1.0" {
+			t.Fatalf("unexpected example template: %+v", tpl)
+		}
+		return nil
+	}
+
+	Example_minimal()
+	if !called {
+		t.Fatal("example did not serve")
+	}
+}
+
+func TestExampleMinimalPanicsOnConfigLoadError(t *testing.T) {
+	clearPluginEnv(t)
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected config load panic")
+		}
+	}()
+	Example_minimal()
+}
+
+func TestExampleMinimalPanicsOnServeError(t *testing.T) {
+	clearPluginEnv(t)
+	setValidPluginEnv(t)
+	oldServe := serveExampleWithConfig
+	t.Cleanup(func() { serveExampleWithConfig = oldServe })
+	sentinel := fmt.Errorf("serve failed")
+	serveExampleWithConfig = func(Config, Core) error { return sentinel }
+
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected serve panic")
+		}
+		if !errors.Is(r.(error), sentinel) {
+			t.Fatalf("panic = %v, want sentinel", r)
+		}
+	}()
+	Example_minimal()
+}
+
 func TestServerLoggingBranchesForAuthAndCapabilities(t *testing.T) {
 	logger := newTestLogger(t)
 	core := &sdkTestCore{pluginID: "p", generationID: 4, authErr: fmt.Errorf("hook rejected")}

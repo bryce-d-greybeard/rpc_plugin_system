@@ -151,6 +151,10 @@ func Serve(core Core) error {
 	return ServeWithConfig(cfg, core)
 }
 
+var registerRPCService = func(s *rpc.Server, name string, rcvr any) error {
+	return s.RegisterName(name, rcvr)
+}
+
 func ServeWithConfig(cfg Config, core Core) error {
 	if core == nil {
 		return fmt.Errorf("plugin core is required")
@@ -176,7 +180,7 @@ func ServeWithConfig(cfg Config, core Core) error {
 
 	srv := &server{core: core, cfg: cfg, capabilities: detectCapabilities(core), logger: logger}
 	rpcServer := rpc.NewServer()
-	if err := rpcServer.RegisterName(ServiceName, srv); err != nil {
+	if err := registerRPCService(rpcServer, ServiceName, srv); err != nil {
 		_ = logger.Event(LogEvent{Level: LogLevelError, Event: EventPluginBootFailed, Message: "rpc service registration failed", Error: err.Error()})
 		return fmt.Errorf("register rpc service: %w", err)
 	}
