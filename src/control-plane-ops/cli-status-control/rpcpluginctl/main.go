@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,19 +16,57 @@ import (
 	"rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi"
 )
 
+var exit = os.Exit
+
 func main() {
-	args := os.Args[1:]
+	exit(run(os.Args[1:], runEnv{Prog: os.Args[0], TempDir: os.TempDir, Now: time.Now}, os.Stdout, os.Stderr))
+}
+
+type runEnv struct {
+	Prog    string
+	TempDir func() string
+	Now     func() time.Time
+}
+
+func (e runEnv) normalize() runEnv {
+	if e.Prog == "" {
+		e.Prog = "rpcpluginctl"
+	}
+	if e.TempDir == nil {
+		e.TempDir = os.TempDir
+	}
+	if e.Now == nil {
+		e.Now = time.Now
+	}
+	return e
+}
+
+func run(args []string, env runEnv, stdout, stderr io.Writer) int {
+	env = env.normalize()
+	logger := log.New(stderr, log.Prefix(), log.Flags())
+	usage := func() string {
+		return fmt.Sprintf("usage: %s [-runtime-dir DIR] [-plugin-id ID] [-message TEXT] [-level LEVEL] [-component COMPONENT] [-event EVENT] [-method METHOD] [-limit N] [-format text|json] [-since DURATION] [-reverse] [-summary] <status|plugins|plugin|capabilities|routes|heartbeat|echo|restart|logs>", env.Prog)
+	}
+	fatal := func(v ...any) int {
+		logger.Print(v...)
+		return 1
+	}
+	fatalf := func(format string, v ...any) int {
+		logger.Printf(format, v...)
+		return 1
+	}
 	if len(args) == 0 {
-		log.Fatalf("usage: %s [-runtime-dir DIR] [-plugin-id ID] [-message TEXT] [-level LEVEL] [-component COMPONENT] [-event EVENT] [-method METHOD] [-limit N] [-format text|json] [-since DURATION] [-reverse] [-summary] <status|plugins|plugin|capabilities|routes|heartbeat|echo|restart|logs>", os.Args[0])
+		return fatal(usage())
 	}
 	command, flagArgs := splitCommandArgs(args)
 	if command == "" {
-		log.Fatalf("usage: %s [-runtime-dir DIR] [-plugin-id ID] [-message TEXT] [-level LEVEL] [-component COMPONENT] [-event EVENT] [-method METHOD] [-limit N] [-format text|json] [-since DURATION] [-reverse] [-summary] <status|plugins|plugin|capabilities|routes|heartbeat|echo|restart|logs>", os.Args[0])
+		return fatal(usage())
 	}
 
-	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	fs := flag.NewFlagSet(env.Prog, flag.ContinueOnError)
+	fs.SetOutput(stderr)
 	var (
-		runtimeDir = fs.String("runtime-dir", filepath.Join(os.TempDir(), "rpc_plugin_system"), "runtime directory")
+		runtimeDir = fs.String("runtime-dir", filepath.Join(env.TempDir(), "rpc_plugin_system"), "runtime directory")
 		pluginID   = fs.String("plugin-id", "", "target plugin id for plugin-specific operations")
 		echoMsg    = fs.String("message", "ping", "message for echo command")
 		level      = fs.String("level", "", "filter logs by level")
@@ -41,20 +80,20 @@ func main() {
 		summary    = fs.Bool("summary", false, "show summary counts instead of raw log lines")
 	)
 	if err := fs.Parse(flagArgs); err != nil {
-		log.Fatal(err)
+		return 2
 	}
 	if fs.NArg() != 0 {
-		log.Fatalf("unexpected extra args: %v", fs.Args())
+		return fatalf("unexpected extra args: %v", fs.Args())
 	}
 	if err := validateOptions(command, *pluginID, *limit, *format); err != nil {
-		log.Fatal(err)
+		return fatal(err)
 	}
 
 	switch command {
 	case "status", "plugins", "plugin", "capabilities", "routes", "heartbeat", "echo", "restart":
 		client, err := adminrpc.Dial(filepath.Join(*runtimeDir, "admin.sock"), 2*time.Second)
 		if err != nil {
-			log.Fatal(err)
+			return fatal(err)
 		}
 		defer client.Close()
 
@@ -63,70 +102,70 @@ func main() {
 			var state kernel.HostState
 			err = client.Call(adminrpc.MethodPlugins, adminrpc.Empty{}, &state)
 			if err != nil {
-				log.Fatal(err)
+				return fatal(err)
 			}
-			if err := cli.WriteHostState(os.Stdout, state); err != nil {
-				log.Fatal(err)
+			if err := cli.WriteHostState(stdout, state); err != nil {
+				return fatal(err)
 			}
 		case "plugin":
 			var state kernel.State
 			err = client.Call(adminrpc.MethodPlugin, adminrpc.PluginRequest{PluginID: *pluginID}, &state)
 			if err != nil {
-				log.Fatal(err)
+				return fatal(err)
 			}
-			if err := cli.WriteState(os.Stdout, state); err != nil {
-				log.Fatal(err)
+			if err := cli.WriteState(stdout, state); err != nil {
+				return fatal(err)
 			}
 		case "capabilities":
 			var caps map[string][]string
 			err = client.Call(adminrpc.MethodCapabilities, adminrpc.Empty{}, &caps)
 			if err != nil {
-				log.Fatal(err)
+				return fatal(err)
 			}
-			if err := cli.WriteCapabilities(os.Stdout, caps); err != nil {
-				log.Fatal(err)
+			if err := cli.WriteCapabilities(stdout, caps); err != nil {
+				return fatal(err)
 			}
 		case "routes":
 			var routes []kernel.Route
 			err = client.Call(adminrpc.MethodRoutes, adminrpc.Empty{}, &routes)
 			if err != nil {
-				log.Fatal(err)
+				return fatal(err)
 			}
-			if err := cli.WriteAny(os.Stdout, routes); err != nil {
-				log.Fatal(err)
+			if err := cli.WriteAny(stdout, routes); err != nil {
+				return fatal(err)
 			}
 		case "heartbeat":
 			var hb testpluginapi.HeartbeatResponse
 			err = client.Call(adminrpc.MethodHeartbeat, adminrpc.HeartbeatRequest{PluginID: *pluginID}, &hb)
 			if err != nil {
-				log.Fatal(err)
+				return fatal(err)
 			}
-			if err := cli.WriteAny(os.Stdout, hb); err != nil {
-				log.Fatal(err)
+			if err := cli.WriteAny(stdout, hb); err != nil {
+				return fatal(err)
 			}
 		case "echo":
 			var out testpluginapi.EchoResponse
 			err = client.Call(adminrpc.MethodEcho, adminrpc.EchoRequest{PluginID: *pluginID, Message: *echoMsg}, &out)
 			if err != nil {
-				log.Fatal(err)
+				return fatal(err)
 			}
-			if err := cli.WriteAny(os.Stdout, out); err != nil {
-				log.Fatal(err)
+			if err := cli.WriteAny(stdout, out); err != nil {
+				return fatal(err)
 			}
 		case "restart":
 			var state kernel.State
 			err = client.Call(adminrpc.MethodRestart, adminrpc.RestartRequest{PluginID: *pluginID}, &state)
 			if err != nil {
-				log.Fatal(err)
+				return fatal(err)
 			}
-			if err := cli.WriteState(os.Stdout, state); err != nil {
-				log.Fatal(err)
+			if err := cli.WriteState(stdout, state); err != nil {
+				return fatal(err)
 			}
 		}
 	case "logs":
 		logPath, err := resolveLogPath(*runtimeDir, *pluginID)
 		if err != nil {
-			log.Fatal(err)
+			return fatal(err)
 		}
 		filters := eventlog.Filters{
 			Level:     *level,
@@ -138,46 +177,41 @@ func main() {
 			Reverse:   *reverse,
 		}
 		if *since > 0 {
-			filters.Since = time.Now().Add(-*since)
+			filters.Since = env.Now().Add(-*since)
 		}
 		events, err := eventlog.ReadAll(logPath, filters)
 		if err != nil {
-			log.Fatal(err)
+			return fatal(err)
 		}
 		if *summary {
 			s := eventlog.Summarize(events)
-			switch *format {
-			case "text":
-				if err := cli.WriteSummaryText(os.Stdout, s); err != nil {
-					log.Fatal(err)
+			if *format == "text" {
+				if err := cli.WriteSummaryText(stdout, s); err != nil {
+					return fatal(err)
 				}
-			case "json":
-				if err := cli.WriteSummaryJSON(os.Stdout, s); err != nil {
-					log.Fatal(err)
-				}
-			default:
-				log.Fatalf("unknown log format %q, want text or json", *format)
+				return 0
 			}
-			return
+			if err := cli.WriteSummaryJSON(stdout, s); err != nil {
+				return fatal(err)
+			}
+			return 0
 		}
-		switch *format {
-		case "text":
-			if err := cli.WriteEventsText(os.Stdout, events); err != nil {
-				log.Fatal(err)
+		if *format == "text" {
+			if err := cli.WriteEventsText(stdout, events); err != nil {
+				return fatal(err)
 			}
-		case "json":
-			if err := cli.WriteEventsJSON(os.Stdout, events); err != nil {
-				log.Fatal(err)
-			}
-		default:
-			log.Fatalf("unknown log format %q, want text or json", *format)
+			return 0
+		}
+		if err := cli.WriteEventsJSON(stdout, events); err != nil {
+			return fatal(err)
 		}
 	case "help", "-h", "--help":
-		fmt.Printf("usage: %s [-runtime-dir DIR] [-plugin-id ID] [-message TEXT] [-level LEVEL] [-component COMPONENT] [-event EVENT] [-method METHOD] [-limit N] [-format text|json] [-since DURATION] [-reverse] [-summary] <status|plugins|plugin|capabilities|routes|heartbeat|echo|restart|logs>\n", os.Args[0])
-		return
+		fmt.Fprintf(stdout, "%s\n", usage())
+		return 0
 	default:
-		log.Fatalf("unknown command %q, want status, plugins, plugin, capabilities, routes, heartbeat, echo, restart, or logs", command)
+		return fatalf("unknown command %q, want status, plugins, plugin, capabilities, routes, heartbeat, echo, restart, or logs", command)
 	}
+	return 0
 }
 
 func validateOptions(command, pluginID string, limit int, format string) error {
