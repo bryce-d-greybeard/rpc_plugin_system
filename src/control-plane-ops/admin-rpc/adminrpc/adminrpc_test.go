@@ -17,6 +17,54 @@ import (
 	"rpc_plugin_system/release-packaging-governance/go-build-deps/testroot"
 )
 
+func TestMethodsRequireHost(t *testing.T) {
+	service := Service{}
+	for _, tc := range []struct {
+		name string
+		run  func() error
+	}{
+		{name: "status", run: func() error {
+			var out kernel.HostState
+			return service.Status(Empty{}, &out)
+		}},
+		{name: "plugins", run: func() error {
+			var out kernel.HostState
+			return service.Plugins(Empty{}, &out)
+		}},
+		{name: "plugin", run: func() error {
+			var out kernel.State
+			return service.Plugin(PluginRequest{PluginID: "echo"}, &out)
+		}},
+		{name: "capabilities", run: func() error {
+			var out map[string][]string
+			return service.Capabilities(Empty{}, &out)
+		}},
+		{name: "routes", run: func() error {
+			var out []kernel.Route
+			return service.Routes(Empty{}, &out)
+		}},
+		{name: "heartbeat", run: func() error {
+			var out testpluginapi.HeartbeatResponse
+			return service.Heartbeat(HeartbeatRequest{PluginID: "echo"}, &out)
+		}},
+		{name: "echo", run: func() error {
+			var out testpluginapi.EchoResponse
+			return service.Echo(EchoRequest{PluginID: "echo", Message: "ping"}, &out)
+		}},
+		{name: "restart", run: func() error {
+			var out kernel.State
+			return service.Restart(RestartRequest{PluginID: "echo"}, &out)
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.run()
+			if err == nil || !strings.Contains(err.Error(), "host is required") {
+				t.Fatalf("err = %v, want host is required", err)
+			}
+		})
+	}
+}
+
 func TestPluginIDMethodsRejectInvalidPluginID(t *testing.T) {
 	service := Service{Host: &kernel.Host{}}
 	for _, tc := range []struct {
@@ -44,6 +92,38 @@ func TestPluginIDMethodsRejectInvalidPluginID(t *testing.T) {
 			err := tc.run()
 			if err == nil || !strings.Contains(err.Error(), "invalid plugin id") {
 				t.Fatalf("err = %v, want invalid plugin id", err)
+			}
+		})
+	}
+}
+
+func TestPluginIDMethodsReturnHostErrors(t *testing.T) {
+	service := Service{Host: &kernel.Host{}}
+	for _, tc := range []struct {
+		name string
+		run  func() error
+	}{
+		{name: "plugin", run: func() error {
+			var out kernel.State
+			return service.Plugin(PluginRequest{PluginID: "missing"}, &out)
+		}},
+		{name: "heartbeat", run: func() error {
+			var out testpluginapi.HeartbeatResponse
+			return service.Heartbeat(HeartbeatRequest{PluginID: "missing"}, &out)
+		}},
+		{name: "echo", run: func() error {
+			var out testpluginapi.EchoResponse
+			return service.Echo(EchoRequest{PluginID: "missing", Message: "ping"}, &out)
+		}},
+		{name: "restart", run: func() error {
+			var out kernel.State
+			return service.Restart(RestartRequest{PluginID: "missing"}, &out)
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.run()
+			if err == nil || !strings.Contains(err.Error(), "unknown plugin id: missing") {
+				t.Fatalf("err = %v, want unknown plugin id", err)
 			}
 		})
 	}
@@ -111,6 +191,20 @@ func TestStatusAndRestart(t *testing.T) {
 	}
 	if len(state.Plugins) != 1 || state.Plugins[0].PluginID != "echo" || state.Plugins[0].GenerationID != firstState.GenerationID || state.Plugins[0].PID == 0 {
 		t.Fatalf("unexpected status state: %+v", state)
+	}
+
+	var plugins kernel.HostState
+	if err := client.Call(MethodPlugins, Empty{}, &plugins); err != nil {
+		t.Fatalf("plugins rpc: %v", err)
+	}
+	if len(plugins.Plugins) != 1 || plugins.Plugins[0].PluginID != "echo" || plugins.Plugins[0].GenerationID != firstState.GenerationID || plugins.Plugins[0].PID == 0 {
+		t.Fatalf("unexpected plugins state: %+v", plugins)
+	}
+	if len(plugins.CapabilityMap["echo"]) != 1 || plugins.CapabilityMap["echo"][0] != "echo" {
+		t.Fatalf("unexpected plugins capability map: %+v", plugins.CapabilityMap)
+	}
+	if len(plugins.Routes) != 1 || plugins.Routes[0].PluginID != "echo" {
+		t.Fatalf("unexpected plugins routes: %+v", plugins.Routes)
 	}
 
 	var pluginState kernel.State
