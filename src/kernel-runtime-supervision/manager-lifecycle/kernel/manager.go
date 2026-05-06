@@ -54,6 +54,25 @@ type rpcClient struct {
 
 var errRPCPoisoned = errors.New("rpc client poisoned")
 
+var (
+	newBootstrapToken = auth.NewToken
+	managerRPCCall    = func(m *Manager, client *rpcClient, generation, epoch uint64, method string, args any, reply any) error {
+		return m.call(client, generation, epoch, method, args, reply)
+	}
+	verifyManagerPeerCred = func(m *Manager, client *rpcClient, wantPID int, generation uint64) error {
+		return m.verifyPeerCred(client, wantPID, generation)
+	}
+	waitProcess = func(process *os.Process) (*os.ProcessState, error) {
+		return process.Wait()
+	}
+	signalProcess = func(process *os.Process, signal os.Signal) error {
+		return process.Signal(signal)
+	}
+	stopManagerCurrent = func(m *Manager, markClosed bool, reason string) error {
+		return m.stopCurrent(markClosed, reason)
+	}
+)
+
 // Manager supervises one plugin executable and its RPC connection.
 type Manager struct {
 	cfg         Config
@@ -115,7 +134,7 @@ func (m *Manager) Close() error {
 	m.lifecycleMu.Lock()
 	defer m.lifecycleMu.Unlock()
 	m.closeOnce.Do(func() {
-		m.closeErr = m.stopCurrent(true, "manager close")
+		m.closeErr = stopManagerCurrent(m, true, "manager close")
 		m.mu.Lock()
 		if !m.closed {
 			m.closed = true
@@ -174,7 +193,7 @@ func (m *Manager) startLocked() error {
 		},
 	})
 
-	token, err := auth.NewToken()
+	token, err := newBootstrapToken()
 	if err != nil {
 		m.rollbackGeneration(generation)
 		m.logEvent(eventlog.Event{
@@ -239,7 +258,7 @@ func (m *Manager) startLocked() error {
 		m.cleanupFailedStart(cmd, nil, generation, "dial failure", err)
 		return err
 	}
-	if err := m.verifyPeerCred(client, cmd.Process.Pid, generation); err != nil {
+	if err := verifyManagerPeerCred(m, client, cmd.Process.Pid, generation); err != nil {
 		m.logEvent(eventlog.Event{
 			Level:        eventlog.LevelError,
 			Component:    eventlog.ComponentAuth,
@@ -266,7 +285,7 @@ func (m *Manager) startLocked() error {
 		Message:      "authenticating plugin bootstrap token",
 	})
 	var authResp testpluginapi.AuthResponse
-	if err := m.call(client, generation, 0, testpluginapi.MethodAuth, testpluginapi.AuthRequest{Token: string(token)}, &authResp); err != nil {
+	if err := managerRPCCall(m, client, generation, 0, testpluginapi.MethodAuth, testpluginapi.AuthRequest{Token: string(token)}, &authResp); err != nil {
 		wrapped := fmt.Errorf("auth rpc: %w", err)
 		m.logEvent(eventlog.Event{
 			Level:        eventlog.LevelError,
@@ -337,7 +356,7 @@ func (m *Manager) startLocked() error {
 		Message:      "loading plugin capabilities",
 	})
 	var caps testpluginapi.CapabilitiesResponse
-	if err := m.call(client, generation, 0, testpluginapi.MethodCapabilities, testpluginapi.Empty{}, &caps); err != nil {
+	if err := managerRPCCall(m, client, generation, 0, testpluginapi.MethodCapabilities, testpluginapi.Empty{}, &caps); err != nil {
 		wrapped := fmt.Errorf("capabilities rpc: %w", err)
 		m.logEvent(eventlog.Event{
 			Level:        eventlog.LevelError,
@@ -459,7 +478,7 @@ func (m *Manager) Heartbeat() (testpluginapi.HeartbeatResponse, error) {
 	if client == nil {
 		return out, errors.New("plugin not started")
 	}
-	if err := m.call(client, generation, epoch, testpluginapi.MethodHeartbeat, testpluginapi.Empty{}, &out); err != nil {
+	if err := managerRPCCall(m, client, generation, epoch, testpluginapi.MethodHeartbeat, testpluginapi.Empty{}, &out); err != nil {
 		m.logEvent(eventlog.Event{
 			Level:        eventlog.LevelWarn,
 			Component:    eventlog.ComponentKernel,
@@ -529,7 +548,7 @@ func (m *Manager) Echo(message string) (string, error) {
 		return "", errors.New("plugin not started")
 	}
 	var out testpluginapi.EchoResponse
-	if err := m.call(client, generation, epoch, testpluginapi.MethodEcho, testpluginapi.EchoRequest{Message: message}, &out); err != nil {
+	if err := managerRPCCall(m, client, generation, epoch, testpluginapi.MethodEcho, testpluginapi.EchoRequest{Message: message}, &out); err != nil {
 		return "", err
 	}
 	return out.Message, nil
@@ -549,7 +568,7 @@ func (m *Manager) Sleep(duration time.Duration) error {
 	if client == nil {
 		return errors.New("plugin not started")
 	}
-	return m.call(client, generation, epoch, testpluginapi.MethodSleep, testpluginapi.SleepRequest{Duration: duration}, &testpluginapi.Empty{})
+	return managerRPCCall(m, client, generation, epoch, testpluginapi.MethodSleep, testpluginapi.SleepRequest{Duration: duration}, &testpluginapi.Empty{})
 }
 
 // Crash asks the plugin to terminate itself with one exit code.
@@ -566,7 +585,7 @@ func (m *Manager) Crash(code int) error {
 	if client == nil {
 		return errors.New("plugin not started")
 	}
-	return m.call(client, generation, epoch, testpluginapi.MethodCrash, testpluginapi.CrashRequest{Code: code}, &testpluginapi.Empty{})
+	return managerRPCCall(m, client, generation, epoch, testpluginapi.MethodCrash, testpluginapi.CrashRequest{Code: code}, &testpluginapi.Empty{})
 }
 
 // Restart kills the current plugin process and starts a fresh generation.
@@ -831,7 +850,7 @@ func (m *Manager) stopCurrent(markClosed bool, reason string) error {
 			Method:       testpluginapi.MethodShutdown,
 			Message:      "requesting graceful shutdown",
 		})
-		if err := m.call(client, generation, 0, testpluginapi.MethodShutdown, testpluginapi.Empty{}, &testpluginapi.Empty{}); err != nil {
+		if err := managerRPCCall(m, client, generation, 0, testpluginapi.MethodShutdown, testpluginapi.Empty{}, &testpluginapi.Empty{}); err != nil {
 			m.logEvent(eventlog.Event{
 				Level:        eventlog.LevelWarn,
 				Component:    eventlog.ComponentKernel,
@@ -862,7 +881,7 @@ func (m *Manager) stopCurrent(markClosed bool, reason string) error {
 	if cmd != nil && cmd.Process != nil {
 		waitCh := make(chan error, 1)
 		go func() {
-			_, err := cmd.Process.Wait()
+			_, err := waitProcess(cmd.Process)
 			waitCh <- err
 		}()
 		select {
@@ -871,7 +890,7 @@ func (m *Manager) stopCurrent(markClosed bool, reason string) error {
 				return fmt.Errorf("wait plugin exit: %w", err)
 			}
 		case <-time.After(250 * time.Millisecond):
-			if err := cmd.Process.Signal(syscall.SIGKILL); err != nil && !errors.Is(err, os.ErrProcessDone) {
+			if err := signalProcess(cmd.Process, syscall.SIGKILL); err != nil && !errors.Is(err, os.ErrProcessDone) {
 				return fmt.Errorf("kill plugin: %w", err)
 			}
 			if err := <-waitCh; err != nil && !errors.Is(err, os.ErrProcessDone) {

@@ -50,6 +50,10 @@ type Route struct {
 	Mode         string
 }
 
+var routeHostCall = func(h *Host, pluginID string, call RoutedCall, arg any) (RoutedResponse, error) {
+	return h.Call(pluginID, call, arg)
+}
+
 // CapabilityMap returns the current capability-to-plugin map.
 func (h *Host) CapabilityMap() map[string][]string {
 	return h.State().CapabilityMap
@@ -189,7 +193,7 @@ func (h *Host) States() []State {
 
 // RestartPlugin restarts exactly one plugin and returns its new state.
 func (h *Host) RestartPlugin(pluginID string) (State, error) {
-	out, err := h.Call(pluginID, RoutedCallRestart, nil)
+	out, err := routeHostCall(h, pluginID, RoutedCallRestart, nil)
 	if err != nil {
 		return State{}, err
 	}
