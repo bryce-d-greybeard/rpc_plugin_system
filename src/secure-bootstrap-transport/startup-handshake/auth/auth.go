@@ -6,12 +6,15 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
+	"io"
 )
+
+var tokenRandomReader io.Reader = rand.Reader
 
 // NewToken returns a fresh random bootstrap token.
 func NewToken() ([]byte, error) {
 	buf := make([]byte, 32)
-	if _, err := rand.Read(buf); err != nil {
+	if _, err := io.ReadFull(tokenRandomReader, buf); err != nil {
 		return nil, fmt.Errorf("generate token: %w", err)
 	}
 	return buf, nil

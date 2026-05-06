@@ -2,6 +2,7 @@ package auth
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 )
 
@@ -16,6 +17,32 @@ func TestNewTokenReturnsThirtyTwoRandomBytes(t *testing.T) {
 	if bytes.Equal(token, make([]byte, 32)) {
 		t.Fatal("NewToken returned an all-zero token")
 	}
+}
+
+func TestNewTokenReportsEntropyFailure(t *testing.T) {
+	want := errors.New("entropy unavailable")
+	original := tokenRandomReader
+	tokenRandomReader = failingReader{err: want}
+	t.Cleanup(func() { tokenRandomReader = original })
+
+	token, err := NewToken()
+	if err == nil {
+		t.Fatalf("NewToken() = %v, nil error", token)
+	}
+	if !errors.Is(err, want) {
+		t.Fatalf("NewToken() error = %v, want wrapping %v", err, want)
+	}
+	if token != nil {
+		t.Fatalf("NewToken() token = %v, want nil", token)
+	}
+}
+
+type failingReader struct {
+	err error
+}
+
+func (r failingReader) Read([]byte) (int, error) {
+	return 0, r.err
 }
 
 func TestEncodeDecodeRoundTrip(t *testing.T) {
