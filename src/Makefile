@@ -1,6 +1,6 @@
 BINDIR := .tmp-bin
 
-.PHONY: all build daemon ctl echo failure clean test
+.PHONY: all build daemon ctl echo failure clean test coverage
 
 all: build
 
@@ -24,6 +24,9 @@ failure:
 
 test:
 	go test ./...
+
+coverage:
+	go test -cover ./...
 
 clean:
 	rm -rf $(BINDIR)

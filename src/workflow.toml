@@ -4,6 +4,14 @@ repository = "agents/rpc-plugin-system"
 worktree_root = "/tank/development/linus/rpc-plugin-system-worktrees"
 active = ""
 
+[coverage]
+map = "artifacts/global-coverage-map.md"
+profile = "strict"
+relevant_target = "100% relevant"
+require_gap_record = true
+block_unrecorded_gaps = true
+line_coverage_is_not_completion = true
+
 [[root_features]]
 id = "plugin-contracts"
 branch = "workflow/root/plugin-contracts"

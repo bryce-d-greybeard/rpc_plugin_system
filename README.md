@@ -33,6 +33,20 @@ go build -buildvcs=false -o .tmp-bin/rpcplugin-echo ./plugin-authoring-sdk/echo-
 go build -buildvcs=false -o .tmp-bin/rpcplugin-failure ./plugin-authoring-sdk/failure-example/rpcplugin-failure
 ```
 
+
+Coverage policy:
+
+- Every feature, issue fix, and regression fix must aim for 100% relevant test coverage of the behavior it touches.
+- Relevant coverage means changed behavior, edge cases, regressions, and failure paths. It is not fake repository-wide line coverage theater.
+- Any coverage gap must be recorded with reason, risk, and the smallest next coverage increment before the work can be considered done.
+- Project coverage posture is tracked in [`src/artifacts/global-coverage-map.md`](src/artifacts/global-coverage-map.md).
+
+Run the current package coverage report:
+
+```bash
+make coverage
+```
+
 Run tests:
 
 ```bash
