@@ -29,15 +29,16 @@ cd /tank/development/rpc_plugin_system
 make build
 ```
 
-That produces:
-- `.tmp-bin/rpcplugind`
-- `.tmp-bin/rpcpluginctl`
-- `.tmp-bin/rpcplugin-echo`
-- `.tmp-bin/rpcplugin-failure`
+The root `Makefile` delegates to the Go source root under `src/`. That produces private, non-group/world-writable executables:
+- `src/.tmp-bin/rpcplugind`
+- `src/.tmp-bin/rpcpluginctl`
+- `src/.tmp-bin/rpcplugin-echo`
+- `src/.tmp-bin/rpcplugin-failure`
 
-You can also build everything with plain Go:
+You can also build everything with plain Go from the source root:
 
 ```bash
+cd /tank/development/rpc_plugin_system/src
 go build ./...
 ```
 
@@ -66,9 +67,9 @@ Plugin id notes:
 
 ```bash
 cd /tank/development/rpc_plugin_system
-.tmp-bin/rpcplugind \
+src/.tmp-bin/rpcplugind \
   -runtime-dir /tmp/rpc_plugin_system-demo \
-  -plugin ./.tmp-bin/rpcplugin-echo \
+  -plugin "$(pwd)/src/.tmp-bin/rpcplugin-echo" \
   -plugin-id echo
 ```
 
@@ -76,31 +77,41 @@ Control from another shell:
 
 ```bash
 cd /tank/development/rpc_plugin_system
-.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo status
+src/.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo status
 ```
 
 ## Multi-plugin launch
 
 ```bash
 cd /tank/development/rpc_plugin_system
-.tmp-bin/rpcplugind \
+src/.tmp-bin/rpcplugind \
   -runtime-dir /tmp/rpc_plugin_system-demo \
-  -plugins echo=./.tmp-bin/rpcplugin-echo,failure=./.tmp-bin/rpcplugin-failure
+  -plugins "echo=$(pwd)/src/.tmp-bin/rpcplugin-echo,failure=$(pwd)/src/.tmp-bin/rpcplugin-failure"
 ```
 
 Inspect routes and plugin state:
 
 ```bash
 cd /tank/development/rpc_plugin_system
-.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo plugins
-.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo routes
-.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo plugin -plugin-id echo
+src/.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo plugins
+src/.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo routes
+src/.tmp-bin/rpcpluginctl -runtime-dir /tmp/rpc_plugin_system-demo plugin -plugin-id echo
 ```
 
 Log inspection note:
 - in single-plugin mode, `rpcpluginctl logs` can fall back to the sole kernel plugin log automatically
 - in multi-plugin mode, pass `-plugin-id` explicitly when reading kernel logs
 - plugin-side SDK logs live in sibling `plugin-events.jsonl` files and remain an intentional shell-first inspection path for v1
+
+## Install docs smoke check
+
+A lightweight check for the documented build/run command shape is available from the repo root:
+
+```bash
+scripts/check-install-docs.sh
+```
+
+The check builds through the root `Makefile`, verifies the `src/.tmp-bin` outputs, verifies plain `go build ./...` from `src/`, confirms relative plugin executable paths are rejected, then starts the daemon with an absolute plugin path only long enough for `rpcpluginctl status` to respond.
 
 ## Packaging stance for v1
 
