@@ -98,6 +98,57 @@ func TestServerRejectsNonAuthMethodsBeforeAuth(t *testing.T) {
 	}
 }
 
+func TestServerRejectsBadTokenBeforeSuccessfulAuth(t *testing.T) {
+	srv := &server{core: NewTemplate(Config{PluginID: "echo", GenerationID: 7}, "1.2.3"), cfg: Config{PluginID: "echo", GenerationID: 7, AuthToken: "secret"}}
+
+	var authOut AuthResponse
+	if err := srv.Auth(AuthRequest{Token: "wrong"}, &authOut); !errors.Is(err, os.ErrPermission) {
+		t.Fatalf("bad auth token err = %v, want permission", err)
+	}
+
+	var hb HeartbeatResponse
+	if err := srv.Heartbeat(Empty{}, &hb); !errors.Is(err, os.ErrPermission) {
+		t.Fatalf("heartbeat after bad auth err = %v, want permission", err)
+	}
+
+	if err := srv.Auth(AuthRequest{Token: "secret"}, &authOut); err != nil {
+		t.Fatalf("auth after bad token: %v", err)
+	}
+	if authOut.PluginID != "echo" || authOut.GenerationID != 7 || authOut.Version != "1.2.3" {
+		t.Fatalf("unexpected auth response: %+v", authOut)
+	}
+}
+
+func TestServerRejectsAuthReplayAndKeepsEstablishedSession(t *testing.T) {
+	srv := &server{core: NewTemplate(Config{PluginID: "echo", GenerationID: 7}, "1.2.3"), cfg: Config{PluginID: "echo", GenerationID: 7, AuthToken: "secret"}}
+
+	var authOut AuthResponse
+	if err := srv.Auth(AuthRequest{Token: "secret"}, &authOut); err != nil {
+		t.Fatalf("first auth: %v", err)
+	}
+	if authOut.PluginID != "echo" || authOut.GenerationID != 7 || authOut.Version != "1.2.3" {
+		t.Fatalf("unexpected first auth response: %+v", authOut)
+	}
+
+	var replayOut AuthResponse
+	if err := srv.Auth(AuthRequest{Token: "secret"}, &replayOut); !errors.Is(err, os.ErrPermission) {
+		t.Fatalf("replayed auth err = %v, want permission", err)
+	}
+
+	var caps CapabilitiesResponse
+	if err := srv.Capabilities(Empty{}, &caps); err != nil {
+		t.Fatalf("capabilities after replay rejection: %v", err)
+	}
+	if caps.PluginID != "echo" || caps.GenerationID != 7 || caps.Version != "1.2.3" {
+		t.Fatalf("unexpected capabilities response: %+v", caps)
+	}
+
+	var hb HeartbeatResponse
+	if err := srv.Heartbeat(Empty{}, &hb); err != nil {
+		t.Fatalf("heartbeat after replay rejection: %v", err)
+	}
+}
+
 func clearPluginEnv(t *testing.T) {
 	t.Helper()
 	for _, name := range []string{

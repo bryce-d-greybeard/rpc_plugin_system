@@ -31,10 +31,10 @@ This baseline is not 100% line coverage. That is acceptable only because the pol
 | Subsystem | Required harness classes | Current evidence | Known gaps / next increments |
 | --- | --- | --- | --- |
 | `plugin-contracts` | docs/spec consistency checks, compatibility examples, negative contract tests when code is touched | protocol-doc honesty check, capability-vocabulary docs, existing docs | add broader executable spec consistency checks when contract docs change |
-| `secure-bootstrap-transport` | token generation, bad token rejection, replay/stale artifact rejection, transport permission checks | direct auth package tests plus manager lifecycle/startup auth tests | add direct plugin server replay rejection regression when handshake replay surface is touched |
+| `secure-bootstrap-transport` | token generation, bad token rejection, replay/stale artifact rejection, transport permission checks | direct auth package tests, manager lifecycle/startup auth tests, and plugin server replay rejection tests | accepted gap: `auth.NewToken` entropy-source failure branch unless production error handling gains a real seam |
 | `kernel-runtime-supervision` | lifecycle unit tests, integration start/auth/load tests, restart race tests, monitor/admin concurrency tests, cleanup ownership tests, stale RPC fencing tests | manager lifecycle, daemon, monitor, hardening, concurrent restart, stale cleanup, and RPC fence tests | add broader pairwise lifecycle matrix only when lifecycle surface changes again |
 | `control-plane-ops` | admin RPC integration, CLI argument/status tests, event-log read/write tests, negative malformed input tests | admin RPC, CLI pre-I/O validation, eventlog long-line/corrupt-line tests | add aggregate multi-plugin log read if/when it becomes a committed feature |
-| `plugin-authoring-sdk` | SDK API unit tests, example build tests, auth-before-RPC behavior tests, public import examples | go-runtime tests, Capabilities auth tests, local import docs, example binaries built in `make build` | add external-module packaging tests only if a real external module path is introduced |
+| `plugin-authoring-sdk` | SDK API unit tests, example build tests, auth-before-RPC behavior tests, public import examples | go-runtime tests, Capabilities auth tests, bad-token and double-auth replay rejection tests, local import docs, example binaries built in `make build` | add external-module packaging tests only if a real external module path is introduced |
 | `release-packaging-governance` | build wrapper tests, install docs command validation, release checklist consistency checks, coverage artifact checks | root/source Makefile tests, install-doc smoke check, coverage artifact tests, protocol honesty check | add release-promotion checklist automation when promotion process changes |
 
 ## Gap record format
@@ -58,12 +58,12 @@ These records cover known baseline gaps present in the generated coverage artifa
 ### `secure-bootstrap-transport.startup-handshake` replay/auth failure edge coverage
 
 - feature or issue id: `secure-bootstrap-transport.startup-handshake`
-- behavior not covered: direct replay rejection regression for the plugin server handshake, plus the `auth.NewToken` entropy-source failure branch
-- why full relevant coverage is impossible or wasteful now: the `auth` package is a stateless token byte helper, so replay rejection is not implemented at that package layer; replay belongs to the plugin server `authUsed` handshake state, and forcing a `crypto/rand` failure through `NewToken` would require adding a test seam only for an operating-system entropy failure path
-- risk level: medium
+- behavior not covered: the `auth.NewToken` entropy-source failure branch
+- why full relevant coverage is impossible or wasteful now: direct auth package helper behavior and plugin server bad-token/double-auth replay rejection now have regression coverage. Forcing a `crypto/rand` failure through `NewToken` would require adding a test seam only for an operating-system entropy failure path; that is coverage theater unless production error handling changes.
+- risk level: low
 - owner/reviewer accepting the gap: workflow maintainer/orchestrator at feature review
-- smallest next coverage increment: add a direct plugin server double-auth/replay rejection regression when handshake replay behavior is next touched; add an entropy-reader seam only if token generation error handling changes
-- expiry or review trigger: any edit to plugin server `Auth` replay state, `auth.NewToken`, or manager auth/startup code
+- smallest next coverage increment: add an entropy-reader seam only if token generation error handling changes for production reasons
+- expiry or review trigger: any edit to `auth.NewToken` or startup token generation error handling
 
 ### `kernel-runtime-supervision` lifecycle matrix breadth
 
