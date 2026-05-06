@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"strings"
 	"testing"
 
@@ -50,5 +51,28 @@ func TestWriteCapabilities(t *testing.T) {
 		if !strings.Contains(out, needle) {
 			t.Fatalf("output missing %q in %s", needle, out)
 		}
+	}
+}
+
+func TestJSONWritersReturnEncodeErrors(t *testing.T) {
+	wantErr := errors.New("writer failed")
+	for _, tt := range []struct {
+		name string
+		run  func() error
+		want string
+	}{
+		{name: "state", run: func() error { return WriteState(errorWriter{err: wantErr}, kernel.State{}) }, want: "encode state"},
+		{name: "host state", run: func() error { return WriteHostState(errorWriter{err: wantErr}, kernel.HostState{}) }, want: "encode host state"},
+		{name: "capabilities", run: func() error { return WriteCapabilities(errorWriter{err: wantErr}, map[string][]string{}) }, want: "encode capability map"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.run()
+			if err == nil {
+				t.Fatalf("expected error")
+			}
+			if !strings.Contains(err.Error(), tt.want) || !errors.Is(err, wantErr) {
+				t.Fatalf("error = %v, want wrapped %q", err, tt.want)
+			}
+		})
 	}
 }

@@ -36,6 +36,36 @@ func TestSplitCommandArgs(t *testing.T) {
 			wantCmd:    "routes",
 			wantOthers: []string{"-runtime-dir", "/tmp/demo"},
 		},
+		{
+			name:       "dangling double dash leaves no command",
+			args:       []string{"-runtime-dir", "/tmp/demo", "--"},
+			wantCmd:    "",
+			wantOthers: []string{"-runtime-dir", "/tmp/demo"},
+		},
+		{
+			name:       "missing valued flag argument leaves no command",
+			args:       []string{"-limit"},
+			wantCmd:    "",
+			wantOthers: []string{"-limit"},
+		},
+		{
+			name:       "bool flag before command",
+			args:       []string{"-summary", "logs"},
+			wantCmd:    "logs",
+			wantOthers: []string{"-summary"},
+		},
+		{
+			name:       "bool equals flag before command",
+			args:       []string{"-reverse=false", "logs"},
+			wantCmd:    "logs",
+			wantOthers: []string{"-reverse=false"},
+		},
+		{
+			name:       "unknown flag is left for flag parser",
+			args:       []string{"-bogus", "status"},
+			wantCmd:    "status",
+			wantOthers: []string{"-bogus"},
+		},
 	}
 
 	for _, tt := range tests {
