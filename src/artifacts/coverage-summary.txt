@@ -1,15 +1,15 @@
-ok  	rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc	0.979s	coverage: 76.6% of statements
-ok  	rpc_plugin_system/control-plane-ops/cli-status-control/cli	0.007s	coverage: 70.2% of statements
-ok  	rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl	1.965s	coverage: 14.9% of statements
-ok  	rpc_plugin_system/control-plane-ops/event-log-write/eventlog	0.015s	coverage: 77.0% of statements
-ok  	rpc_plugin_system/kernel-runtime-supervision/daemon-entrypoint/rpcplugind	2.453s	coverage: 36.4% of statements
-ok  	rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel	15.860s	coverage: 80.9% of statements
-ok  	rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime	0.008s	coverage: 31.7% of statements
+ok  	rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc	0.907s	coverage: 76.6% of statements
+ok  	rpc_plugin_system/control-plane-ops/cli-status-control/cli	0.006s	coverage: 70.2% of statements
+ok  	rpc_plugin_system/control-plane-ops/cli-status-control/rpcpluginctl	(cached)	coverage: 14.9% of statements
+ok  	rpc_plugin_system/control-plane-ops/event-log-write/eventlog	(cached)	coverage: 77.0% of statements
+ok  	rpc_plugin_system/kernel-runtime-supervision/daemon-entrypoint/rpcplugind	2.496s	coverage: 36.4% of statements
+ok  	rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel	16.633s	coverage: 79.8% of statements
+ok  	rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime	(cached)	coverage: 31.7% of statements
 	rpc_plugin_system/plugin-authoring-sdk/echo-example/rpcplugin-echo		coverage: 0.0% of statements
 	rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure		coverage: 0.0% of statements
-ok  	rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin	0.009s	coverage: 29.4% of statements
-ok  	rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi	0.007s	coverage: 0.0% of statements
-ok  	rpc_plugin_system/release-packaging-governance/go-build-deps/testroot	0.049s	coverage: 76.9% of statements
+ok  	rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin	(cached)	coverage: 29.4% of statements
+ok  	rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi	0.009s	coverage: 0.0% of statements
+ok  	rpc_plugin_system/release-packaging-governance/go-build-deps/testroot	(cached)	coverage: 76.9% of statements
 	rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth		coverage: 0.0% of statements
 rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc/adminrpc.go:64:				Status				75.0%
 rpc_plugin_system/control-plane-ops/admin-rpc/adminrpc/adminrpc.go:73:				Plugins				0.0%
@@ -56,7 +56,7 @@ rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/host.go:54
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/host.go:59:		Routes				100.0%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/host.go:64:		Plugin				75.0%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/host.go:73:		NewHost				69.6%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/host.go:116:		Close				100.0%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/host.go:116:		Close				85.7%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/host.go:129:		StartAll			70.0%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/host.go:146:		Manager				83.3%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/host.go:157:		State				100.0%
@@ -70,31 +70,31 @@ rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/host.go:26
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/host.go:296:		MonitorLoop			0.0%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/host.go:304:		pluginRuntimeDir		100.0%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/host.go:308:		pluginEventLogPath		100.0%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:72:		New				72.2%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:112:		Close				100.0%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:127:		Start				100.0%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:133:		startLocked			70.2%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:438:		Heartbeat			100.0%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:505:		Echo				84.6%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:525:		Sleep				80.0%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:541:		Crash				80.0%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:557:		Restart				80.0%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:623:		Kill				100.0%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:630:		State				100.0%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:638:		dial				100.0%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:679:		call				84.6%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:770:		stopCurrent			85.4%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:890:		cleanupFailedStart		100.0%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:916:		close				71.4%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:929:		poisonClient			90.0%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:956:		verifyPeerCred			66.7%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:984:		isRPCPoisonError		77.8%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:999:		cleanupRuntimeArtifacts		82.4%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:1058:		cleanupOwnsRuntimeArtifacts	100.0%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:1067:		rollbackGeneration		100.0%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:1078:		logEvent			66.7%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:1085:		errorString			66.7%
-rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/monitor.go:12:		MonitorLoop			100.0%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:74:		New				72.2%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:114:		Close				85.7%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:135:		Start				100.0%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:141:		startLocked			70.2%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:446:		Heartbeat			86.2%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:518:		Echo				85.7%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:539:		Sleep				81.8%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:556:		Crash				81.8%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:573:		Restart				80.0%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:639:		Kill				100.0%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:646:		State				100.0%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:654:		dial				100.0%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:695:		call				86.2%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:789:		stopCurrent			85.7%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:910:		cleanupFailedStart		100.0%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:936:		close				71.4%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:949:		poisonClient			90.0%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:976:		verifyPeerCred			66.7%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:1004:		isRPCPoisonError		77.8%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:1019:		cleanupRuntimeArtifacts		82.4%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:1078:		cleanupOwnsRuntimeArtifacts	100.0%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:1087:		rollbackGeneration		100.0%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:1098:		logEvent			66.7%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/manager.go:1105:		errorString			66.7%
+rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/monitor.go:12:		MonitorLoop			90.9%
 rpc_plugin_system/kernel-runtime-supervision/manager-lifecycle/kernel/plugin_id.go:12:		ValidatePluginID		100.0%
 rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/peercred_linux.go:20:	ReadPeerCred			0.0%
 rpc_plugin_system/kernel-runtime-supervision/peercred-runtime/runtime/runtime.go:17:		EnsureDir			33.3%
@@ -112,12 +112,12 @@ rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go
 rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go:32:		OnAuthAttempt			0.0%
 rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go:39:		OnServeListener			0.0%
 rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go:46:		Heartbeat			0.0%
-rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go:65:		Echo				0.0%
-rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go:76:		Sleep				0.0%
-rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go:85:		Crash				0.0%
-rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go:90:		Shutdown			0.0%
-rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go:101:		Capabilities			0.0%
-rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go:111:		main				0.0%
+rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go:68:		Echo				0.0%
+rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go:79:		Sleep				0.0%
+rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go:88:		Crash				0.0%
+rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go:93:		Shutdown			0.0%
+rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go:104:		Capabilities			0.0%
+rpc_plugin_system/plugin-authoring-sdk/failure-example/rpcplugin-failure/main.go:114:		main				0.0%
 rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin/example_minimal.go:6:			Example_minimal			0.0%
 rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin/logging.go:55:				NewLogger			0.0%
 rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin/logging.go:71:				Path				0.0%
@@ -141,17 +141,18 @@ rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin/template.go:16:			NewTe
 rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin/template.go:29:			Version				100.0%
 rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin/template.go:34:			Heartbeat			100.0%
 rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin/template.go:46:			Shutdown			0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:30:		ShutdownDelay			0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:37:		LoadConfig			0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:59:		WriteConfig			0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:71:		LoadEnv				0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:88:		getenvDefault			0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:95:		getenvInt64			0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:107:		getenvFloat64			0.0%
-rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:119:		getenvBool			0.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:31:		HeartbeatDelay			0.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:38:		ShutdownDelay			0.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:45:		LoadConfig			0.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:67:		WriteConfig			0.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:79:		LoadEnv				0.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:97:		getenvDefault			0.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:104:		getenvInt64			0.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:116:		getenvFloat64			0.0%
+rpc_plugin_system/plugin-authoring-sdk/test-plugin-api/testpluginapi/config.go:128:		getenvBool			0.0%
 rpc_plugin_system/release-packaging-governance/go-build-deps/testroot/root.go:11:		SourceRoot			76.9%
 rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:12:			NewToken			0.0%
 rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:21:			EqualToken			0.0%
 rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:29:			Encode				0.0%
 rpc_plugin_system/secure-bootstrap-transport/startup-handshake/auth/auth.go:34:			Decode				0.0%
-total:												(statements)			54.0%
+total:												(statements)			53.7%
