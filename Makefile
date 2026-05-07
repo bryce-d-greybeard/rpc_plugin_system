@@ -8,3 +8,4 @@ test: doc-check
 
 doc-check:
 	scripts/check-protocol-doc-honesty.sh
+	scripts/check-workflow-layout.sh

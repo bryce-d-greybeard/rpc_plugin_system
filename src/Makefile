@@ -1,5 +1,5 @@
 BINDIR := .tmp-bin
-ARTIFACTS_DIR := artifacts
+ARTIFACTS_DIR := ../workflow/artifacts
 COVERAGE_PROFILE := $(ARTIFACTS_DIR)/coverage.out
 COVERAGE_SUMMARY := $(ARTIFACTS_DIR)/coverage-summary.txt
 

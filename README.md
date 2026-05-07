@@ -1,8 +1,8 @@
 # rpc-plugin-system
 
-`src/` is the workflow root and the source root. Implementation, examples, tests, and workflow records live in the same root-feature / feature folders. Project-level documentation lives in repo-root [`docs/`](docs/).
+`src/` is the source root. Workflow state is kept separately at repo root in `workflow.toml` and `workflow/` so code, tests, and examples are not polluted by workflow bookkeeping. Project-level documentation lives in repo-root [`docs/`](docs/).
 
-Root features / source-workflow roots:
+Root feature source directories:
 
 - `src/plugin-contracts/`
 - `src/secure-bootstrap-transport/`
@@ -39,7 +39,7 @@ Coverage policy:
 - Every feature, issue fix, and regression fix must aim for 100% relevant test coverage of the behavior it touches.
 - Relevant coverage means changed behavior, edge cases, regressions, and failure paths. It is not fake repository-wide line coverage theater.
 - Any coverage gap must be recorded with reason, risk, and the smallest next coverage increment before the work can be considered done.
-- Project coverage posture is tracked in [`src/artifacts/global-coverage-map.md`](src/artifacts/global-coverage-map.md).
+- Project coverage posture is tracked in [`workflow/artifacts/global-coverage-map.md`](workflow/artifacts/global-coverage-map.md).
 
 Run the current package coverage report and write reusable evidence:
 
@@ -49,8 +49,8 @@ make coverage
 
 The coverage target writes:
 
-- `src/artifacts/coverage.out` — Go coverage profile for `go tool cover`/HTML inspection.
-- `src/artifacts/coverage-summary.txt` — package coverage plus `go tool cover -func` totals, also printed to the terminal.
+- `workflow/artifacts/coverage.out` — Go coverage profile for `go tool cover`/HTML inspection.
+- `workflow/artifacts/coverage-summary.txt` — package coverage plus `go tool cover -func` totals, also printed to the terminal.
 
 Run tests:
 

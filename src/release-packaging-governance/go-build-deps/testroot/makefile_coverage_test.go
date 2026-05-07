@@ -19,7 +19,7 @@ func TestSourceMakeCoverageWritesProfileAndSummaryArtifacts(t *testing.T) {
 	writeFakeGo(t, fakeGo)
 
 	workDir := t.TempDir()
-	artifacts := filepath.Join(workDir, "artifacts")
+	artifacts := filepath.Join(filepath.Dir(workDir), "workflow", "artifacts")
 
 	cmd := exec.Command("make", "-f", filepath.Join(srcRoot, "Makefile"), "coverage")
 	cmd.Dir = workDir
