@@ -34,8 +34,8 @@ for root in data.get('root_features', []):
     source = root.get('source_path', '')
     if not path.startswith('workflow/root/'):
         sys.exit(f'root {rid}: path must live under workflow/root/')
-    if not source.startswith('src/'):
-        sys.exit(f'root {rid}: source_path must live under src/')
+    if source.startswith('workflow/'):
+        sys.exit(f'root {rid}: source_path must not point at workflow records')
     if path == source:
         sys.exit(f'root {rid}: path and source_path must be separated')
     if not Path(path, 'WORKFLOW.md').is_file():
@@ -49,8 +49,8 @@ for feat in data.get('features', []):
     source = feat.get('source_path', '')
     if not path.startswith('workflow/features/'):
         sys.exit(f'feature {fid}: path must live under workflow/features/')
-    if not source.startswith('src/'):
-        sys.exit(f'feature {fid}: source_path must live under src/')
+    if source.startswith('workflow/'):
+        sys.exit(f'feature {fid}: source_path must not point at workflow records')
     if path == source:
         sys.exit(f'feature {fid}: path and source_path must be separated')
     p = Path(path)

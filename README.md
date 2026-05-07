@@ -2,14 +2,19 @@
 
 `src/` is the source root. Workflow state is kept separately at repo root in `workflow.toml` and `workflow/` so code, tests, and examples are not polluted by workflow bookkeeping. Project-level documentation lives in repo-root [`docs/`](docs/).
 
-Root feature source directories:
+Classic source layout:
 
-- `src/plugin-contracts/`
-- `src/secure-bootstrap-transport/`
-- `src/kernel-runtime-supervision/`
-- `src/control-plane-ops/`
-- `src/plugin-authoring-sdk/`
-- `src/release-packaging-governance/`
+- `src/cmd/rpcplugind/` — daemon entrypoint.
+- `src/cmd/rpcpluginctl/` — CLI entrypoint.
+- `src/internal/adminrpc/` — local admin RPC server/client.
+- `src/internal/cli/` — CLI formatting helpers.
+- `src/internal/eventlog/` — JSONL event log writer/reader.
+- `src/internal/kernel/` — plugin manager, host routing, lifecycle, monitoring.
+- `src/internal/runtime/` — runtime directory, sockets, executable and peercred helpers.
+- `src/internal/auth/` — startup token helpers.
+- `src/pkg/plugin/` — public in-repo Go plugin SDK.
+- `src/examples/` — example plugins.
+- `src/test/` — shared test fixtures/helpers.
 
 Build all packages:
 
@@ -27,10 +32,10 @@ Build command binaries directly from `src/`:
 
 ```bash
 cd src
-go build -buildvcs=false -o .tmp-bin/rpcplugind ./kernel-runtime-supervision/daemon-entrypoint/rpcplugind
-go build -buildvcs=false -o .tmp-bin/rpcpluginctl ./control-plane-ops/cli-status-control/rpcpluginctl
-go build -buildvcs=false -o .tmp-bin/rpcplugin-echo ./plugin-authoring-sdk/echo-example/rpcplugin-echo
-go build -buildvcs=false -o .tmp-bin/rpcplugin-failure ./plugin-authoring-sdk/failure-example/rpcplugin-failure
+go build -buildvcs=false -o .tmp-bin/rpcplugind ./cmd/rpcplugind
+go build -buildvcs=false -o .tmp-bin/rpcpluginctl ./cmd/rpcpluginctl
+go build -buildvcs=false -o .tmp-bin/rpcplugin-echo ./examples/rpcplugin-echo
+go build -buildvcs=false -o .tmp-bin/rpcplugin-failure ./examples/rpcplugin-failure
 ```
 
 
@@ -67,13 +72,13 @@ cd src && go test ./...
 Kernel-focused tests:
 
 ```bash
-cd src && go test ./kernel-runtime-supervision/manager-lifecycle/kernel/...
+cd src && go test ./internal/kernel/...
 ```
 
 The public Go plugin SDK lives at:
 
 ```go
-import plugin "rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin"
+import plugin "rpc_plugin_system/pkg/plugin"
 ```
 
 That import path is the local Go module path used by this source release. It

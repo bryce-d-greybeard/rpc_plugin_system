@@ -53,7 +53,7 @@ For v1, versioning is still blunt:
 - v1 compatibility is behavior/documentation based unless and until explicit protocol negotiation is added later
 - exact documented behavior matters more than hand-wavy compatibility claims
 - explicit documented contract changes win over implicit compatibility assumptions
-- the current frozen wire namespace remains `TestPlugin.*` even though the public Go authoring import is `rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin`
+- the current frozen wire namespace remains `TestPlugin.*` even though the public Go authoring import is `rpc_plugin_system/pkg/plugin`
 - additive capability growth is allowed when it does not break the required contract
 
 Post-v1 only, later versions may add:

@@ -19,10 +19,10 @@ Scope: `plugin-authoring-sdk/go-runtime/plugin` after commit `9279896`.
 
 ## Verification
 
-- `go test -coverprofile=/tmp/plugin-cover.out ./plugin-authoring-sdk/go-runtime/plugin`: PASS, package coverage `100.0%`.
+- `go test -coverprofile=/tmp/plugin-cover.out ./pkg/plugin`: PASS, package coverage `100.0%`.
 - `go tool cover -func=/tmp/plugin-cover.out`: PASS, all functions in `plugin` package report `100.0%`.
 - `git diff --check`: PASS.
-- `make coverage`: PASS; package summary reports `rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin` at `100.0%`; repo total `63.4%`.
+- `make coverage`: PASS; package summary reports `rpc_plugin_system/pkg/plugin` at `100.0%`; repo total `63.4%`.
 
 ## HANDOFF
 

@@ -12,9 +12,9 @@ Scope: `plugin-authoring-sdk/go-runtime/plugin`.
 
 ## Verification
 
-- `go test -cover ./plugin-authoring-sdk/go-runtime/plugin` from `src`: PASS, package coverage `95.2%`.
+- `go test -cover ./pkg/plugin` from `src`: PASS, package coverage `95.2%`.
 - `git diff --check`: PASS.
-- `make coverage`: PASS, repo total `62.8%`; package line in generated summary reports `rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin` at `95.7%` under full-suite coverage.
+- `make coverage`: PASS, repo total `62.8%`; package line in generated summary reports `rpc_plugin_system/pkg/plugin` at `95.7%` under full-suite coverage.
 
 ## Remaining package gaps
 

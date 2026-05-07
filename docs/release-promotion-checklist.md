@@ -41,7 +41,7 @@ Required before promotion:
 
 Recommended validation set:
 - `go test ./...`
-- `go test ./kernel-runtime-supervision/manager-lifecycle/kernel/...`
+- `go test ./internal/kernel/...`
 - `make build`
 - one manual daemon + ctl smoke run using `.tmp-bin/rpcplugind` and `.tmp-bin/rpcpluginctl`
 
@@ -62,7 +62,7 @@ Required before promotion:
 
 Required final validation set:
 - `go test ./...`
-- `go test ./kernel-runtime-supervision/manager-lifecycle/kernel/...`
+- `go test ./internal/kernel/...`
 - `make build`
 - manual single-plugin smoke run
 - manual multi-plugin smoke run

@@ -11,22 +11,22 @@ build: daemon ctl echo failure
 
 daemon:
 	mkdir -p $(BINDIR)
-	go build -buildvcs=false -o $(BINDIR)/rpcplugind ./kernel-runtime-supervision/daemon-entrypoint/rpcplugind
+	go build -buildvcs=false -o $(BINDIR)/rpcplugind ./cmd/rpcplugind
 	chmod go-w $(BINDIR)/rpcplugind
 
 ctl:
 	mkdir -p $(BINDIR)
-	go build -buildvcs=false -o $(BINDIR)/rpcpluginctl ./control-plane-ops/cli-status-control/rpcpluginctl
+	go build -buildvcs=false -o $(BINDIR)/rpcpluginctl ./cmd/rpcpluginctl
 	chmod go-w $(BINDIR)/rpcpluginctl
 
 echo:
 	mkdir -p $(BINDIR)
-	go build -buildvcs=false -o $(BINDIR)/rpcplugin-echo ./plugin-authoring-sdk/echo-example/rpcplugin-echo
+	go build -buildvcs=false -o $(BINDIR)/rpcplugin-echo ./examples/rpcplugin-echo
 	chmod go-w $(BINDIR)/rpcplugin-echo
 
 failure:
 	mkdir -p $(BINDIR)
-	go build -buildvcs=false -o $(BINDIR)/rpcplugin-failure ./plugin-authoring-sdk/failure-example/rpcplugin-failure
+	go build -buildvcs=false -o $(BINDIR)/rpcplugin-failure ./examples/rpcplugin-failure
 	chmod go-w $(BINDIR)/rpcplugin-failure
 
 test:

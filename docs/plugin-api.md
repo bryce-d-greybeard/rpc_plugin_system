@@ -62,7 +62,7 @@ Requests graceful shutdown.
 
 For the substrate itself, the stable required wire methods are still the `TestPlugin.*` methods documented here.
 
-For public authors using `rpc_plugin_system/plugin-authoring-sdk/go-runtime/plugin`, the stable authoring path is:
+For public authors using `rpc_plugin_system/pkg/plugin`, the stable authoring path is:
 - load config with `LoadConfigFromEnv()`
 - build the minimal core with `NewTemplate(...)`
 - extend optional capabilities by implementing the matching optional interfaces

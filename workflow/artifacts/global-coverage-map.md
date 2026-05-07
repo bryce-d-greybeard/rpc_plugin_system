@@ -103,4 +103,4 @@ These records cover known baseline gaps present in the generated coverage artifa
 - risk level: medium
 - owner/reviewer accepting the gap: workflow maintainer/orchestrator at feature review
 - smallest next coverage increment: add a doc/spec consistency check for the next contract feature edited
-- expiry or review trigger: any substantive edit under `docs/plugin-*.md`, `docs/compatibility.md`, or `src/plugin-contracts/**`
+- expiry or review trigger: any substantive edit under `docs/plugin-*.md`, `docs/compatibility.md`, or workflow records for `plugin-contracts.*`
