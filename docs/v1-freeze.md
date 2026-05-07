@@ -14,6 +14,7 @@ It exists to stop drift during the final audit and promotion work.
 - stable generation and restart semantics
 
 ### Stable authoring path
+- `docs/downstream-provider-guidance.md` documents how provider PRDs should inherit the substrate without redefining it
 - `rpc_plugin_system/pkg/plugin` is the public Go authoring entrypoint
 - `LoadConfigFromEnv()` is the supported config/bootstrap entrypoint
 - `NewTemplate(...)` is the supported minimal skeleton path

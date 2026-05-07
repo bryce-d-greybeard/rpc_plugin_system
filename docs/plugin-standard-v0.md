@@ -247,6 +247,14 @@ Current earned validation now includes explicit local coverage for:
 - runtime artifact cleanup assertions across restart churn
 - Linux peer credential verification during startup
 
+## Downstream provider PRDs
+
+Downstream provider projects should reference this substrate instead of re-specifying it.
+
+Provider PRDs must not redefine lifecycle, transport, authentication, generation, health, logging, or supervision rules. They should state only provider-specific obligations and consequences.
+
+See `docs/downstream-provider-guidance.md`.
+
 ## Intended next users of the standard
 
 After kernel stabilization, this standard should support plugins such as:
