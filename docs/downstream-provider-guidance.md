@@ -26,7 +26,7 @@ Provider PRDs may then list inherited substrate facts:
 
 - plugin is a process-boundary executable, never an in-process library
 - kernel/supervisor owns lifecycle, restart, generation, health, routing, logs, and runtime artifacts
-- executable authority follows the core authority-use pattern: descriptor declares availability, proposal requests use, core admits/denies and seals executable authority, authority owner issues/resolves opaque refs, provider consumes only admitted mediated authority
+- executable authority follows the core client/broker/provider pattern: provider submits tool-skill descriptors and Lua state-machine scripts, broker admits and emits the advertised client surface, client requests broker-emitted operations, broker admits/denies usage and seals executable authority, authority owner issues/resolves opaque refs when needed, provider consumes only admitted mediated authority
 - startup uses the minimal substrate environment:
   - `RPC_PLUGIN_SYSTEM_PLUGIN_SOCKET`
   - `RPC_PLUGIN_SYSTEM_PLUGIN_ID`
@@ -67,22 +67,23 @@ Examples:
 
 ## Authority-use inheritance
 
-Provider PRDs must inherit the core authority-use boundary instead of inventing local credential, filesystem, browser, process, memory, network, SSH, or gRPC shortcuts.
+Provider PRDs must inherit the core client/broker/provider authority-use boundary instead of inventing local credential, filesystem, browser, process, memory, network, SSH, or gRPC shortcuts.
 
 Canonical flow:
 
 ```text
-tool-skill descriptor declares what is available
-→ Lua/planner proposes how to use it as a candidate and authority-use intent
-→ core broker admits/denies and emits the executable use contract
-→ authority owner issues/resolves opaque authority_use_ref
+provider submits tool-skill descriptors and Lua state-machine scripts to the broker
+→ broker admits and emits the advertised client surface
+→ client requests broker-emitted operations
+→ broker admits/denies usage and emits the executable use contract
+→ authority owner issues/resolves opaque authority_use_ref when external authority is needed
 → provider executes only through admitted mediated authority
-→ audit links descriptor, proposal, admission, issuance, use, and result
+→ audit links provider advertisement, broker emission, client request, admission, issuance, use, and result
 ```
 
 Provider documents may name provider-specific use kinds and operations, but those names are not new substrate authority seams. For example, SSH connect, gRPC client credentials, HTTP header injection, filesystem writes, browser sessions, and process execution are modeled as authority kind + use kind + access mode plus bound audience/generation/audit facts.
 
-Descriptors declare that a provider can propose such a use. They do not grant permission. Lua, tool calls, LLM output, and plugins may propose authority-use intent only. They must not mint executable refs, export raw secrets/handles, rely on ambient local state, or bypass core admission.
+Descriptors and Lua scripts declare what a provider can do and how the broker can shape that operation. They do not grant permission and are not client-visible until broker emission. Clients, Lua, tool calls, LLM output, and plugins may propose/request authority-use intent only through broker-emitted operations. They must not mint executable refs, export raw secrets/handles, rely on ambient local state, or bypass core admission.
 
 ## What provider PRDs must not do
 
