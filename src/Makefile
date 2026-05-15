@@ -35,6 +35,8 @@ test:
 coverage:
 	mkdir -p $(ARTIFACTS_DIR)
 	go test -coverprofile=$(COVERAGE_PROFILE).tmp ./... > $(COVERAGE_SUMMARY).tmp
+	{ head -n 1 $(COVERAGE_PROFILE).tmp; tail -n +2 $(COVERAGE_PROFILE).tmp | LC_ALL=C sort; } > $(COVERAGE_PROFILE).sorted
+	mv $(COVERAGE_PROFILE).sorted $(COVERAGE_PROFILE).tmp
 	go tool cover -func=$(COVERAGE_PROFILE).tmp >> $(COVERAGE_SUMMARY).tmp
 	mv $(COVERAGE_PROFILE).tmp $(COVERAGE_PROFILE)
 	mv $(COVERAGE_SUMMARY).tmp $(COVERAGE_SUMMARY)
