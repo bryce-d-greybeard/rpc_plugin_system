@@ -1,16 +1,16 @@
-ok  	rpc_plugin_system/cmd/rpcpluginctl	2.012s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/cmd/rpcplugind	2.656s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/examples/rpcplugin-echo	0.071s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/cmd/rpcpluginctl	2.083s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/cmd/rpcplugind	2.595s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/examples/rpcplugin-echo	0.067s	coverage: 100.0% of statements
 ok  	rpc_plugin_system/examples/rpcplugin-failure	0.037s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/adminrpc	0.959s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/auth	0.007s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/adminrpc	0.978s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/auth	0.005s	coverage: 100.0% of statements
 ok  	rpc_plugin_system/internal/cli	0.009s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/eventlog	0.013s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/kernel	17.542s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/runtime	0.018s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/eventlog	0.014s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/kernel	17.583s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/runtime	0.012s	coverage: 100.0% of statements
 ok  	rpc_plugin_system/pkg/plugin	0.014s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/test/testpluginapi	0.008s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/test/testroot	0.047s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/test/testpluginapi	0.009s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/test/testroot	0.043s	coverage: 100.0% of statements
 rpc_plugin_system/cmd/rpcpluginctl/args.go:23:			splitCommandArgs		100.0%
 rpc_plugin_system/cmd/rpcpluginctl/args.go:47:			takesValue			100.0%
 rpc_plugin_system/cmd/rpcpluginctl/args.go:59:			isBoolFlag			100.0%
@@ -139,17 +139,17 @@ rpc_plugin_system/pkg/plugin/logging.go:87:			Event				100.0%
 rpc_plugin_system/pkg/plugin/plugin.go:85:			Error				100.0%
 rpc_plugin_system/pkg/plugin/plugin.go:118:			LoadConfigFromEnv		100.0%
 rpc_plugin_system/pkg/plugin/plugin.go:146:			Serve				100.0%
-rpc_plugin_system/pkg/plugin/plugin.go:158:			ServeWithConfig			100.0%
-rpc_plugin_system/pkg/plugin/plugin.go:197:			detectCapabilities		100.0%
-rpc_plugin_system/pkg/plugin/plugin.go:214:			Auth				100.0%
-rpc_plugin_system/pkg/plugin/plugin.go:247:			Capabilities			100.0%
-rpc_plugin_system/pkg/plugin/plugin.go:263:			Heartbeat			100.0%
-rpc_plugin_system/pkg/plugin/plugin.go:272:			Shutdown			100.0%
-rpc_plugin_system/pkg/plugin/plugin.go:284:			Echo				100.0%
-rpc_plugin_system/pkg/plugin/plugin.go:299:			Sleep				100.0%
-rpc_plugin_system/pkg/plugin/plugin.go:314:			Crash				100.0%
-rpc_plugin_system/pkg/plugin/plugin.go:329:			requireAuth			100.0%
-rpc_plugin_system/pkg/plugin/plugin.go:343:			logRPC				100.0%
+rpc_plugin_system/pkg/plugin/plugin.go:162:			ServeWithConfig			100.0%
+rpc_plugin_system/pkg/plugin/plugin.go:201:			detectCapabilities		100.0%
+rpc_plugin_system/pkg/plugin/plugin.go:218:			Auth				100.0%
+rpc_plugin_system/pkg/plugin/plugin.go:251:			Capabilities			100.0%
+rpc_plugin_system/pkg/plugin/plugin.go:267:			Heartbeat			100.0%
+rpc_plugin_system/pkg/plugin/plugin.go:276:			Shutdown			100.0%
+rpc_plugin_system/pkg/plugin/plugin.go:288:			Echo				100.0%
+rpc_plugin_system/pkg/plugin/plugin.go:303:			Sleep				100.0%
+rpc_plugin_system/pkg/plugin/plugin.go:318:			Crash				100.0%
+rpc_plugin_system/pkg/plugin/plugin.go:333:			requireAuth			100.0%
+rpc_plugin_system/pkg/plugin/plugin.go:347:			logRPC				100.0%
 rpc_plugin_system/pkg/plugin/template.go:16:			NewTemplate			100.0%
 rpc_plugin_system/pkg/plugin/template.go:29:			Version				100.0%
 rpc_plugin_system/pkg/plugin/template.go:34:			Heartbeat			100.0%

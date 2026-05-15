@@ -155,6 +155,10 @@ var registerRPCService = func(s *rpc.Server, name string, rcvr any) error {
 	return s.RegisterName(name, rcvr)
 }
 
+var serveRPCConn = func(s *rpc.Server, conn net.Conn) {
+	s.ServeConn(conn)
+}
+
 func ServeWithConfig(cfg Config, core Core) error {
 	if core == nil {
 		return fmt.Errorf("plugin core is required")
@@ -190,7 +194,7 @@ func ServeWithConfig(cfg Config, core Core) error {
 			_ = logger.Event(LogEvent{Event: EventPluginServeStopped, Message: "plugin listener stopped", Reason: "listener closed", Error: err.Error()})
 			return nil
 		}
-		go rpcServer.ServeConn(conn)
+		go serveRPCConn(rpcServer, conn)
 	}
 }
 

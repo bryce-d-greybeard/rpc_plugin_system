@@ -106,14 +106,18 @@ type closeOnServeCore struct{ sdkBaseCore }
 
 func (closeOnServeCore) OnServeListener(l net.Listener) { _ = l.Close() }
 
-type dialOnceServeCore struct{ sdkBaseCore }
+type observedServeCore struct {
+	sdkBaseCore
+	served chan struct{}
+}
 
-func (dialOnceServeCore) OnServeListener(l net.Listener) {
+func (c observedServeCore) OnServeListener(l net.Listener) {
 	go func() {
 		conn, err := net.Dial("unix", l.Addr().String())
 		if err == nil {
 			_ = conn.Close()
 		}
+		<-c.served
 		_ = l.Close()
 	}()
 }
@@ -602,7 +606,15 @@ func TestServeReturnsServeWithConfigResult(t *testing.T) {
 }
 
 func TestServeWithConfigAcceptsOneConnectionBeforeClose(t *testing.T) {
-	if err := ServeWithConfig(Config{SocketPath: filepath.Join(t.TempDir(), "plugin.sock"), PluginID: "p", GenerationID: 1}, dialOnceServeCore{}); err != nil {
+	oldServeConn := serveRPCConn
+	served := make(chan struct{})
+	t.Cleanup(func() { serveRPCConn = oldServeConn })
+	serveRPCConn = func(s *rpc.Server, conn net.Conn) {
+		close(served)
+		oldServeConn(s, conn)
+	}
+
+	if err := ServeWithConfig(Config{SocketPath: filepath.Join(t.TempDir(), "plugin.sock"), PluginID: "p", GenerationID: 1}, observedServeCore{served: served}); err != nil {
 		t.Fatalf("ServeWithConfig one accepted connection: %v", err)
 	}
 }
