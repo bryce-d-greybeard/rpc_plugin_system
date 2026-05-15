@@ -90,6 +90,35 @@ src/.tmp-bin/rpcplugind \
   -plugins "echo=$(pwd)/src/.tmp-bin/rpcplugin-echo,failure=$(pwd)/src/.tmp-bin/rpcplugin-failure"
 ```
 
+## TOML daemon config
+
+`rpcplugind` can also load daemon settings from TOML:
+
+```toml
+[daemon]
+runtime_dir = "/tmp/rpc_plugin_system-demo"
+admin_socket = "/tmp/rpc_plugin_system-demo/admin.sock"
+dial_timeout = "3s"
+call_timeout = "500ms"
+heartbeat_every = "2s"
+
+[[plugins]]
+id = "echo"
+path = "/absolute/path/to/src/.tmp-bin/rpcplugin-echo"
+
+[[plugins]]
+id = "failure"
+path = "/absolute/path/to/src/.tmp-bin/rpcplugin-failure"
+```
+
+Launch with:
+
+```bash
+src/.tmp-bin/rpcplugind -config /path/to/rpcplugind.toml
+```
+
+Command-line flags override TOML values when explicitly supplied. Unknown TOML fields are rejected so stale configuration does not silently do nothing.
+
 Inspect routes and plugin state:
 
 ```bash

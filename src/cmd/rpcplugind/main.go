@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -15,6 +16,8 @@ import (
 
 	"rpc_plugin_system/internal/adminrpc"
 	"rpc_plugin_system/internal/kernel"
+
+	"github.com/pelletier/go-toml/v2"
 )
 
 func main() {
@@ -58,11 +61,16 @@ func productionDaemonDeps() daemonDeps {
 
 func run(name string, args []string, deps daemonDeps) int {
 	var (
-		flags      = flag.NewFlagSet(name, flag.ContinueOnError)
-		runtimeDir = flags.String("runtime-dir", filepath.Join(os.TempDir(), "rpc_plugin_system"), "runtime directory")
-		pluginsArg = flags.String("plugins", "", "comma-separated plugin specs in the form id=path")
-		pluginPath = flags.String("plugin", "", "path to plugin executable (single-plugin compatibility mode)")
-		pluginID   = flags.String("plugin-id", "echo", "plugin id for single-plugin compatibility mode")
+		flags          = flag.NewFlagSet(name, flag.ContinueOnError)
+		configPath     = flags.String("config", "", "path to rpcplugind TOML config")
+		runtimeDir     = flags.String("runtime-dir", filepath.Join(os.TempDir(), "rpc_plugin_system"), "runtime directory")
+		adminSocket    = flags.String("admin-socket", "", "admin RPC Unix socket path; defaults to <runtime-dir>/admin.sock")
+		pluginsArg     = flags.String("plugins", "", "comma-separated plugin specs in the form id=path")
+		pluginPath     = flags.String("plugin", "", "path to plugin executable (single-plugin compatibility mode)")
+		pluginID       = flags.String("plugin-id", "echo", "plugin id for single-plugin compatibility mode")
+		dialTimeout    = flags.Duration("dial-timeout", 3*time.Second, "plugin RPC dial timeout")
+		callTimeout    = flags.Duration("call-timeout", 500*time.Millisecond, "plugin RPC call timeout")
+		heartbeatEvery = flags.Duration("heartbeat-every", 2*time.Second, "plugin heartbeat interval")
 	)
 	logger := log.New(deps.logOutput, "", log.LstdFlags)
 	flags.SetOutput(deps.logOutput)
@@ -73,18 +81,25 @@ func run(name string, args []string, deps daemonDeps) int {
 		return 2
 	}
 
+	explicit := explicitFlags(flags)
 	cfg, err := parseDaemonConfig(daemonOptions{
-		RuntimeDir: *runtimeDir,
-		PluginsArg: *pluginsArg,
-		PluginID:   *pluginID,
-		PluginPath: *pluginPath,
+		ConfigPath:     *configPath,
+		RuntimeDir:     *runtimeDir,
+		AdminSocket:    *adminSocket,
+		PluginsArg:     *pluginsArg,
+		PluginID:       *pluginID,
+		PluginPath:     *pluginPath,
+		DialTimeout:    *dialTimeout,
+		CallTimeout:    *callTimeout,
+		HeartbeatEvery: *heartbeatEvery,
+		ExplicitFlags:  explicit,
 	})
 	if err != nil {
 		logger.Print(err)
 		return 1
 	}
 
-	host, err := deps.newHost(cfg)
+	host, err := deps.newHost(cfg.Host)
 	if err != nil {
 		logger.Print(err)
 		return 1
@@ -100,7 +115,7 @@ func run(name string, args []string, deps daemonDeps) int {
 	defer cancel()
 
 	host.MonitorLoop(ctx)
-	if err := deps.serve(ctx, filepath.Join(*runtimeDir, "admin.sock"), host); err != nil {
+	if err := deps.serve(ctx, cfg.AdminSocket, host); err != nil {
 		logger.Print(err)
 		return 1
 	}
@@ -108,24 +123,161 @@ func run(name string, args []string, deps daemonDeps) int {
 }
 
 type daemonOptions struct {
-	RuntimeDir string
-	PluginsArg string
-	PluginID   string
-	PluginPath string
+	ConfigPath     string
+	RuntimeDir     string
+	AdminSocket    string
+	PluginsArg     string
+	PluginID       string
+	PluginPath     string
+	DialTimeout    time.Duration
+	CallTimeout    time.Duration
+	HeartbeatEvery time.Duration
+	ExplicitFlags  map[string]bool
 }
 
-func parseDaemonConfig(opts daemonOptions) (kernel.HostConfig, error) {
-	plugins, err := parsePlugins(opts.PluginsArg, opts.PluginID, opts.PluginPath)
+type resolvedDaemonConfig struct {
+	Host        kernel.HostConfig
+	AdminSocket string
+}
+
+type tomlDaemonConfig struct {
+	Daemon  tomlDaemonSection   `toml:"daemon"`
+	Plugins []tomlPluginSection `toml:"plugins"`
+}
+
+type tomlDaemonSection struct {
+	RuntimeDir     string `toml:"runtime_dir"`
+	AdminSocket    string `toml:"admin_socket"`
+	DialTimeout    string `toml:"dial_timeout"`
+	CallTimeout    string `toml:"call_timeout"`
+	HeartbeatEvery string `toml:"heartbeat_every"`
+}
+
+type tomlPluginSection struct {
+	ID   string `toml:"id"`
+	Path string `toml:"path"`
+}
+
+func parseDaemonConfig(opts daemonOptions) (resolvedDaemonConfig, error) {
+	fileCfg, err := loadTOMLConfig(opts.ConfigPath)
 	if err != nil {
-		return kernel.HostConfig{}, err
+		return resolvedDaemonConfig{}, err
 	}
-	return kernel.HostConfig{
-		RuntimeDir:     opts.RuntimeDir,
-		DialTimeout:    3 * time.Second,
-		CallTimeout:    500 * time.Millisecond,
-		HeartbeatEvery: 2 * time.Second,
-		Plugins:        plugins,
+
+	runtimeDir := chooseString(opts.ExplicitFlags, "runtime-dir", opts.RuntimeDir, fileCfg.Daemon.RuntimeDir, defaultRuntimeDir(opts.RuntimeDir))
+	adminSocket := chooseString(opts.ExplicitFlags, "admin-socket", opts.AdminSocket, fileCfg.Daemon.AdminSocket, "")
+	dialTimeout, err := chooseDuration(opts.ExplicitFlags, "dial-timeout", opts.DialTimeout, fileCfg.Daemon.DialTimeout, defaultDuration(opts.DialTimeout, 3*time.Second))
+	if err != nil {
+		return resolvedDaemonConfig{}, fmt.Errorf("dial_timeout: %w", err)
+	}
+	callTimeout, err := chooseDuration(opts.ExplicitFlags, "call-timeout", opts.CallTimeout, fileCfg.Daemon.CallTimeout, defaultDuration(opts.CallTimeout, 500*time.Millisecond))
+	if err != nil {
+		return resolvedDaemonConfig{}, fmt.Errorf("call_timeout: %w", err)
+	}
+	heartbeatEvery, err := chooseDuration(opts.ExplicitFlags, "heartbeat-every", opts.HeartbeatEvery, fileCfg.Daemon.HeartbeatEvery, defaultDuration(opts.HeartbeatEvery, 2*time.Second))
+	if err != nil {
+		return resolvedDaemonConfig{}, fmt.Errorf("heartbeat_every: %w", err)
+	}
+	plugins, err := resolvePlugins(opts, fileCfg.Plugins)
+	if err != nil {
+		return resolvedDaemonConfig{}, err
+	}
+	if adminSocket == "" {
+		adminSocket = filepath.Join(runtimeDir, "admin.sock")
+	}
+	return resolvedDaemonConfig{
+		Host: kernel.HostConfig{
+			RuntimeDir:     runtimeDir,
+			DialTimeout:    dialTimeout,
+			CallTimeout:    callTimeout,
+			HeartbeatEvery: heartbeatEvery,
+			Plugins:        plugins,
+		},
+		AdminSocket: adminSocket,
 	}, nil
+}
+
+func loadTOMLConfig(path string) (tomlDaemonConfig, error) {
+	if path == "" {
+		return tomlDaemonConfig{}, nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return tomlDaemonConfig{}, fmt.Errorf("read config %s: %w", path, err)
+	}
+	var cfg tomlDaemonConfig
+	decoder := toml.NewDecoder(bytes.NewReader(data)).DisallowUnknownFields()
+	if err := decoder.Decode(&cfg); err != nil {
+		return tomlDaemonConfig{}, fmt.Errorf("parse config %s: %w", path, err)
+	}
+	return cfg, nil
+}
+
+func resolvePlugins(opts daemonOptions, filePlugins []tomlPluginSection) ([]kernel.PluginConfig, error) {
+	if opts.ExplicitFlags["plugins"] {
+		return parsePlugins(opts.PluginsArg, opts.PluginID, opts.PluginPath)
+	}
+	if opts.ExplicitFlags["plugin"] || opts.ExplicitFlags["plugin-id"] {
+		return parsePlugins("", opts.PluginID, opts.PluginPath)
+	}
+	if len(filePlugins) > 0 {
+		plugins := make([]kernel.PluginConfig, 0, len(filePlugins))
+		for _, plugin := range filePlugins {
+			if plugin.ID == "" || plugin.Path == "" {
+				return nil, fmt.Errorf("invalid config plugin, id and path are required")
+			}
+			if err := kernel.ValidatePluginID(plugin.ID); err != nil {
+				return nil, err
+			}
+			plugins = append(plugins, kernel.PluginConfig{PluginID: plugin.ID, PluginPath: plugin.Path})
+		}
+		return plugins, nil
+	}
+	return parsePlugins(opts.PluginsArg, opts.PluginID, opts.PluginPath)
+}
+
+func defaultRuntimeDir(value string) string {
+	if value != "" {
+		return value
+	}
+	return filepath.Join(os.TempDir(), "rpc_plugin_system")
+}
+
+func defaultDuration(value, fallback time.Duration) time.Duration {
+	if value != 0 {
+		return value
+	}
+	return fallback
+}
+
+func chooseString(explicit map[string]bool, flagName string, flagValue, fileValue, fallback string) string {
+	if explicit[flagName] {
+		return flagValue
+	}
+	if fileValue != "" {
+		return fileValue
+	}
+	return fallback
+}
+
+func chooseDuration(explicit map[string]bool, flagName string, flagValue time.Duration, fileValue string, fallback time.Duration) (time.Duration, error) {
+	if explicit[flagName] {
+		return flagValue, nil
+	}
+	if fileValue != "" {
+		d, err := time.ParseDuration(fileValue)
+		if err != nil {
+			return 0, err
+		}
+		return d, nil
+	}
+	return fallback, nil
+}
+
+func explicitFlags(flags *flag.FlagSet) map[string]bool {
+	explicit := map[string]bool{}
+	flags.Visit(func(f *flag.Flag) { explicit[f.Name] = true })
+	return explicit
 }
 
 func parsePlugins(pluginsArg, pluginID, pluginPath string) ([]kernel.PluginConfig, error) {

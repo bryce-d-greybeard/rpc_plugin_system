@@ -182,6 +182,54 @@ func TestRunReturnsZeroAfterServeStops(t *testing.T) {
 	}
 }
 
+func TestRunLoadsTOMLConfig(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "rpcplugind.toml")
+	data := `
+[daemon]
+runtime_dir = "/tmp/run-toml-runtime"
+admin_socket = "/tmp/run-toml-admin.sock"
+dial_timeout = "4s"
+call_timeout = "700ms"
+heartbeat_every = "5s"
+
+[[plugins]]
+id = "alpha"
+path = "/bin/alpha"
+`
+	if err := os.WriteFile(configPath, []byte(data), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	var log bytes.Buffer
+	fakeHost := &fakeDaemonHost{}
+	code := run("rpcplugind", []string{"-config", configPath}, daemonDeps{
+		newHost: func(cfg kernel.HostConfig) (daemonHost, error) {
+			if cfg.RuntimeDir != "/tmp/run-toml-runtime" || cfg.DialTimeout != 4*time.Second || cfg.CallTimeout != 700*time.Millisecond || cfg.HeartbeatEvery != 5*time.Second {
+				t.Fatalf("config = %+v", cfg)
+			}
+			if len(cfg.Plugins) != 1 || cfg.Plugins[0] != (kernel.PluginConfig{PluginID: "alpha", PluginPath: "/bin/alpha"}) {
+				t.Fatalf("plugins = %+v", cfg.Plugins)
+			}
+			return fakeHost, nil
+		},
+		serve: func(ctx context.Context, socketPath string, host daemonHost) error {
+			if socketPath != "/tmp/run-toml-admin.sock" {
+				t.Fatalf("socket path = %q", socketPath)
+			}
+			return nil
+		},
+		notifySignal: func(parent context.Context, signals ...os.Signal) (context.Context, context.CancelFunc) {
+			return context.WithCancel(parent)
+		},
+		logOutput: &log,
+	})
+	if code != 0 {
+		t.Fatalf("run code = %d, want 0; log=%s", code, log.String())
+	}
+	if !fakeHost.started || !fakeHost.monitorStarted || !fakeHost.closed {
+		t.Fatalf("host lifecycle = started:%v monitor:%v closed:%v", fakeHost.started, fakeHost.monitorStarted, fakeHost.closed)
+	}
+}
+
 func TestDaemonAndCLIEndToEnd(t *testing.T) {
 	daemonBin := buildBinary(t, "rpcplugind", "./cmd/rpcplugind")
 	ctlBin := buildBinary(t, "rpcpluginctl", "./cmd/rpcpluginctl")
@@ -222,20 +270,136 @@ func TestParseDaemonConfigBuildsKernelHostConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parseDaemonConfig: %v", err)
 	}
-	if cfg.RuntimeDir != "/tmp/rpc-runtime" {
-		t.Fatalf("runtime dir = %q", cfg.RuntimeDir)
+	if cfg.Host.RuntimeDir != "/tmp/rpc-runtime" {
+		t.Fatalf("runtime dir = %q", cfg.Host.RuntimeDir)
 	}
-	if cfg.DialTimeout != 3*time.Second || cfg.CallTimeout != 500*time.Millisecond || cfg.HeartbeatEvery != 2*time.Second {
-		t.Fatalf("unexpected timeout config: dial=%s call=%s heartbeat=%s", cfg.DialTimeout, cfg.CallTimeout, cfg.HeartbeatEvery)
+	if cfg.AdminSocket != "/tmp/rpc-runtime/admin.sock" {
+		t.Fatalf("admin socket = %q", cfg.AdminSocket)
 	}
-	if len(cfg.Plugins) != 2 {
-		t.Fatalf("plugin count = %d, want 2", len(cfg.Plugins))
+	if cfg.Host.DialTimeout != 3*time.Second || cfg.Host.CallTimeout != 500*time.Millisecond || cfg.Host.HeartbeatEvery != 2*time.Second {
+		t.Fatalf("unexpected timeout config: dial=%s call=%s heartbeat=%s", cfg.Host.DialTimeout, cfg.Host.CallTimeout, cfg.Host.HeartbeatEvery)
 	}
-	if cfg.Plugins[0] != (kernel.PluginConfig{PluginID: "alpha", PluginPath: "/bin/alpha"}) {
-		t.Fatalf("plugin[0] = %+v", cfg.Plugins[0])
+	if len(cfg.Host.Plugins) != 2 {
+		t.Fatalf("plugin count = %d, want 2", len(cfg.Host.Plugins))
 	}
-	if cfg.Plugins[1] != (kernel.PluginConfig{PluginID: "beta", PluginPath: "/bin/beta"}) {
-		t.Fatalf("plugin[1] = %+v", cfg.Plugins[1])
+	if cfg.Host.Plugins[0] != (kernel.PluginConfig{PluginID: "alpha", PluginPath: "/bin/alpha"}) {
+		t.Fatalf("plugin[0] = %+v", cfg.Host.Plugins[0])
+	}
+	if cfg.Host.Plugins[1] != (kernel.PluginConfig{PluginID: "beta", PluginPath: "/bin/beta"}) {
+		t.Fatalf("plugin[1] = %+v", cfg.Host.Plugins[1])
+	}
+}
+
+func TestParseDaemonConfigLoadsTOMLConfig(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "rpcplugind.toml")
+	data := `
+[daemon]
+runtime_dir = "/tmp/toml-runtime"
+admin_socket = "/tmp/toml-admin.sock"
+dial_timeout = "4s"
+call_timeout = "750ms"
+heartbeat_every = "3s"
+
+[[plugins]]
+id = "alpha"
+path = "/bin/alpha"
+
+[[plugins]]
+id = "beta"
+path = "/bin/beta"
+`
+	if err := os.WriteFile(configPath, []byte(data), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	cfg, err := parseDaemonConfig(daemonOptions{ConfigPath: configPath})
+	if err != nil {
+		t.Fatalf("parseDaemonConfig: %v", err)
+	}
+	if cfg.Host.RuntimeDir != "/tmp/toml-runtime" || cfg.AdminSocket != "/tmp/toml-admin.sock" {
+		t.Fatalf("paths = runtime %q admin %q", cfg.Host.RuntimeDir, cfg.AdminSocket)
+	}
+	if cfg.Host.DialTimeout != 4*time.Second || cfg.Host.CallTimeout != 750*time.Millisecond || cfg.Host.HeartbeatEvery != 3*time.Second {
+		t.Fatalf("durations = dial %s call %s heartbeat %s", cfg.Host.DialTimeout, cfg.Host.CallTimeout, cfg.Host.HeartbeatEvery)
+	}
+	want := []kernel.PluginConfig{{PluginID: "alpha", PluginPath: "/bin/alpha"}, {PluginID: "beta", PluginPath: "/bin/beta"}}
+	if len(cfg.Host.Plugins) != len(want) {
+		t.Fatalf("plugin count = %d, want %d", len(cfg.Host.Plugins), len(want))
+	}
+	for i := range want {
+		if cfg.Host.Plugins[i] != want[i] {
+			t.Fatalf("plugin[%d] = %+v, want %+v", i, cfg.Host.Plugins[i], want[i])
+		}
+	}
+}
+
+func TestParseDaemonConfigFlagsOverrideTOML(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "rpcplugind.toml")
+	data := `
+[daemon]
+runtime_dir = "/tmp/toml-runtime"
+admin_socket = "/tmp/toml-admin.sock"
+dial_timeout = "4s"
+call_timeout = "750ms"
+heartbeat_every = "3s"
+
+[[plugins]]
+id = "toml"
+path = "/bin/toml"
+`
+	if err := os.WriteFile(configPath, []byte(data), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	cfg, err := parseDaemonConfig(daemonOptions{
+		ConfigPath:     configPath,
+		RuntimeDir:     "/tmp/flag-runtime",
+		AdminSocket:    "/tmp/flag-admin.sock",
+		PluginsArg:     "flag=/bin/flag",
+		DialTimeout:    5 * time.Second,
+		CallTimeout:    time.Second,
+		HeartbeatEvery: 6 * time.Second,
+		ExplicitFlags: map[string]bool{
+			"runtime-dir":     true,
+			"admin-socket":    true,
+			"plugins":         true,
+			"dial-timeout":    true,
+			"call-timeout":    true,
+			"heartbeat-every": true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("parseDaemonConfig: %v", err)
+	}
+	if cfg.Host.RuntimeDir != "/tmp/flag-runtime" || cfg.AdminSocket != "/tmp/flag-admin.sock" {
+		t.Fatalf("paths = runtime %q admin %q", cfg.Host.RuntimeDir, cfg.AdminSocket)
+	}
+	if cfg.Host.DialTimeout != 5*time.Second || cfg.Host.CallTimeout != time.Second || cfg.Host.HeartbeatEvery != 6*time.Second {
+		t.Fatalf("durations = dial %s call %s heartbeat %s", cfg.Host.DialTimeout, cfg.Host.CallTimeout, cfg.Host.HeartbeatEvery)
+	}
+	if len(cfg.Host.Plugins) != 1 || cfg.Host.Plugins[0] != (kernel.PluginConfig{PluginID: "flag", PluginPath: "/bin/flag"}) {
+		t.Fatalf("plugins = %+v", cfg.Host.Plugins)
+	}
+}
+
+func TestParseDaemonConfigRejectsInvalidTOMLConfig(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		data string
+		want string
+	}{
+		{name: "unknown field", data: "[daemon]\nunknown = true\n[[plugins]]\nid = \"echo\"\npath = \"/bin/echo\"\n", want: "parse config"},
+		{name: "bad duration", data: "[daemon]\ndial_timeout = \"soon\"\n[[plugins]]\nid = \"echo\"\npath = \"/bin/echo\"\n", want: "dial_timeout"},
+		{name: "bad plugin", data: "[[plugins]]\nid = \"../echo\"\npath = \"/bin/echo\"\n", want: "invalid plugin id"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			configPath := filepath.Join(t.TempDir(), "rpcplugind.toml")
+			if err := os.WriteFile(configPath, []byte(tc.data), 0o600); err != nil {
+				t.Fatalf("write config: %v", err)
+			}
+			_, err := parseDaemonConfig(daemonOptions{ConfigPath: configPath})
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("parseDaemonConfig err = %v, want %q", err, tc.want)
+			}
+		})
 	}
 }
 
