@@ -97,7 +97,6 @@ src/.tmp-bin/rpcplugind \
 ```toml
 [daemon]
 runtime_dir = "/tmp/rpc_plugin_system-demo"
-admin_socket = "/tmp/rpc_plugin_system-demo/admin.sock"
 dial_timeout = "3s"
 call_timeout = "500ms"
 heartbeat_every = "2s"
@@ -117,7 +116,7 @@ Launch with:
 src/.tmp-bin/rpcplugind -config /path/to/rpcplugind.toml
 ```
 
-Command-line flags override TOML values when explicitly supplied. Unknown TOML fields are rejected so stale configuration does not silently do nothing.
+Command-line flags override TOML values when explicitly supplied. Unknown TOML fields are rejected so stale configuration does not silently do nothing. The admin socket remains derived from `runtime_dir` as `<runtime_dir>/admin.sock`.
 
 Inspect routes and plugin state:
 

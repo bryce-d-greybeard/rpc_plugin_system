@@ -64,7 +64,6 @@ func run(name string, args []string, deps daemonDeps) int {
 		flags          = flag.NewFlagSet(name, flag.ContinueOnError)
 		configPath     = flags.String("config", "", "path to rpcplugind TOML config")
 		runtimeDir     = flags.String("runtime-dir", filepath.Join(os.TempDir(), "rpc_plugin_system"), "runtime directory")
-		adminSocket    = flags.String("admin-socket", "", "admin RPC Unix socket path; defaults to <runtime-dir>/admin.sock")
 		pluginsArg     = flags.String("plugins", "", "comma-separated plugin specs in the form id=path")
 		pluginPath     = flags.String("plugin", "", "path to plugin executable (single-plugin compatibility mode)")
 		pluginID       = flags.String("plugin-id", "echo", "plugin id for single-plugin compatibility mode")
@@ -85,7 +84,6 @@ func run(name string, args []string, deps daemonDeps) int {
 	cfg, err := parseDaemonConfig(daemonOptions{
 		ConfigPath:     *configPath,
 		RuntimeDir:     *runtimeDir,
-		AdminSocket:    *adminSocket,
 		PluginsArg:     *pluginsArg,
 		PluginID:       *pluginID,
 		PluginPath:     *pluginPath,
@@ -125,7 +123,6 @@ func run(name string, args []string, deps daemonDeps) int {
 type daemonOptions struct {
 	ConfigPath     string
 	RuntimeDir     string
-	AdminSocket    string
 	PluginsArg     string
 	PluginID       string
 	PluginPath     string
@@ -147,7 +144,6 @@ type tomlDaemonConfig struct {
 
 type tomlDaemonSection struct {
 	RuntimeDir     string `toml:"runtime_dir"`
-	AdminSocket    string `toml:"admin_socket"`
 	DialTimeout    string `toml:"dial_timeout"`
 	CallTimeout    string `toml:"call_timeout"`
 	HeartbeatEvery string `toml:"heartbeat_every"`
@@ -165,7 +161,6 @@ func parseDaemonConfig(opts daemonOptions) (resolvedDaemonConfig, error) {
 	}
 
 	runtimeDir := chooseString(opts.ExplicitFlags, "runtime-dir", opts.RuntimeDir, fileCfg.Daemon.RuntimeDir, defaultRuntimeDir(opts.RuntimeDir))
-	adminSocket := chooseString(opts.ExplicitFlags, "admin-socket", opts.AdminSocket, fileCfg.Daemon.AdminSocket, "")
 	dialTimeout, err := chooseDuration(opts.ExplicitFlags, "dial-timeout", opts.DialTimeout, fileCfg.Daemon.DialTimeout, defaultDuration(opts.DialTimeout, 3*time.Second))
 	if err != nil {
 		return resolvedDaemonConfig{}, fmt.Errorf("dial_timeout: %w", err)
@@ -182,9 +177,6 @@ func parseDaemonConfig(opts daemonOptions) (resolvedDaemonConfig, error) {
 	if err != nil {
 		return resolvedDaemonConfig{}, err
 	}
-	if adminSocket == "" {
-		adminSocket = filepath.Join(runtimeDir, "admin.sock")
-	}
 	return resolvedDaemonConfig{
 		Host: kernel.HostConfig{
 			RuntimeDir:     runtimeDir,
@@ -193,7 +185,7 @@ func parseDaemonConfig(opts daemonOptions) (resolvedDaemonConfig, error) {
 			HeartbeatEvery: heartbeatEvery,
 			Plugins:        plugins,
 		},
-		AdminSocket: adminSocket,
+		AdminSocket: filepath.Join(runtimeDir, "admin.sock"),
 	}, nil
 }
 

@@ -187,7 +187,6 @@ func TestRunLoadsTOMLConfig(t *testing.T) {
 	data := `
 [daemon]
 runtime_dir = "/tmp/run-toml-runtime"
-admin_socket = "/tmp/run-toml-admin.sock"
 dial_timeout = "4s"
 call_timeout = "700ms"
 heartbeat_every = "5s"
@@ -212,7 +211,7 @@ path = "/bin/alpha"
 			return fakeHost, nil
 		},
 		serve: func(ctx context.Context, socketPath string, host daemonHost) error {
-			if socketPath != "/tmp/run-toml-admin.sock" {
+			if socketPath != "/tmp/run-toml-runtime/admin.sock" {
 				t.Fatalf("socket path = %q", socketPath)
 			}
 			return nil
@@ -295,7 +294,6 @@ func TestParseDaemonConfigLoadsTOMLConfig(t *testing.T) {
 	data := `
 [daemon]
 runtime_dir = "/tmp/toml-runtime"
-admin_socket = "/tmp/toml-admin.sock"
 dial_timeout = "4s"
 call_timeout = "750ms"
 heartbeat_every = "3s"
@@ -315,7 +313,7 @@ path = "/bin/beta"
 	if err != nil {
 		t.Fatalf("parseDaemonConfig: %v", err)
 	}
-	if cfg.Host.RuntimeDir != "/tmp/toml-runtime" || cfg.AdminSocket != "/tmp/toml-admin.sock" {
+	if cfg.Host.RuntimeDir != "/tmp/toml-runtime" || cfg.AdminSocket != "/tmp/toml-runtime/admin.sock" {
 		t.Fatalf("paths = runtime %q admin %q", cfg.Host.RuntimeDir, cfg.AdminSocket)
 	}
 	if cfg.Host.DialTimeout != 4*time.Second || cfg.Host.CallTimeout != 750*time.Millisecond || cfg.Host.HeartbeatEvery != 3*time.Second {
@@ -337,7 +335,6 @@ func TestParseDaemonConfigFlagsOverrideTOML(t *testing.T) {
 	data := `
 [daemon]
 runtime_dir = "/tmp/toml-runtime"
-admin_socket = "/tmp/toml-admin.sock"
 dial_timeout = "4s"
 call_timeout = "750ms"
 heartbeat_every = "3s"
@@ -352,14 +349,12 @@ path = "/bin/toml"
 	cfg, err := parseDaemonConfig(daemonOptions{
 		ConfigPath:     configPath,
 		RuntimeDir:     "/tmp/flag-runtime",
-		AdminSocket:    "/tmp/flag-admin.sock",
 		PluginsArg:     "flag=/bin/flag",
 		DialTimeout:    5 * time.Second,
 		CallTimeout:    time.Second,
 		HeartbeatEvery: 6 * time.Second,
 		ExplicitFlags: map[string]bool{
 			"runtime-dir":     true,
-			"admin-socket":    true,
 			"plugins":         true,
 			"dial-timeout":    true,
 			"call-timeout":    true,
@@ -369,7 +364,7 @@ path = "/bin/toml"
 	if err != nil {
 		t.Fatalf("parseDaemonConfig: %v", err)
 	}
-	if cfg.Host.RuntimeDir != "/tmp/flag-runtime" || cfg.AdminSocket != "/tmp/flag-admin.sock" {
+	if cfg.Host.RuntimeDir != "/tmp/flag-runtime" || cfg.AdminSocket != "/tmp/flag-runtime/admin.sock" {
 		t.Fatalf("paths = runtime %q admin %q", cfg.Host.RuntimeDir, cfg.AdminSocket)
 	}
 	if cfg.Host.DialTimeout != 5*time.Second || cfg.Host.CallTimeout != time.Second || cfg.Host.HeartbeatEvery != 6*time.Second {
