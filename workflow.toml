@@ -2,7 +2,7 @@ schema_version = 1
 project = "rpc-plugin-system"
 repository = "agents/rpc-plugin-system"
 worktree_root = "/tank/development/linus/rpc-plugin-system-worktrees"
-active = ""
+active = "provider-bundle-substrate.metadata-contracts"
 
 [coverage]
 map = "workflow/artifacts/global-coverage-map.md"
@@ -455,3 +455,53 @@ branch = "workflow/feature/release-packaging-governance.go-build-deps"
 path = "workflow/features/release-packaging-governance.go-build-deps"
 source_path = "src/test/testroot"
 worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/release-packaging-governance.go-build-deps"
+
+
+[[root_features]]
+id = "provider-bundle-substrate"
+branch = "workflow/root/provider-bundle-substrate"
+path = "workflow/root/provider-bundle-substrate"
+source_path = "src/internal"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/root/provider-bundle-substrate"
+features = [
+  "provider-bundle-substrate.metadata-contracts",
+  "provider-bundle-substrate.bundle-loading",
+  "provider-bundle-substrate.admin-core-surfaces",
+  "provider-bundle-substrate.restart-invalidation",
+]
+
+[[features]]
+id = "provider-bundle-substrate.metadata-contracts"
+root = "provider-bundle-substrate"
+state = "in_progress"
+branch = "workflow/feature/provider-bundle-substrate.metadata-contracts"
+path = "workflow/features/provider-bundle-substrate.metadata-contracts"
+source_path = "src/internal"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/provider-bundle-substrate.metadata-contracts"
+
+[[features]]
+id = "provider-bundle-substrate.bundle-loading"
+root = "provider-bundle-substrate"
+state = "ready"
+branch = "workflow/feature/provider-bundle-substrate.bundle-loading"
+path = "workflow/features/provider-bundle-substrate.bundle-loading"
+source_path = "src/internal"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/provider-bundle-substrate.bundle-loading"
+
+[[features]]
+id = "provider-bundle-substrate.admin-core-surfaces"
+root = "provider-bundle-substrate"
+state = "ready"
+branch = "workflow/feature/provider-bundle-substrate.admin-core-surfaces"
+path = "workflow/features/provider-bundle-substrate.admin-core-surfaces"
+source_path = "src/internal"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/provider-bundle-substrate.admin-core-surfaces"
+
+[[features]]
+id = "provider-bundle-substrate.restart-invalidation"
+root = "provider-bundle-substrate"
+state = "ready"
+branch = "workflow/feature/provider-bundle-substrate.restart-invalidation"
+path = "workflow/features/provider-bundle-substrate.restart-invalidation"
+source_path = "src/internal"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/provider-bundle-substrate.restart-invalidation"
