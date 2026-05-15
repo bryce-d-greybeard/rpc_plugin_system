@@ -382,8 +382,12 @@ func TestParseDaemonConfigRejectsInvalidTOMLConfig(t *testing.T) {
 		want string
 	}{
 		{name: "unknown field", data: "[daemon]\nunknown = true\n[[plugins]]\nid = \"echo\"\npath = \"/bin/echo\"\n", want: "parse config"},
-		{name: "bad duration", data: "[daemon]\ndial_timeout = \"soon\"\n[[plugins]]\nid = \"echo\"\npath = \"/bin/echo\"\n", want: "dial_timeout"},
+		{name: "bad dial duration", data: "[daemon]\ndial_timeout = \"soon\"\n[[plugins]]\nid = \"echo\"\npath = \"/bin/echo\"\n", want: "dial_timeout"},
+		{name: "bad call duration", data: "[daemon]\ncall_timeout = \"soon\"\n[[plugins]]\nid = \"echo\"\npath = \"/bin/echo\"\n", want: "call_timeout"},
+		{name: "bad heartbeat duration", data: "[daemon]\nheartbeat_every = \"soon\"\n[[plugins]]\nid = \"echo\"\npath = \"/bin/echo\"\n", want: "heartbeat_every"},
 		{name: "bad plugin", data: "[[plugins]]\nid = \"../echo\"\npath = \"/bin/echo\"\n", want: "invalid plugin id"},
+		{name: "missing plugin id", data: "[[plugins]]\npath = \"/bin/echo\"\n", want: "id and path are required"},
+		{name: "missing plugin path", data: "[[plugins]]\nid = \"echo\"\n", want: "id and path are required"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			configPath := filepath.Join(t.TempDir(), "rpcplugind.toml")
@@ -395,6 +399,14 @@ func TestParseDaemonConfigRejectsInvalidTOMLConfig(t *testing.T) {
 				t.Fatalf("parseDaemonConfig err = %v, want %q", err, tc.want)
 			}
 		})
+	}
+}
+
+func TestParseDaemonConfigRejectsUnreadableConfig(t *testing.T) {
+	missingPath := filepath.Join(t.TempDir(), "missing.toml")
+	_, err := parseDaemonConfig(daemonOptions{ConfigPath: missingPath})
+	if err == nil || !strings.Contains(err.Error(), "read config") {
+		t.Fatalf("parseDaemonConfig err = %v, want read config error", err)
 	}
 }
 

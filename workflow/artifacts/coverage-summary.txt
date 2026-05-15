@@ -1,16 +1,16 @@
-ok  	rpc_plugin_system/cmd/rpcpluginctl	2.083s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/cmd/rpcplugind	2.595s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/examples/rpcplugin-echo	0.067s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/examples/rpcplugin-failure	0.037s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/adminrpc	0.978s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/auth	0.005s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/cli	0.009s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/eventlog	0.014s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/kernel	17.583s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/runtime	0.012s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/pkg/plugin	0.014s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/test/testpluginapi	0.009s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/test/testroot	0.043s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/cmd/rpcpluginctl	(cached)	coverage: 100.0% of statements
+ok  	rpc_plugin_system/cmd/rpcplugind	(cached)	coverage: 100.0% of statements
+ok  	rpc_plugin_system/examples/rpcplugin-echo	(cached)	coverage: 100.0% of statements
+ok  	rpc_plugin_system/examples/rpcplugin-failure	(cached)	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/adminrpc	(cached)	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/auth	(cached)	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/cli	(cached)	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/eventlog	(cached)	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/kernel	(cached)	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/runtime	(cached)	coverage: 100.0% of statements
+ok  	rpc_plugin_system/pkg/plugin	(cached)	coverage: 100.0% of statements
+ok  	rpc_plugin_system/test/testpluginapi	(cached)	coverage: 100.0% of statements
+ok  	rpc_plugin_system/test/testroot	(cached)	coverage: 100.0% of statements
 rpc_plugin_system/cmd/rpcpluginctl/args.go:23:			splitCommandArgs		100.0%
 rpc_plugin_system/cmd/rpcpluginctl/args.go:47:			takesValue			100.0%
 rpc_plugin_system/cmd/rpcpluginctl/args.go:59:			isBoolFlag			100.0%
@@ -19,11 +19,18 @@ rpc_plugin_system/cmd/rpcpluginctl/main.go:31:			normalize			100.0%
 rpc_plugin_system/cmd/rpcpluginctl/main.go:44:			run				100.0%
 rpc_plugin_system/cmd/rpcpluginctl/main.go:217:			validateOptions			100.0%
 rpc_plugin_system/cmd/rpcpluginctl/main.go:242:			resolveLogPath			100.0%
-rpc_plugin_system/cmd/rpcplugind/main.go:20:			main				100.0%
-rpc_plugin_system/cmd/rpcplugind/main.go:42:			productionDaemonDeps		100.0%
-rpc_plugin_system/cmd/rpcplugind/main.go:59:			run				100.0%
-rpc_plugin_system/cmd/rpcplugind/main.go:117:			parseDaemonConfig		100.0%
-rpc_plugin_system/cmd/rpcplugind/main.go:131:			parsePlugins			100.0%
+rpc_plugin_system/cmd/rpcplugind/main.go:23:			main				100.0%
+rpc_plugin_system/cmd/rpcplugind/main.go:45:			productionDaemonDeps		100.0%
+rpc_plugin_system/cmd/rpcplugind/main.go:62:			run				100.0%
+rpc_plugin_system/cmd/rpcplugind/main.go:157:			parseDaemonConfig		100.0%
+rpc_plugin_system/cmd/rpcplugind/main.go:192:			loadTOMLConfig			100.0%
+rpc_plugin_system/cmd/rpcplugind/main.go:208:			resolvePlugins			100.0%
+rpc_plugin_system/cmd/rpcplugind/main.go:231:			defaultRuntimeDir		100.0%
+rpc_plugin_system/cmd/rpcplugind/main.go:238:			defaultDuration			100.0%
+rpc_plugin_system/cmd/rpcplugind/main.go:245:			chooseString			100.0%
+rpc_plugin_system/cmd/rpcplugind/main.go:255:			chooseDuration			100.0%
+rpc_plugin_system/cmd/rpcplugind/main.go:269:			explicitFlags			100.0%
+rpc_plugin_system/cmd/rpcplugind/main.go:275:			parsePlugins			100.0%
 rpc_plugin_system/examples/rpcplugin-echo/main.go:15:		Echo				100.0%
 rpc_plugin_system/examples/rpcplugin-echo/main.go:20:		Sleep				100.0%
 rpc_plugin_system/examples/rpcplugin-echo/main.go:31:		Crash				100.0%
