@@ -14,3 +14,7 @@ Implement provider bundle substrate support for `rpc-plugin-system`: inert disco
 - No Lua execution.
 - No raw secrets, handles, sockets, signers, sessions, or credential material in plugin/provider/admin/core surfaces.
 - No protocol-specific authority friendship interfaces.
+
+## Completion evidence
+
+Closed after metadata contracts, bundle loading, admin/core surfaces, and restart invalidation passed orchestrator review and verification.

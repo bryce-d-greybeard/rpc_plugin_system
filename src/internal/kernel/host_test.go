@@ -379,12 +379,206 @@ func TestProviderBundleProjectionRequiresCurrentPluginGeneration(t *testing.T) {
 		t.Fatalf("start all: %v", err)
 	}
 
+	assertProviderBundleProjectionAbsent(t, host, "stale generation metadata projected")
+}
+
+func TestProviderBundleRestartInvalidatesStaleStaticMetadata(t *testing.T) {
+	pluginBin := buildPlugin(t)
+	runtimeDir := t.TempDir()
+	metadata := kernelProviderBundleTestMetadata("echo", 1)
+
+	host, err := NewHost(HostConfig{
+		RuntimeDir:     runtimeDir,
+		DialTimeout:    2 * time.Second,
+		CallTimeout:    200 * time.Millisecond,
+		HeartbeatEvery: 100 * time.Millisecond,
+		Plugins: []PluginConfig{{
+			PluginID:               "echo",
+			PluginPath:             pluginBin,
+			ProviderBundleMetadata: &metadata,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("new host: %v", err)
+	}
+	defer host.Close()
+	if err := host.StartAll(); err != nil {
+		t.Fatalf("start all: %v", err)
+	}
+	assertProviderBundleProjectionGeneration(t, host, 1)
+
+	state, err := host.RestartPlugin("echo")
+	if err != nil {
+		t.Fatalf("restart plugin: %v", err)
+	}
+	if state.GenerationID != 2 {
+		t.Fatalf("restart generation = %d, want 2", state.GenerationID)
+	}
+	assertProviderBundleProjectionAbsent(t, host, "old generation metadata projected after restart")
+}
+
+func TestProviderBundleRestartProjectsExplicitGenerationRefreshOnly(t *testing.T) {
+	pluginBin := buildPlugin(t)
+	runtimeDir := t.TempDir()
+	static := kernelProviderBundleTestMetadata("echo", 1)
+	refreshed := kernelProviderBundleTestMetadata("echo", 2)
+	refreshed.BundleRootPath = "/srv/providers/echo/generation-2"
+	refreshed.ManifestPath = "/srv/providers/echo/generation-2/manifest.json"
+	refreshed.LuaAssets[0].Path = "/srv/providers/echo/generation-2/lua/echo.lua"
+	refreshed.SubstrateEventCorrelation = "corr-generation-2"
+
+	host, err := NewHost(HostConfig{
+		RuntimeDir:     runtimeDir,
+		DialTimeout:    2 * time.Second,
+		CallTimeout:    200 * time.Millisecond,
+		HeartbeatEvery: 100 * time.Millisecond,
+		Plugins: []PluginConfig{{
+			PluginID:               "echo",
+			PluginPath:             pluginBin,
+			ProviderBundleMetadata: &static,
+			ProviderBundleMetadataRefresh: &ProviderBundleMetadataRefreshConfig{
+				ByGeneration: map[int64]providerbundle.ProviderBundleMetadata{2: refreshed},
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("new host: %v", err)
+	}
+	defer host.Close()
+	if err := host.StartAll(); err != nil {
+		t.Fatalf("start all: %v", err)
+	}
+	assertProviderBundleProjectionGeneration(t, host, 1)
+
+	if _, err := host.RestartPlugin("echo"); err != nil {
+		t.Fatalf("restart plugin: %v", err)
+	}
+
+	adminState := host.State()
+	if len(adminState.Plugins) != 1 || adminState.Plugins[0].DeclaredProviderBundleMetadata == nil {
+		t.Fatalf("refreshed metadata did not project to admin state: %#v", adminState)
+	}
+	adminDTO := adminState.Plugins[0].DeclaredProviderBundleMetadata
+	if adminDTO.PluginGeneration != 2 || adminDTO.PluginID != "echo" || adminDTO.SubstrateEventCorrelation != "corr-generation-2" {
+		t.Fatalf("admin projection did not use refreshed generation metadata: %#v", adminDTO)
+	}
+	adminEncoded, err := json.Marshal(adminState)
+	if err != nil {
+		t.Fatalf("marshal admin state: %v", err)
+	}
+	if strings.Contains(string(adminEncoded), "/srv/providers") || strings.Contains(string(adminEncoded), "generation-2/lua") {
+		t.Fatalf("admin projection leaked host-private path after restart: %s", adminEncoded)
+	}
+
+	core := host.CoreSnapshot()
+	if len(core.Plugins) != 1 || core.Plugins[0].DeclaredProviderBundleMetadata == nil {
+		t.Fatalf("refreshed metadata did not project to core state: %#v", core)
+	}
+	coreDTO := core.Plugins[0].DeclaredProviderBundleMetadata
+	if coreDTO.PluginGeneration != 2 || coreDTO.PluginID != "echo" || coreDTO.SubstrateEventCorrelation != "corr-generation-2" {
+		t.Fatalf("core projection did not use refreshed generation metadata: %#v", coreDTO)
+	}
+	coreEncoded, err := json.Marshal(core)
+	if err != nil {
+		t.Fatalf("marshal core snapshot: %v", err)
+	}
+	if strings.Contains(string(coreEncoded), "/srv/providers") || strings.Contains(string(coreEncoded), "generation-2/lua") {
+		t.Fatalf("core projection leaked path material after restart: %s", coreEncoded)
+	}
+}
+
+func TestProviderBundleRestartWithoutBundleMetadataRemainsAbsent(t *testing.T) {
+	pluginBin := buildPlugin(t)
+	runtimeDir := t.TempDir()
+
+	host, err := NewHost(HostConfig{
+		RuntimeDir:     runtimeDir,
+		DialTimeout:    2 * time.Second,
+		CallTimeout:    200 * time.Millisecond,
+		HeartbeatEvery: 100 * time.Millisecond,
+		Plugins:        []PluginConfig{{PluginID: "echo", PluginPath: pluginBin}},
+	})
+	if err != nil {
+		t.Fatalf("new host: %v", err)
+	}
+	defer host.Close()
+	if err := host.StartAll(); err != nil {
+		t.Fatalf("start all: %v", err)
+	}
+	assertProviderBundleProjectionAbsent(t, host, "no-bundle metadata projected before restart")
+
+	state, err := host.RestartPlugin("echo")
+	if err != nil {
+		t.Fatalf("restart plugin: %v", err)
+	}
+	if state.GenerationID != 2 {
+		t.Fatalf("restart generation = %d, want 2", state.GenerationID)
+	}
+	assertProviderBundleProjectionAbsent(t, host, "no-bundle metadata projected after restart")
+}
+
+func assertProviderBundleProjectionGeneration(t *testing.T, host *Host, want int64) {
+	t.Helper()
+	adminState := host.State()
+	if len(adminState.Plugins) != 1 || adminState.Plugins[0].DeclaredProviderBundleMetadata == nil {
+		t.Fatalf("admin metadata projection missing: %#v", adminState)
+	}
+	if got := adminState.Plugins[0].DeclaredProviderBundleMetadata.PluginGeneration; got != want {
+		t.Fatalf("admin metadata generation = %d, want %d", got, want)
+	}
+	core := host.CoreSnapshot()
+	if len(core.Plugins) != 1 || core.Plugins[0].DeclaredProviderBundleMetadata == nil {
+		t.Fatalf("core metadata projection missing: %#v", core)
+	}
+	if got := core.Plugins[0].DeclaredProviderBundleMetadata.PluginGeneration; got != want {
+		t.Fatalf("core metadata generation = %d, want %d", got, want)
+	}
+}
+
+func assertProviderBundleProjectionAbsent(t *testing.T, host *Host, reason string) {
+	t.Helper()
 	adminState := host.State()
 	if len(adminState.Plugins) != 1 || adminState.Plugins[0].DeclaredProviderBundleMetadata != nil {
-		t.Fatalf("stale generation metadata projected to admin state: %#v", adminState)
+		t.Fatalf("%s in admin state: %#v", reason, adminState)
 	}
 	core := host.CoreSnapshot()
 	if len(core.Plugins) != 1 || core.Plugins[0].DeclaredProviderBundleMetadata != nil {
-		t.Fatalf("stale generation metadata projected to core state: %#v", core)
+		t.Fatalf("%s in core state: %#v", reason, core)
 	}
+}
+
+func TestProviderBundleRefreshConfigIsClonedAtHostConstruction(t *testing.T) {
+	pluginBin := buildPlugin(t)
+	runtimeDir := t.TempDir()
+	static := kernelProviderBundleTestMetadata("echo", 1)
+	refreshed := kernelProviderBundleTestMetadata("echo", 2)
+	refresh := &ProviderBundleMetadataRefreshConfig{ByGeneration: map[int64]providerbundle.ProviderBundleMetadata{2: refreshed}}
+
+	host, err := NewHost(HostConfig{
+		RuntimeDir:     runtimeDir,
+		DialTimeout:    2 * time.Second,
+		CallTimeout:    200 * time.Millisecond,
+		HeartbeatEvery: 100 * time.Millisecond,
+		Plugins: []PluginConfig{{
+			PluginID:                      "echo",
+			PluginPath:                    pluginBin,
+			ProviderBundleMetadata:        &static,
+			ProviderBundleMetadataRefresh: refresh,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("new host: %v", err)
+	}
+	defer host.Close()
+
+	delete(refresh.ByGeneration, 2)
+	static.PluginGeneration = 99
+	if err := host.StartAll(); err != nil {
+		t.Fatalf("start all: %v", err)
+	}
+	assertProviderBundleProjectionGeneration(t, host, 1)
+	if _, err := host.RestartPlugin("echo"); err != nil {
+		t.Fatalf("restart plugin: %v", err)
+	}
+	assertProviderBundleProjectionGeneration(t, host, 2)
 }

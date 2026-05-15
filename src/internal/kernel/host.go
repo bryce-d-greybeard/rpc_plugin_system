@@ -20,6 +20,10 @@ type PluginConfig struct {
 	// ProviderBundleMetadata is inert declared bundle metadata to project onto
 	// admin/core snapshots when it matches the current plugin generation.
 	ProviderBundleMetadata *providerbundle.ProviderBundleMetadata
+
+	// ProviderBundleMetadataRefresh is an explicit inert config refresh path for
+	// declared bundle metadata keyed by authenticated plugin generation.
+	ProviderBundleMetadataRefresh *ProviderBundleMetadataRefreshConfig
 }
 
 // HostConfig defines the multi-plugin kernel host configuration.
@@ -120,6 +124,7 @@ func NewHost(cfg HostConfig) (*Host, error) {
 			HeartbeatEvery:                          cfg.HeartbeatEvery,
 			EventLogPath:                            pluginEventLogPath(cfg.RuntimeDir, plugin.PluginID),
 			ProviderBundleMetadata:                  plugin.ProviderBundleMetadata,
+			ProviderBundleMetadataRefresh:           cloneProviderBundleMetadataRefresh(plugin.ProviderBundleMetadataRefresh),
 			DisableProviderBundleAdminPathRedaction: cfg.DisableProviderBundleAdminPathRedaction,
 		})
 		if err != nil {
@@ -335,6 +340,20 @@ func (h *Host) MonitorLoop(ctx context.Context) {
 	for _, pluginID := range h.plugins {
 		go h.managers[pluginID].MonitorLoop(ctx)
 	}
+}
+
+func cloneProviderBundleMetadataRefresh(in *ProviderBundleMetadataRefreshConfig) *ProviderBundleMetadataRefreshConfig {
+	if in == nil {
+		return nil
+	}
+	out := &ProviderBundleMetadataRefreshConfig{}
+	if in.ByGeneration != nil {
+		out.ByGeneration = make(map[int64]providerbundle.ProviderBundleMetadata, len(in.ByGeneration))
+		for generation, metadata := range in.ByGeneration {
+			out.ByGeneration[generation] = metadata.Clone()
+		}
+	}
+	return out
 }
 
 func pluginRuntimeDir(root, pluginID string) string {

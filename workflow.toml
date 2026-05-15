@@ -2,7 +2,7 @@ schema_version = 1
 project = "rpc-plugin-system"
 repository = "agents/rpc-plugin-system"
 worktree_root = "/tank/development/linus/rpc-plugin-system-worktrees"
-active = "provider-bundle-substrate.restart-invalidation"
+active = ""
 
 [coverage]
 map = "workflow/artifacts/global-coverage-map.md"
@@ -500,7 +500,7 @@ worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/provide
 [[features]]
 id = "provider-bundle-substrate.restart-invalidation"
 root = "provider-bundle-substrate"
-state = "in_progress"
+state = "done"
 branch = "workflow/feature/provider-bundle-substrate.restart-invalidation"
 path = "workflow/features/provider-bundle-substrate.restart-invalidation"
 source_path = "src/internal"

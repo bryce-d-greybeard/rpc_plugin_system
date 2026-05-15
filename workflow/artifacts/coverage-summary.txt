@@ -1,17 +1,17 @@
-ok  	rpc_plugin_system/cmd/rpcpluginctl	2.033s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/cmd/rpcplugind	2.500s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/examples/rpcplugin-echo	0.074s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/examples/rpcplugin-failure	0.046s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/adminrpc	1.152s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/auth	0.008s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/cli	0.010s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/eventlog	0.022s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/kernel	17.761s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/providerbundle	0.009s	coverage: 91.0% of statements
-ok  	rpc_plugin_system/internal/runtime	0.010s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/cmd/rpcpluginctl	2.073s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/cmd/rpcplugind	2.547s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/examples/rpcplugin-echo	0.071s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/examples/rpcplugin-failure	0.043s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/adminrpc	1.157s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/auth	0.004s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/cli	0.011s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/eventlog	0.012s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/kernel	18.649s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/providerbundle	0.020s	coverage: 91.0% of statements
+ok  	rpc_plugin_system/internal/runtime	0.012s	coverage: 100.0% of statements
 ok  	rpc_plugin_system/pkg/plugin	0.019s	coverage: 100.0% of statements
 ok  	rpc_plugin_system/test/testpluginapi	0.010s	coverage: 100.0% of statements
-ok  	rpc_plugin_system/test/testroot	0.060s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/test/testroot	0.051s	coverage: 100.0% of statements
 rpc_plugin_system/cmd/rpcpluginctl/args.go:23:			splitCommandArgs				100.0%
 rpc_plugin_system/cmd/rpcpluginctl/args.go:47:			takesValue					100.0%
 rpc_plugin_system/cmd/rpcpluginctl/args.go:59:			isBoolFlag					100.0%
@@ -89,53 +89,54 @@ rpc_plugin_system/internal/eventlog/read.go:107:		readOne						100.0%
 rpc_plugin_system/internal/eventlog/read.go:142:		existingLogPaths				100.0%
 rpc_plugin_system/internal/eventlog/read.go:159:		match						100.0%
 rpc_plugin_system/internal/eventlog/read.go:181:		reverse						100.0%
-rpc_plugin_system/internal/kernel/host.go:75:			CapabilityMap					100.0%
-rpc_plugin_system/internal/kernel/host.go:80:			Routes						100.0%
-rpc_plugin_system/internal/kernel/host.go:85:			Plugin						100.0%
-rpc_plugin_system/internal/kernel/host.go:94:			NewHost						100.0%
-rpc_plugin_system/internal/kernel/host.go:139:			Close						100.0%
-rpc_plugin_system/internal/kernel/host.go:152:			StartAll					100.0%
-rpc_plugin_system/internal/kernel/host.go:169:			Manager						100.0%
-rpc_plugin_system/internal/kernel/host.go:180:			State						100.0%
-rpc_plugin_system/internal/kernel/host.go:209:			States						100.0%
-rpc_plugin_system/internal/kernel/host.go:216:			CoreSnapshot					100.0%
-rpc_plugin_system/internal/kernel/host.go:227:			RestartPlugin					100.0%
-rpc_plugin_system/internal/kernel/host.go:249:			RouteTarget					100.0%
-rpc_plugin_system/internal/kernel/host.go:265:			Echo						100.0%
-rpc_plugin_system/internal/kernel/host.go:274:			Heartbeat					100.0%
-rpc_plugin_system/internal/kernel/host.go:297:			Call						100.0%
-rpc_plugin_system/internal/kernel/host.go:302:			CallRequest					100.0%
-rpc_plugin_system/internal/kernel/host.go:332:			MonitorLoop					100.0%
-rpc_plugin_system/internal/kernel/host.go:340:			pluginRuntimeDir				100.0%
-rpc_plugin_system/internal/kernel/host.go:344:			pluginEventLogPath				100.0%
-rpc_plugin_system/internal/kernel/manager.go:117:		New						100.0%
-rpc_plugin_system/internal/kernel/manager.go:157:		Close						100.0%
-rpc_plugin_system/internal/kernel/manager.go:178:		Start						100.0%
-rpc_plugin_system/internal/kernel/manager.go:184:		startLocked					100.0%
-rpc_plugin_system/internal/kernel/manager.go:489:		Heartbeat					100.0%
-rpc_plugin_system/internal/kernel/manager.go:561:		Echo						100.0%
-rpc_plugin_system/internal/kernel/manager.go:582:		Sleep						100.0%
-rpc_plugin_system/internal/kernel/manager.go:599:		Crash						100.0%
-rpc_plugin_system/internal/kernel/manager.go:616:		Restart						100.0%
-rpc_plugin_system/internal/kernel/manager.go:682:		Kill						100.0%
-rpc_plugin_system/internal/kernel/manager.go:689:		State						100.0%
-rpc_plugin_system/internal/kernel/manager.go:700:		CoreState					100.0%
-rpc_plugin_system/internal/kernel/manager.go:712:		providerBundleAdminDTOLocked			100.0%
-rpc_plugin_system/internal/kernel/manager.go:721:		providerBundleCoreDTOLocked			100.0%
-rpc_plugin_system/internal/kernel/manager.go:730:		generationBoundProviderBundleMetadataLocked	100.0%
-rpc_plugin_system/internal/kernel/manager.go:741:		dial						100.0%
-rpc_plugin_system/internal/kernel/manager.go:782:		call						100.0%
-rpc_plugin_system/internal/kernel/manager.go:876:		stopCurrent					100.0%
-rpc_plugin_system/internal/kernel/manager.go:997:		cleanupFailedStart				100.0%
-rpc_plugin_system/internal/kernel/manager.go:1023:		close						100.0%
-rpc_plugin_system/internal/kernel/manager.go:1036:		poisonClient					100.0%
-rpc_plugin_system/internal/kernel/manager.go:1063:		verifyPeerCred					100.0%
-rpc_plugin_system/internal/kernel/manager.go:1091:		isRPCPoisonError				100.0%
-rpc_plugin_system/internal/kernel/manager.go:1106:		cleanupRuntimeArtifacts				100.0%
-rpc_plugin_system/internal/kernel/manager.go:1165:		cleanupOwnsRuntimeArtifacts			100.0%
-rpc_plugin_system/internal/kernel/manager.go:1174:		rollbackGeneration				100.0%
-rpc_plugin_system/internal/kernel/manager.go:1185:		logEvent					100.0%
-rpc_plugin_system/internal/kernel/manager.go:1192:		errorString					100.0%
+rpc_plugin_system/internal/kernel/host.go:79:			CapabilityMap					100.0%
+rpc_plugin_system/internal/kernel/host.go:84:			Routes						100.0%
+rpc_plugin_system/internal/kernel/host.go:89:			Plugin						100.0%
+rpc_plugin_system/internal/kernel/host.go:98:			NewHost						100.0%
+rpc_plugin_system/internal/kernel/host.go:144:			Close						100.0%
+rpc_plugin_system/internal/kernel/host.go:157:			StartAll					100.0%
+rpc_plugin_system/internal/kernel/host.go:174:			Manager						100.0%
+rpc_plugin_system/internal/kernel/host.go:185:			State						100.0%
+rpc_plugin_system/internal/kernel/host.go:214:			States						100.0%
+rpc_plugin_system/internal/kernel/host.go:221:			CoreSnapshot					100.0%
+rpc_plugin_system/internal/kernel/host.go:232:			RestartPlugin					100.0%
+rpc_plugin_system/internal/kernel/host.go:254:			RouteTarget					100.0%
+rpc_plugin_system/internal/kernel/host.go:270:			Echo						100.0%
+rpc_plugin_system/internal/kernel/host.go:279:			Heartbeat					100.0%
+rpc_plugin_system/internal/kernel/host.go:302:			Call						100.0%
+rpc_plugin_system/internal/kernel/host.go:307:			CallRequest					100.0%
+rpc_plugin_system/internal/kernel/host.go:337:			MonitorLoop					100.0%
+rpc_plugin_system/internal/kernel/host.go:345:			cloneProviderBundleMetadataRefresh		100.0%
+rpc_plugin_system/internal/kernel/host.go:359:			pluginRuntimeDir				100.0%
+rpc_plugin_system/internal/kernel/host.go:363:			pluginEventLogPath				100.0%
+rpc_plugin_system/internal/kernel/manager.go:129:		New						100.0%
+rpc_plugin_system/internal/kernel/manager.go:174:		Close						100.0%
+rpc_plugin_system/internal/kernel/manager.go:195:		Start						100.0%
+rpc_plugin_system/internal/kernel/manager.go:201:		startLocked					100.0%
+rpc_plugin_system/internal/kernel/manager.go:506:		Heartbeat					100.0%
+rpc_plugin_system/internal/kernel/manager.go:578:		Echo						100.0%
+rpc_plugin_system/internal/kernel/manager.go:599:		Sleep						100.0%
+rpc_plugin_system/internal/kernel/manager.go:616:		Crash						100.0%
+rpc_plugin_system/internal/kernel/manager.go:633:		Restart						100.0%
+rpc_plugin_system/internal/kernel/manager.go:699:		Kill						100.0%
+rpc_plugin_system/internal/kernel/manager.go:706:		State						100.0%
+rpc_plugin_system/internal/kernel/manager.go:717:		CoreState					100.0%
+rpc_plugin_system/internal/kernel/manager.go:729:		providerBundleAdminDTOLocked			100.0%
+rpc_plugin_system/internal/kernel/manager.go:738:		providerBundleCoreDTOLocked			100.0%
+rpc_plugin_system/internal/kernel/manager.go:747:		generationBoundProviderBundleMetadataLocked	100.0%
+rpc_plugin_system/internal/kernel/manager.go:766:		dial						100.0%
+rpc_plugin_system/internal/kernel/manager.go:807:		call						100.0%
+rpc_plugin_system/internal/kernel/manager.go:901:		stopCurrent					100.0%
+rpc_plugin_system/internal/kernel/manager.go:1022:		cleanupFailedStart				100.0%
+rpc_plugin_system/internal/kernel/manager.go:1048:		close						100.0%
+rpc_plugin_system/internal/kernel/manager.go:1061:		poisonClient					100.0%
+rpc_plugin_system/internal/kernel/manager.go:1088:		verifyPeerCred					100.0%
+rpc_plugin_system/internal/kernel/manager.go:1116:		isRPCPoisonError				100.0%
+rpc_plugin_system/internal/kernel/manager.go:1131:		cleanupRuntimeArtifacts				100.0%
+rpc_plugin_system/internal/kernel/manager.go:1190:		cleanupOwnsRuntimeArtifacts			100.0%
+rpc_plugin_system/internal/kernel/manager.go:1199:		rollbackGeneration				100.0%
+rpc_plugin_system/internal/kernel/manager.go:1210:		logEvent					100.0%
+rpc_plugin_system/internal/kernel/manager.go:1217:		errorString					100.0%
 rpc_plugin_system/internal/kernel/monitor.go:12:		MonitorLoop					100.0%
 rpc_plugin_system/internal/kernel/plugin_id.go:12:		ValidatePluginID				100.0%
 rpc_plugin_system/internal/providerbundle/loader.go:35:		LoadProviderBundleMetadata			95.9%

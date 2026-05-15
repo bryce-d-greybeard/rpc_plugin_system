@@ -35,9 +35,21 @@ type Config struct {
 	// the plugin id and generation match the current manager generation.
 	ProviderBundleMetadata *providerbundle.ProviderBundleMetadata
 
+	// ProviderBundleMetadataRefresh is an explicit inert config refresh path for
+	// declared bundle metadata keyed by authenticated plugin generation. It does
+	// not execute provider code, admit bundle surfaces, or mint authority.
+	ProviderBundleMetadataRefresh *ProviderBundleMetadataRefreshConfig
+
 	// DisableProviderBundleAdminPathRedaction is an explicit unsafe/debug escape
 	// hatch. The default redacts host-private paths from admin DTOs.
 	DisableProviderBundleAdminPathRedaction bool
+}
+
+// ProviderBundleMetadataRefreshConfig carries explicit generation-keyed inert
+// metadata supplied by host configuration. The manager treats it as projection
+// input only.
+type ProviderBundleMetadataRefreshConfig struct {
+	ByGeneration map[int64]providerbundle.ProviderBundleMetadata
 }
 
 // State reports the current known runtime state of a plugin.
@@ -137,6 +149,11 @@ func New(cfg Config) (*Manager, error) {
 	if cfg.HeartbeatEvery == 0 {
 		cfg.HeartbeatEvery = 2 * time.Second
 	}
+	if cfg.ProviderBundleMetadata != nil {
+		metadata := cfg.ProviderBundleMetadata.Clone()
+		cfg.ProviderBundleMetadata = &metadata
+	}
+	cfg.ProviderBundleMetadataRefresh = cloneProviderBundleMetadataRefresh(cfg.ProviderBundleMetadataRefresh)
 	manager := &Manager{cfg: cfg, log: logger, closedCh: make(chan struct{})}
 	manager.logEvent(eventlog.Event{
 		Level:      eventlog.LevelInfo,
@@ -728,6 +745,14 @@ func (m *Manager) providerBundleCoreDTOLocked(state State) *providerbundle.Decla
 }
 
 func (m *Manager) generationBoundProviderBundleMetadataLocked(state State) *providerbundle.ProviderBundleMetadata {
+	if m.cfg.ProviderBundleMetadataRefresh != nil {
+		if metadata, ok := m.cfg.ProviderBundleMetadataRefresh.ByGeneration[int64(state.GenerationID)]; ok {
+			metadata = metadata.Clone()
+			if metadata.PluginID == state.PluginID && metadata.PluginGeneration == int64(state.GenerationID) {
+				return &metadata
+			}
+		}
+	}
 	if m.cfg.ProviderBundleMetadata == nil {
 		return nil
 	}
