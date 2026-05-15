@@ -2,6 +2,7 @@ package adminrpc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"rpc_plugin_system/internal/kernel"
+	"rpc_plugin_system/internal/providerbundle"
 	"rpc_plugin_system/test/testpluginapi"
 	"rpc_plugin_system/test/testroot"
 )
@@ -258,6 +260,113 @@ func TestStatusAndRestart(t *testing.T) {
 	}
 	if restarted.PID == 0 {
 		t.Fatalf("restart did not leave plugin running: %+v", restarted)
+	}
+}
+
+func TestStatusIncludesDeclaredBundleMetadataWithAdminRedaction(t *testing.T) {
+	pluginBin := buildPlugin(t)
+	runtimeDir := t.TempDir()
+	metadata := providerBundleTestMetadata("echo", 1)
+	metadata.BundleRootPath = "/home/alice/providers/password-bundle"
+	metadata.ManifestPath = "/home/alice/providers/manifest.json"
+	metadata.LuaAssets[0].Path = "/home/alice/providers/lua/private_key.lua"
+	metadata.RedactedErrorCode = "token_parse_failed"
+	metadata.RedactedErrorMessage = "failed with bearer token abc123"
+	metadata.SubstrateEventCorrelation = "evt-session-token"
+
+	host, err := kernel.NewHost(kernel.HostConfig{
+		RuntimeDir:     runtimeDir,
+		DialTimeout:    2 * time.Second,
+		CallTimeout:    200 * time.Millisecond,
+		HeartbeatEvery: 100 * time.Millisecond,
+		Plugins: []kernel.PluginConfig{{
+			PluginID:               "echo",
+			PluginPath:             pluginBin,
+			ProviderBundleMetadata: &metadata,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("new host: %v", err)
+	}
+	defer host.Close()
+	if err := host.StartAll(); err != nil {
+		t.Fatalf("start all: %v", err)
+	}
+
+	var state kernel.HostState
+	if err := (&Service{Host: host}).Status(Empty{}, &state); err != nil {
+		t.Fatalf("status: %v", err)
+	}
+	if len(state.Plugins) != 1 || state.Plugins[0].DeclaredProviderBundleMetadata == nil {
+		t.Fatalf("status missing declared bundle metadata: %#v", state)
+	}
+	dto := state.Plugins[0].DeclaredProviderBundleMetadata
+	if dto.Kind != "declared_provider_bundle_metadata_admin" || dto.Name != "declared_provider_bundle_metadata" {
+		t.Fatalf("unexpected declared metadata identity: %#v", dto)
+	}
+	encoded, err := json.Marshal(state)
+	if err != nil {
+		t.Fatalf("marshal state: %v", err)
+	}
+	text := string(encoded)
+	for _, forbidden := range []string{"/home/alice", "private_key", "token_parse_failed", "bearer token", "session-token"} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("admin status leaked %q in %s", forbidden, text)
+		}
+	}
+}
+
+func TestStatusPreservesNoBundleShape(t *testing.T) {
+	pluginBin := buildPlugin(t)
+	runtimeDir := t.TempDir()
+	host, err := kernel.NewHost(kernel.HostConfig{
+		RuntimeDir:     runtimeDir,
+		DialTimeout:    2 * time.Second,
+		CallTimeout:    200 * time.Millisecond,
+		HeartbeatEvery: 100 * time.Millisecond,
+		Plugins:        []kernel.PluginConfig{{PluginID: "echo", PluginPath: pluginBin}},
+	})
+	if err != nil {
+		t.Fatalf("new host: %v", err)
+	}
+	defer host.Close()
+	if err := host.StartAll(); err != nil {
+		t.Fatalf("start all: %v", err)
+	}
+
+	var state kernel.HostState
+	if err := (&Service{Host: host}).Status(Empty{}, &state); err != nil {
+		t.Fatalf("status: %v", err)
+	}
+	if len(state.Plugins) != 1 {
+		t.Fatalf("unexpected plugins: %#v", state)
+	}
+	if state.Plugins[0].DeclaredProviderBundleMetadata != nil {
+		t.Fatalf("no-bundle status unexpectedly had metadata: %#v", state.Plugins[0].DeclaredProviderBundleMetadata)
+	}
+}
+
+func providerBundleTestMetadata(pluginID string, generation int64) providerbundle.ProviderBundleMetadata {
+	return providerbundle.ProviderBundleMetadata{
+		PluginID:         pluginID,
+		PluginGeneration: generation,
+		BundleRootPath:   "/srv/providers/echo/tool-skills",
+		ManifestPath:     "/srv/providers/echo/tool-skills/manifest.json",
+		LuaAssets: []providerbundle.ProviderBundleAsset{{
+			Path: "/srv/providers/echo/tool-skills/lua/echo.lua",
+			Digest: providerbundle.ProviderBundleDigest{
+				Algorithm: "sha256",
+				Value:     "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+			},
+		}},
+		ManifestDigest: providerbundle.ProviderBundleDigest{
+			Algorithm: "sha256",
+			Value:     "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		},
+		SchemaVersion:             "tool-skills.v1",
+		ValidationStatus:          providerbundle.ProviderBundleStatusDeclaredValid,
+		ObservedAt:                time.Unix(1700000000, 0).UTC(),
+		SubstrateEventCorrelation: "evt-123",
 	}
 }
 

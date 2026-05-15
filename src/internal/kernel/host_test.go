@@ -2,12 +2,15 @@ package kernel
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"rpc_plugin_system/internal/eventlog"
+	"rpc_plugin_system/internal/providerbundle"
 	"rpc_plugin_system/test/testpluginapi"
 )
 
@@ -74,6 +77,86 @@ func TestHostStartStateAndRestartPlugin(t *testing.T) {
 	}
 	if !other.State().Healthy {
 		t.Fatal("other plugin should remain healthy")
+	}
+}
+
+func TestCoreSnapshotCarriesDeclaredBundleProvenanceWithoutAuthorityMaterial(t *testing.T) {
+	pluginBin := buildPlugin(t)
+	runtimeDir := t.TempDir()
+	metadata := kernelProviderBundleTestMetadata("echo", 1)
+	metadata.BundleRootPath = "/srv/providers/echo/socket-owner"
+	metadata.ManifestPath = "/srv/providers/echo/manifest.json"
+	metadata.LuaAssets[0].Path = "/srv/providers/echo/lua/authority_use_ref.lua"
+	metadata.RedactedErrorCode = "authority_use_ref_denied"
+	metadata.RedactedErrorMessage = "session socket handle rejected"
+	metadata.SubstrateEventCorrelation = "corr-123"
+
+	host, err := NewHost(HostConfig{
+		RuntimeDir:     runtimeDir,
+		DialTimeout:    2 * time.Second,
+		CallTimeout:    200 * time.Millisecond,
+		HeartbeatEvery: 100 * time.Millisecond,
+		Plugins: []PluginConfig{{
+			PluginID:               "echo",
+			PluginPath:             pluginBin,
+			ProviderBundleMetadata: &metadata,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("new host: %v", err)
+	}
+	defer host.Close()
+	if err := host.StartAll(); err != nil {
+		t.Fatalf("start all: %v", err)
+	}
+
+	snapshot := host.CoreSnapshot()
+	if len(snapshot.Plugins) != 1 || snapshot.Plugins[0].DeclaredProviderBundleMetadata == nil {
+		t.Fatalf("core snapshot missing declared metadata: %#v", snapshot)
+	}
+	dto := snapshot.Plugins[0].DeclaredProviderBundleMetadata
+	if dto.Kind != "declared_provider_bundle_metadata" || dto.Name != "declared_provider_bundle_metadata" {
+		t.Fatalf("core projection did not use declared metadata identity: %#v", dto)
+	}
+	if dto.PluginID != "echo" || dto.PluginGeneration != 1 || dto.SchemaVersion != "tool-skills.v1" || dto.ValidationStatus != providerbundle.ProviderBundleStatusDeclaredValid {
+		t.Fatalf("core projection lost identity/status facts: %#v", dto)
+	}
+	if len(dto.LuaAssetDigests) != 1 || dto.LuaAssetDigests[0].Value == "" || dto.ManifestDigest.Value == "" || dto.SubstrateEventCorrelation != "corr-123" {
+		t.Fatalf("core projection lost provenance/digest facts: %#v", dto)
+	}
+	encoded, err := json.Marshal(snapshot)
+	if err != nil {
+		t.Fatalf("marshal core snapshot: %v", err)
+	}
+	text := string(encoded)
+	for _, forbidden := range []string{"/srv/providers", "authority_use_ref", "socket", "handle", "session"} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("core snapshot leaked authority/path material %q in %s", forbidden, text)
+		}
+	}
+}
+
+func kernelProviderBundleTestMetadata(pluginID string, generation int64) providerbundle.ProviderBundleMetadata {
+	return providerbundle.ProviderBundleMetadata{
+		PluginID:         pluginID,
+		PluginGeneration: generation,
+		BundleRootPath:   "/srv/providers/echo/tool-skills",
+		ManifestPath:     "/srv/providers/echo/tool-skills/manifest.json",
+		LuaAssets: []providerbundle.ProviderBundleAsset{{
+			Path: "/srv/providers/echo/tool-skills/lua/echo.lua",
+			Digest: providerbundle.ProviderBundleDigest{
+				Algorithm: "sha256",
+				Value:     "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+			},
+		}},
+		ManifestDigest: providerbundle.ProviderBundleDigest{
+			Algorithm: "sha256",
+			Value:     "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		},
+		SchemaVersion:             "tool-skills.v1",
+		ValidationStatus:          providerbundle.ProviderBundleStatusDeclaredValid,
+		ObservedAt:                time.Unix(1700000000, 0).UTC(),
+		SubstrateEventCorrelation: "evt-123",
 	}
 }
 
@@ -269,5 +352,39 @@ func TestHostRoutesByPluginID(t *testing.T) {
 	}
 	if hb.PluginID != "echo-a" || hb.Status != testpluginapi.StatusHealthy {
 		t.Fatalf("unexpected heartbeat route result: %+v", hb)
+	}
+}
+
+func TestProviderBundleProjectionRequiresCurrentPluginGeneration(t *testing.T) {
+	pluginBin := buildPlugin(t)
+	runtimeDir := t.TempDir()
+	metadata := kernelProviderBundleTestMetadata("echo", 2)
+
+	host, err := NewHost(HostConfig{
+		RuntimeDir:     runtimeDir,
+		DialTimeout:    2 * time.Second,
+		CallTimeout:    200 * time.Millisecond,
+		HeartbeatEvery: 100 * time.Millisecond,
+		Plugins: []PluginConfig{{
+			PluginID:               "echo",
+			PluginPath:             pluginBin,
+			ProviderBundleMetadata: &metadata,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("new host: %v", err)
+	}
+	defer host.Close()
+	if err := host.StartAll(); err != nil {
+		t.Fatalf("start all: %v", err)
+	}
+
+	adminState := host.State()
+	if len(adminState.Plugins) != 1 || adminState.Plugins[0].DeclaredProviderBundleMetadata != nil {
+		t.Fatalf("stale generation metadata projected to admin state: %#v", adminState)
+	}
+	core := host.CoreSnapshot()
+	if len(core.Plugins) != 1 || core.Plugins[0].DeclaredProviderBundleMetadata != nil {
+		t.Fatalf("stale generation metadata projected to core state: %#v", core)
 	}
 }

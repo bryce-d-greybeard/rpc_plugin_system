@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"rpc_plugin_system/internal/providerbundle"
 	"rpc_plugin_system/test/testpluginapi"
 )
 
@@ -15,6 +16,10 @@ import (
 type PluginConfig struct {
 	PluginID   string
 	PluginPath string
+
+	// ProviderBundleMetadata is inert declared bundle metadata to project onto
+	// admin/core snapshots when it matches the current plugin generation.
+	ProviderBundleMetadata *providerbundle.ProviderBundleMetadata
 }
 
 // HostConfig defines the multi-plugin kernel host configuration.
@@ -25,6 +30,11 @@ type HostConfig struct {
 	CallTimeout    time.Duration
 	HeartbeatEvery time.Duration
 	Plugins        []PluginConfig
+
+	// DisableProviderBundleAdminPathRedaction leaves host-private paths visible
+	// on admin DTOs. The default is redaction, because admin status often crosses
+	// process and operator boundaries.
+	DisableProviderBundleAdminPathRedaction bool
 }
 
 // Host supervises multiple plugin managers and exposes registry-style access.
@@ -39,6 +49,13 @@ type HostState struct {
 	Plugins       []State
 	CapabilityMap map[string][]string
 	Routes        []Route
+}
+
+// CoreSnapshot is the core-facing host projection. It is intentionally separate
+// from HostState so admin surfaces cannot accidentally expose raw core-only
+// metadata.
+type CoreSnapshot struct {
+	Plugins []CoreState
 }
 
 // Route describes one explicit direct-routing target known to the host.
@@ -95,13 +112,15 @@ func NewHost(cfg HostConfig) (*Host, error) {
 		}
 		seen[plugin.PluginID] = struct{}{}
 		manager, err := New(Config{
-			RuntimeDir:     pluginRuntimeDir(cfg.RuntimeDir, plugin.PluginID),
-			PluginPath:     plugin.PluginPath,
-			PluginID:       plugin.PluginID,
-			DialTimeout:    cfg.DialTimeout,
-			CallTimeout:    cfg.CallTimeout,
-			HeartbeatEvery: cfg.HeartbeatEvery,
-			EventLogPath:   pluginEventLogPath(cfg.RuntimeDir, plugin.PluginID),
+			RuntimeDir:                              pluginRuntimeDir(cfg.RuntimeDir, plugin.PluginID),
+			PluginPath:                              plugin.PluginPath,
+			PluginID:                                plugin.PluginID,
+			DialTimeout:                             cfg.DialTimeout,
+			CallTimeout:                             cfg.CallTimeout,
+			HeartbeatEvery:                          cfg.HeartbeatEvery,
+			EventLogPath:                            pluginEventLogPath(cfg.RuntimeDir, plugin.PluginID),
+			ProviderBundleMetadata:                  plugin.ProviderBundleMetadata,
+			DisableProviderBundleAdminPathRedaction: cfg.DisableProviderBundleAdminPathRedaction,
 		})
 		if err != nil {
 			for _, existing := range host.managers {
@@ -189,6 +208,19 @@ func (h *Host) State() HostState {
 // States returns the current states in stable plugin-id order.
 func (h *Host) States() []State {
 	return h.State().Plugins
+}
+
+// CoreSnapshot returns core-facing declared metadata facts in stable plugin-id
+// order. It is inert substrate state only; it does not admit bundle surfaces or
+// mint executable authority.
+func (h *Host) CoreSnapshot() CoreSnapshot {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	out := CoreSnapshot{Plugins: make([]CoreState, 0, len(h.plugins))}
+	for _, pluginID := range h.plugins {
+		out.Plugins = append(out.Plugins, h.managers[pluginID].CoreState())
+	}
+	return out
 }
 
 // RestartPlugin restarts exactly one plugin and returns its new state.

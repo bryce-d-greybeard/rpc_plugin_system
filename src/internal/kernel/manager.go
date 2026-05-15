@@ -15,6 +15,7 @@ import (
 
 	"rpc_plugin_system/internal/auth"
 	"rpc_plugin_system/internal/eventlog"
+	"rpc_plugin_system/internal/providerbundle"
 	amruntime "rpc_plugin_system/internal/runtime"
 	"rpc_plugin_system/test/testpluginapi"
 )
@@ -28,6 +29,15 @@ type Config struct {
 	CallTimeout    time.Duration
 	HeartbeatEvery time.Duration
 	EventLogPath   string
+
+	// ProviderBundleMetadata is inert declared bundle metadata for this plugin.
+	// It is projection input only; it is not authority and is exposed only when
+	// the plugin id and generation match the current manager generation.
+	ProviderBundleMetadata *providerbundle.ProviderBundleMetadata
+
+	// DisableProviderBundleAdminPathRedaction is an explicit unsafe/debug escape
+	// hatch. The default redacts host-private paths from admin DTOs.
+	DisableProviderBundleAdminPathRedaction bool
 }
 
 // State reports the current known runtime state of a plugin.
@@ -42,6 +52,20 @@ type State struct {
 	Capabilities []string
 	SocketPath   string
 	PID          int
+
+	// DeclaredProviderBundleMetadata is admin-safe inert provider bundle
+	// metadata. Nil preserves the existing no-bundle status shape.
+	DeclaredProviderBundleMetadata *providerbundle.ProviderBundleAdminDTO `json:",omitempty"`
+}
+
+// CoreState reports core-facing state facts. It deliberately does not reuse
+// State because admin status must not carry raw core-only projection material.
+type CoreState struct {
+	PluginID     string
+	GenerationID uint64
+	Healthy      bool
+
+	DeclaredProviderBundleMetadata *providerbundle.DeclaredProviderBundleCoreDTO `json:",omitempty"`
 }
 
 // rpcClient wraps one RPC client and its underlying connection so the manager
@@ -667,7 +691,51 @@ func (m *Manager) State() State {
 	defer m.mu.RUnlock()
 	state := m.state
 	state.Capabilities = append([]string(nil), state.Capabilities...)
+	state.DeclaredProviderBundleMetadata = m.providerBundleAdminDTOLocked(state)
 	return state
+}
+
+// CoreState returns core-facing inert metadata facts for this manager. It does
+// not expose admin-only process/socket/path detail.
+func (m *Manager) CoreState() CoreState {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	state := CoreState{
+		PluginID:     m.state.PluginID,
+		GenerationID: m.state.GenerationID,
+		Healthy:      m.state.Healthy,
+	}
+	state.DeclaredProviderBundleMetadata = m.providerBundleCoreDTOLocked(m.state)
+	return state
+}
+
+func (m *Manager) providerBundleAdminDTOLocked(state State) *providerbundle.ProviderBundleAdminDTO {
+	metadata := m.generationBoundProviderBundleMetadataLocked(state)
+	if metadata == nil {
+		return nil
+	}
+	dto := metadata.AdminDTO(!m.cfg.DisableProviderBundleAdminPathRedaction)
+	return &dto
+}
+
+func (m *Manager) providerBundleCoreDTOLocked(state State) *providerbundle.DeclaredProviderBundleCoreDTO {
+	metadata := m.generationBoundProviderBundleMetadataLocked(state)
+	if metadata == nil {
+		return nil
+	}
+	dto := metadata.CoreDTO()
+	return &dto
+}
+
+func (m *Manager) generationBoundProviderBundleMetadataLocked(state State) *providerbundle.ProviderBundleMetadata {
+	if m.cfg.ProviderBundleMetadata == nil {
+		return nil
+	}
+	metadata := m.cfg.ProviderBundleMetadata.Clone()
+	if metadata.PluginID != state.PluginID || metadata.PluginGeneration != int64(state.GenerationID) {
+		return nil
+	}
+	return &metadata
 }
 
 func (m *Manager) dial(socketPath string, generation uint64) (*rpcClient, error) {

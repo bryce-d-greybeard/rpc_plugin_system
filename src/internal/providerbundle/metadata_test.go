@@ -1,6 +1,7 @@
 package providerbundle
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -170,9 +171,9 @@ func TestCloneAndDTOsDoNotLeakMutableAssetSlices(t *testing.T) {
 	}
 
 	core := metadata.CoreDTO()
-	core.LuaAssets[0].Path = "core-changed.lua"
-	if metadata.LuaAssets[0].Path == "core-changed.lua" {
-		t.Fatalf("CoreDTO leaked mutable LuaAssets slice")
+	core.LuaAssetDigests[0].Value = "core-changed"
+	if metadata.LuaAssets[0].Digest.Value == "core-changed" {
+		t.Fatalf("CoreDTO leaked mutable LuaAssets digest slice")
 	}
 
 	admin := metadata.AdminDTO(false)
@@ -215,17 +216,27 @@ func TestAdminRedactionRemovesSecretsAndHostPrivatePaths(t *testing.T) {
 
 func TestCoreDTOExplicitlyDistinguishesDeclaredMetadataFromBrokerSurface(t *testing.T) {
 	metadata := validMetadata()
+	metadata.SubstrateEventCorrelation = "evt-session-token"
 
 	core := metadata.CoreDTO()
 
 	if got, want := core.Kind, "declared_provider_bundle_metadata"; got != want {
 		t.Fatalf("CoreDTO kind = %q, want %q", got, want)
 	}
+	if got, want := core.Name, "declared_provider_bundle_metadata"; got != want {
+		t.Fatalf("CoreDTO name = %q, want %q", got, want)
+	}
 	if strings.Contains(core.Kind, "broker") || strings.Contains(core.Kind, "admitted") || strings.Contains(core.Kind, "surface") {
 		t.Fatalf("CoreDTO kind %q confuses declared metadata with broker/admitted surfaces", core.Kind)
 	}
-	if core.LuaAssets[0].Digest.Value != sha256Digest || core.ManifestDigest.Value != sha256Digest {
+	if len(core.LuaAssetDigests) != 1 || core.LuaAssetDigests[0].Value != sha256Digest || core.ManifestDigest.Value != sha256Digest {
 		t.Fatalf("CoreDTO lost digest provenance: %#v", core)
+	}
+	coreText := fmt.Sprintf("%#v", core)
+	for _, forbidden := range []string{"/srv/providers", "echo.lua", "session-token"} {
+		if strings.Contains(coreText, forbidden) {
+			t.Fatalf("CoreDTO exposed forbidden material %q in %#v", forbidden, core)
+		}
 	}
 }
 

@@ -52,19 +52,17 @@ type ProviderBundleMetadata struct {
 
 // DeclaredProviderBundleCoreDTO is the core-facing projection. Its name and kind
 // intentionally say declared metadata so callers cannot confuse it with a
-// broker-emitted or admitted surface.
+// broker-emitted or admitted surface. It carries provenance and digest facts
+// only; host-private paths stay out of the core admission-facing DTO.
 type DeclaredProviderBundleCoreDTO struct {
 	Kind                      string
+	Name                      string
 	PluginID                  string
 	PluginGeneration          int64
-	BundleRootPath            string
-	ManifestPath              string
-	LuaAssets                 []ProviderBundleAsset
+	LuaAssetDigests           []ProviderBundleDigest
 	ManifestDigest            ProviderBundleDigest
 	SchemaVersion             string
 	ValidationStatus          ProviderBundleStatus
-	ErrorCode                 string
-	ErrorMessage              string
 	ObservedAt                time.Time
 	SubstrateEventCorrelation string
 }
@@ -73,6 +71,7 @@ type DeclaredProviderBundleCoreDTO struct {
 // is requested, host-private path detail is removed.
 type ProviderBundleAdminDTO struct {
 	Kind                      string
+	Name                      string
 	PluginID                  string
 	PluginGeneration          int64
 	BundleRootPath            string
@@ -90,7 +89,7 @@ type ProviderBundleAdminDTO struct {
 var (
 	pluginIDPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
 	hexDigest64     = regexp.MustCompile(`^[a-fA-F0-9]{64}$`)
-	secretLike      = regexp.MustCompile(`(?i)(secret|token|password|passwd|private[ _-]?key|api[ _-]?key|bearer|credential)`)
+	secretLike      = regexp.MustCompile(`(?i)(secret|token|password|passwd|private[ _-]?key|api[ _-]?key|bearer|credential|authority[ _-]?use[ _-]?ref|authority[ _-]?ref|socket|handle|signer|session)`)
 )
 
 // Clone returns an independent snapshot of metadata slice fields.
@@ -182,22 +181,25 @@ func (s ProviderBundleStatus) Validate() error {
 }
 
 // CoreDTO returns an inert declared-metadata projection for the broker/core
-// boundary. It does not contain authority references or broker-emitted surfaces.
+// boundary. It does not contain authority references, host-private paths, or
+// broker-emitted surfaces.
 func (m ProviderBundleMetadata) CoreDTO() DeclaredProviderBundleCoreDTO {
+	assets := cloneAssets(m.LuaAssets)
+	digests := make([]ProviderBundleDigest, 0, len(assets))
+	for _, asset := range assets {
+		digests = append(digests, asset.Digest)
+	}
 	return DeclaredProviderBundleCoreDTO{
 		Kind:                      "declared_provider_bundle_metadata",
+		Name:                      "declared_provider_bundle_metadata",
 		PluginID:                  m.PluginID,
 		PluginGeneration:          m.PluginGeneration,
-		BundleRootPath:            m.BundleRootPath,
-		ManifestPath:              m.ManifestPath,
-		LuaAssets:                 cloneAssets(m.LuaAssets),
+		LuaAssetDigests:           digests,
 		ManifestDigest:            m.ManifestDigest,
 		SchemaVersion:             m.SchemaVersion,
 		ValidationStatus:          m.ValidationStatus,
-		ErrorCode:                 RedactSecretLike(m.RedactedErrorCode),
-		ErrorMessage:              RedactSecretLike(m.RedactedErrorMessage),
 		ObservedAt:                m.ObservedAt,
-		SubstrateEventCorrelation: m.SubstrateEventCorrelation,
+		SubstrateEventCorrelation: RedactSecretLike(m.SubstrateEventCorrelation),
 	}
 }
 
@@ -210,6 +212,7 @@ func (m ProviderBundleMetadata) AdminDTO(redactPaths bool) ProviderBundleAdminDT
 	}
 	return ProviderBundleAdminDTO{
 		Kind:                      "declared_provider_bundle_metadata_admin",
+		Name:                      "declared_provider_bundle_metadata",
 		PluginID:                  RedactSecretLike(m.PluginID),
 		PluginGeneration:          m.PluginGeneration,
 		BundleRootPath:            RedactAdminString(m.BundleRootPath, redactPaths),
