@@ -1,16 +1,17 @@
-ok  	rpc_plugin_system/cmd/rpcpluginctl	(cached)	coverage: 100.0% of statements
-ok  	rpc_plugin_system/cmd/rpcplugind	(cached)	coverage: 100.0% of statements
-ok  	rpc_plugin_system/examples/rpcplugin-echo	(cached)	coverage: 100.0% of statements
-ok  	rpc_plugin_system/examples/rpcplugin-failure	(cached)	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/adminrpc	(cached)	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/auth	(cached)	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/cli	(cached)	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/eventlog	(cached)	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/kernel	(cached)	coverage: 100.0% of statements
-ok  	rpc_plugin_system/internal/runtime	(cached)	coverage: 100.0% of statements
-ok  	rpc_plugin_system/pkg/plugin	(cached)	coverage: 100.0% of statements
-ok  	rpc_plugin_system/test/testpluginapi	(cached)	coverage: 100.0% of statements
-ok  	rpc_plugin_system/test/testroot	(cached)	coverage: 100.0% of statements
+ok  	rpc_plugin_system/cmd/rpcpluginctl	2.155s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/cmd/rpcplugind	2.506s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/examples/rpcplugin-echo	0.073s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/examples/rpcplugin-failure	0.039s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/adminrpc	0.970s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/auth	0.005s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/cli	0.011s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/eventlog	0.012s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/kernel	17.576s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/internal/providerbundle	0.008s	coverage: 93.0% of statements
+ok  	rpc_plugin_system/internal/runtime	0.012s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/pkg/plugin	0.017s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/test/testpluginapi	0.012s	coverage: 100.0% of statements
+ok  	rpc_plugin_system/test/testroot	0.064s	coverage: 100.0% of statements
 rpc_plugin_system/cmd/rpcpluginctl/args.go:23:			splitCommandArgs		100.0%
 rpc_plugin_system/cmd/rpcpluginctl/args.go:47:			takesValue			100.0%
 rpc_plugin_system/cmd/rpcpluginctl/args.go:59:			isBoolFlag			100.0%
@@ -132,6 +133,18 @@ rpc_plugin_system/internal/kernel/manager.go:1117:		logEvent			100.0%
 rpc_plugin_system/internal/kernel/manager.go:1124:		errorString			100.0%
 rpc_plugin_system/internal/kernel/monitor.go:12:		MonitorLoop			100.0%
 rpc_plugin_system/internal/kernel/plugin_id.go:12:		ValidatePluginID		100.0%
+rpc_plugin_system/internal/providerbundle/metadata.go:97:	Clone				100.0%
+rpc_plugin_system/internal/providerbundle/metadata.go:103:	LuaAssetPaths			100.0%
+rpc_plugin_system/internal/providerbundle/metadata.go:113:	Validate			93.3%
+rpc_plugin_system/internal/providerbundle/metadata.go:164:	Validate			100.0%
+rpc_plugin_system/internal/providerbundle/metadata.go:175:	Validate			100.0%
+rpc_plugin_system/internal/providerbundle/metadata.go:186:	CoreDTO				100.0%
+rpc_plugin_system/internal/providerbundle/metadata.go:206:	AdminDTO			100.0%
+rpc_plugin_system/internal/providerbundle/metadata.go:229:	RedactSecretLike		100.0%
+rpc_plugin_system/internal/providerbundle/metadata.go:238:	RedactAdminString		87.5%
+rpc_plugin_system/internal/providerbundle/metadata.go:252:	cloneAssets			80.0%
+rpc_plugin_system/internal/providerbundle/metadata.go:261:	containsSecretLike		100.0%
+rpc_plugin_system/internal/providerbundle/metadata.go:265:	validatePluginID		80.0%
 rpc_plugin_system/internal/runtime/peercred_linux.go:25:	ReadPeerCred			100.0%
 rpc_plugin_system/internal/runtime/runtime.go:22:		EnsureDir			100.0%
 rpc_plugin_system/internal/runtime/runtime.go:47:		SocketPath			100.0%
@@ -172,4 +185,4 @@ rpc_plugin_system/test/testpluginapi/config.go:116:		getenvFloat64			100.0%
 rpc_plugin_system/test/testpluginapi/config.go:128:		getenvBool			100.0%
 rpc_plugin_system/test/testroot/root.go:18:			SourceRoot			100.0%
 rpc_plugin_system/test/testroot/root.go:28:			sourceRoot			100.0%
-total:								(statements)			100.0%
+total:								(statements)			99.7%
