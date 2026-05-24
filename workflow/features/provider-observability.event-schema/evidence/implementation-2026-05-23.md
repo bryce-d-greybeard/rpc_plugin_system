@@ -85,3 +85,21 @@ Known gap: root `make doc-check` and root `make test` cannot pass in this worktr
 ## Next recommendation
 
 Review the eventlog-only schema surface, then unblock repository-level `doc-check` by adding the required workflow directories for unrelated manifest features in a separate workflow/layout cleanup if those records are intended to be active.
+
+## Orchestrator final verification update
+
+After review, the orchestrator added tracked `.gitkeep` files for the provider-observability workflow `evidence/`, `review/`, and `postmortems/` directories. That fixed the fresh-worktree layout problem described above.
+
+Final verification from `/tank/development/linus/rpc-plugin-system` after integration:
+
+```text
+git diff --check
+make doc-check
+make test
+cd src && go vet ./...
+cd src && go test ./internal/eventlog -cover
+```
+
+All passed. Eventlog package coverage remained `92.9%`.
+
+Final coverage/gap status: no accepted coverage gap for `provider-observability.event-schema`; the earlier root verification blocker was resolved before the integration commit.

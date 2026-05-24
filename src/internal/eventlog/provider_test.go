@@ -85,6 +85,51 @@ func TestProviderDiagnosticEventIsDistinctFromBoundaryEvent(t *testing.T) {
 	}
 }
 
+func TestProviderBoundaryEventsRequireMatchingStatuses(t *testing.T) {
+	tests := []struct {
+		event  string
+		status string
+	}{
+		{EventProviderOperationStarted, ProviderStatusStarted},
+		{EventProviderOperationSucceeded, ProviderStatusSucceeded},
+		{EventProviderOperationFailed, ProviderStatusFailed},
+		{EventProviderOperationDegraded, ProviderStatusDegraded},
+		{EventProviderOperationUnavailable, ProviderStatusUnavailable},
+	}
+	for _, tc := range tests {
+		t.Run(tc.event, func(t *testing.T) {
+			obs := validProviderObservation()
+			obs.Event = tc.event
+			obs.Status = tc.status
+			if _, err := ProviderEvent(obs); err != nil {
+				t.Fatalf("ProviderEvent(%s/%s): %v", tc.event, tc.status, err)
+			}
+
+			obs.Status = ProviderStatusFailed
+			if obs.Status == tc.status {
+				obs.Status = ProviderStatusStarted
+			}
+			if _, err := ProviderEvent(obs); err == nil || !strings.Contains(err.Error(), "requires status") {
+				t.Fatalf("mismatched status err = %v, want requires status", err)
+			}
+		})
+	}
+}
+
+func TestProviderDiagnosticReportedAcceptsBoundedStatuses(t *testing.T) {
+	for _, status := range []string{ProviderStatusStarted, ProviderStatusSucceeded, ProviderStatusFailed, ProviderStatusDegraded, ProviderStatusUnavailable, ProviderStatusRejected} {
+		t.Run(status, func(t *testing.T) {
+			obs := validProviderObservation()
+			obs.Component = ComponentProviderDiagnostic
+			obs.Event = EventProviderDiagnosticReported
+			obs.Status = status
+			if _, err := ProviderEvent(obs); err != nil {
+				t.Fatalf("ProviderEvent diagnostic status %s: %v", status, err)
+			}
+		})
+	}
+}
+
 func TestProviderEventRejectsUnknownProviderEvent(t *testing.T) {
 	obs := validProviderObservation()
 	obs.Event = "provider_operation_confused"

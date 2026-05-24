@@ -156,7 +156,7 @@ Existing lifecycle/RPC/auth/restart/cleanup event names must remain backward-com
 
 ### Provider observability event schema
 
-Active feature: `provider-observability.event-schema`.
+The `provider-observability.event-schema` slice implements this schema. Later provider-observability slices build on these additive eventlog fields and helpers.
 
 Add provider observability as additive eventlog schema, not as a replacement for lifecycle logs.
 
