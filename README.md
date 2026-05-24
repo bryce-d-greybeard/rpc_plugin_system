@@ -32,6 +32,10 @@ Provider observability is structured and redacted:
 
 Downstream provider docs should inherit this substrate by reference and add only provider-specific deltas. See [`docs/downstream-provider-guidance.md`](docs/downstream-provider-guidance.md).
 
+## Provider diagnostics status
+
+Final provider diagnostics judge sweep accepted this substrate with constraints. `rpc-plugin-system` owns the provider event schema, SDK helper, admin/CLI filters, and unsafe-material rejection/redaction. It still does not own provider-specific semantics, broker admission, authority issuance, routing policy, or client-visible provider surfaces. Keep provider diagnostics on `Logger.ProviderDiagnostic`; do not smuggle them through arbitrary lifecycle `LogEvent` fields.
+
 Build all packages:
 
 ```bash
