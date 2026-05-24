@@ -418,6 +418,83 @@ func TestLoggerDefaultsAndNilSafety(t *testing.T) {
 	}
 }
 
+func TestLoggerProviderDiagnosticWritesSafeStructuredEvent(t *testing.T) {
+	dir := t.TempDir()
+	cfg := Config{SocketPath: filepath.Join(dir, "plugin.sock"), PluginID: "provider.echo", GenerationID: 42}
+	logger, err := NewLogger(cfg)
+	if err != nil {
+		t.Fatalf("NewLogger: %v", err)
+	}
+	if err := logger.ProviderDiagnostic(ProviderDiagnostic{
+		CapabilityID:   "mail.send",
+		OperationID:    "send_message",
+		CorrelationID:  "corr-123",
+		Status:         ProviderStatusDegraded,
+		DurationMS:     42,
+		ErrorClass:     "upstream_unavailable",
+		DegradedReason: "rate_limited",
+		Message:        "provider degraded",
+		Details:        map[string]any{"attempt": float64(2), "retryable": true},
+	}); err != nil {
+		t.Fatalf("ProviderDiagnostic: %v", err)
+	}
+	if err := logger.Close(); err != nil {
+		t.Fatalf("close logger: %v", err)
+	}
+
+	data, err := os.ReadFile(logger.Path())
+	if err != nil {
+		t.Fatalf("read log: %v", err)
+	}
+	var event LogEvent
+	if err := json.Unmarshal([]byte(strings.TrimSpace(string(data))), &event); err != nil {
+		t.Fatalf("decode event %q: %v", data, err)
+	}
+	if event.Component != "provider_diagnostic" || event.Event != "provider_diagnostic_reported" || event.PluginID != "provider.echo" || event.GenerationID != 42 || event.PID == 0 {
+		t.Fatalf("identity/default fields not preserved: %+v", event)
+	}
+	if event.CapabilityID != "mail.send" || event.OperationID != "send_message" || event.CorrelationID != "corr-123" || event.Status != ProviderStatusDegraded || event.DurationMS != 42 || event.ErrorClass != "upstream_unavailable" || event.DegradedReason != "rate_limited" || event.Message != "provider degraded" {
+		t.Fatalf("provider diagnostic fields not preserved: %+v", event)
+	}
+}
+
+func TestLoggerProviderDiagnosticRejectsUnsafeInput(t *testing.T) {
+	var nilLogger *Logger
+	if err := nilLogger.ProviderDiagnostic(ProviderDiagnostic{}); err != nil {
+		t.Fatalf("nil logger provider diagnostic: %v", err)
+	}
+
+	base := ProviderDiagnostic{
+		CapabilityID:  "mail.send",
+		OperationID:   "send_message",
+		CorrelationID: "corr-123",
+		Status:        ProviderStatusFailed,
+		ErrorClass:    "upstream_unavailable",
+		Message:       "provider failed",
+	}
+	tests := []struct {
+		name string
+		mut  func(*ProviderDiagnostic)
+	}{
+		{"missing capability", func(d *ProviderDiagnostic) { d.CapabilityID = "" }},
+		{"unknown status", func(d *ProviderDiagnostic) { d.Status = "confused" }},
+		{"negative duration", func(d *ProviderDiagnostic) { d.DurationMS = -1 }},
+		{"unsafe top-level field", func(d *ProviderDiagnostic) { d.CorrelationID = "authority_ref:abc" }},
+		{"unsafe detail key", func(d *ProviderDiagnostic) { d.Details = map[string]any{"payload": "omitted"} }},
+		{"unsafe detail value", func(d *ProviderDiagnostic) { d.Details = map[string]any{"note": "bearer token omitted"} }},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			logger := newTestLogger(t)
+			diagnostic := base
+			tc.mut(&diagnostic)
+			if err := logger.ProviderDiagnostic(diagnostic); err == nil {
+				t.Fatal("expected provider diagnostic validation error")
+			}
+		})
+	}
+}
+
 func TestNewLoggerReportsOpenFailure(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "not-a-dir")

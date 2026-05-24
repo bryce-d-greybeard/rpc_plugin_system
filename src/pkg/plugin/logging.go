@@ -36,6 +36,31 @@ const (
 	LogComponentPlugin = "plugin"
 )
 
+// ProviderDiagnostic is the public SDK input for provider-owned structured diagnostics.
+// It records coarse provider facts only; raw payloads, secrets, authority refs,
+// handles, sessions, sockets, signer material, and provider-private paths are
+// rejected before durable logging.
+type ProviderDiagnostic struct {
+	CapabilityID   string
+	OperationID    string
+	CorrelationID  string
+	Status         string
+	DurationMS     int64
+	ErrorClass     string
+	DegradedReason string
+	Message        string
+	Details        map[string]any
+}
+
+const (
+	ProviderStatusStarted     = eventlog.ProviderStatusStarted
+	ProviderStatusSucceeded   = eventlog.ProviderStatusSucceeded
+	ProviderStatusFailed      = eventlog.ProviderStatusFailed
+	ProviderStatusDegraded    = eventlog.ProviderStatusDegraded
+	ProviderStatusUnavailable = eventlog.ProviderStatusUnavailable
+	ProviderStatusRejected    = eventlog.ProviderStatusRejected
+)
+
 const (
 	EventPluginBootStarted      = "plugin_boot_started"
 	EventPluginBootFailed       = "plugin_boot_failed"
@@ -102,6 +127,36 @@ func (l *Logger) Event(event LogEvent) error {
 	}
 	if event.Level == "" {
 		event.Level = LogLevelInfo
+	}
+	return l.logger.Write(event)
+}
+
+// ProviderDiagnostic writes one provider-owned structured diagnostic for the current plugin generation.
+func (l *Logger) ProviderDiagnostic(d ProviderDiagnostic) error {
+	if l == nil || l.logger == nil {
+		return nil
+	}
+	event, err := eventlog.ProviderEvent(eventlog.ProviderObservation{
+		Level:          LogLevelInfo,
+		Component:      eventlog.ComponentProviderDiagnostic,
+		Event:          eventlog.EventProviderDiagnosticReported,
+		PluginID:       l.pluginID,
+		GenerationID:   l.generationID,
+		CapabilityID:   d.CapabilityID,
+		OperationID:    d.OperationID,
+		CorrelationID:  d.CorrelationID,
+		Status:         d.Status,
+		DurationMS:     d.DurationMS,
+		ErrorClass:     d.ErrorClass,
+		DegradedReason: d.DegradedReason,
+		Message:        d.Message,
+		Details:        d.Details,
+	})
+	if err != nil {
+		return fmt.Errorf("provider diagnostic: %w", err)
+	}
+	if event.PID == 0 {
+		event.PID = l.pid
 	}
 	return l.logger.Write(event)
 }
