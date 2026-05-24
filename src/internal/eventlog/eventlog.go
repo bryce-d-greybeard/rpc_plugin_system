@@ -95,19 +95,26 @@ type Logger struct {
 
 // Event describes one recorded lifecycle event.
 type Event struct {
-	Time         time.Time      `json:"time"`
-	Level        string         `json:"level"`
-	Component    string         `json:"component"`
-	Event        string         `json:"event"`
-	PluginID     string         `json:"plugin_id,omitempty"`
-	GenerationID uint64         `json:"generation_id,omitempty"`
-	PID          int            `json:"pid,omitempty"`
-	SocketPath   string         `json:"socket_path,omitempty"`
-	Method       string         `json:"method,omitempty"`
-	Message      string         `json:"message,omitempty"`
-	Error        string         `json:"error,omitempty"`
-	Reason       string         `json:"reason,omitempty"`
-	Details      map[string]any `json:"details,omitempty"`
+	Time           time.Time      `json:"time"`
+	Level          string         `json:"level"`
+	Component      string         `json:"component"`
+	Event          string         `json:"event"`
+	PluginID       string         `json:"plugin_id,omitempty"`
+	GenerationID   uint64         `json:"generation_id,omitempty"`
+	PID            int            `json:"pid,omitempty"`
+	SocketPath     string         `json:"socket_path,omitempty"`
+	Method         string         `json:"method,omitempty"`
+	CapabilityID   string         `json:"capability_id,omitempty"`
+	OperationID    string         `json:"operation_id,omitempty"`
+	CorrelationID  string         `json:"correlation_id,omitempty"`
+	Status         string         `json:"status,omitempty"`
+	DurationMS     int64          `json:"duration_ms,omitempty"`
+	ErrorClass     string         `json:"error_class,omitempty"`
+	DegradedReason string         `json:"degraded_reason,omitempty"`
+	Message        string         `json:"message,omitempty"`
+	Error          string         `json:"error,omitempty"`
+	Reason         string         `json:"reason,omitempty"`
+	Details        map[string]any `json:"details,omitempty"`
 }
 
 // New opens or creates an append-only event log file with default retention.

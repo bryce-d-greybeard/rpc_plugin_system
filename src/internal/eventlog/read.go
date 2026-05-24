@@ -13,14 +13,17 @@ import (
 
 // Filters selects a subset of events during log reads.
 type Filters struct {
-	Level     string
-	Component string
-	Event     string
-	PluginID  string
-	Method    string
-	Limit     int
-	Since     time.Time
-	Reverse   bool
+	Level         string
+	Component     string
+	Event         string
+	PluginID      string
+	Method        string
+	CapabilityID  string
+	OperationID   string
+	CorrelationID string
+	Limit         int
+	Since         time.Time
+	Reverse       bool
 }
 
 // Summary reports coarse counts for operator use.
@@ -91,6 +94,27 @@ func FormatText(event Event) string {
 	}
 	if event.Method != "" {
 		parts = append(parts, "method="+event.Method)
+	}
+	if event.CapabilityID != "" {
+		parts = append(parts, "capability="+event.CapabilityID)
+	}
+	if event.OperationID != "" {
+		parts = append(parts, "operation="+event.OperationID)
+	}
+	if event.CorrelationID != "" {
+		parts = append(parts, "correlation="+event.CorrelationID)
+	}
+	if event.Status != "" {
+		parts = append(parts, "status="+event.Status)
+	}
+	if event.DurationMS != 0 {
+		parts = append(parts, fmt.Sprintf("duration_ms=%d", event.DurationMS))
+	}
+	if event.ErrorClass != "" {
+		parts = append(parts, "error_class="+event.ErrorClass)
+	}
+	if event.DegradedReason != "" {
+		parts = append(parts, "degraded_reason="+event.DegradedReason)
 	}
 	if event.Message != "" {
 		parts = append(parts, event.Message)
@@ -170,6 +194,15 @@ func match(event Event, filters Filters) bool {
 		return false
 	}
 	if filters.Method != "" && event.Method != filters.Method {
+		return false
+	}
+	if filters.CapabilityID != "" && event.CapabilityID != filters.CapabilityID {
+		return false
+	}
+	if filters.OperationID != "" && event.OperationID != filters.OperationID {
+		return false
+	}
+	if filters.CorrelationID != "" && event.CorrelationID != filters.CorrelationID {
 		return false
 	}
 	if !filters.Since.IsZero() && event.Time.Before(filters.Since) {
