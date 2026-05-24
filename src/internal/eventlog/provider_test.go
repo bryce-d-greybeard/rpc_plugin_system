@@ -179,6 +179,29 @@ func TestProviderEventRejectsNegativeDuration(t *testing.T) {
 	}
 }
 
+func TestProviderEventRejectsUnsafeTopLevelProviderFields(t *testing.T) {
+	tests := []struct {
+		name string
+		mut  func(*ProviderObservation)
+	}{
+		{"capability payload marker", func(obs *ProviderObservation) { obs.CapabilityID = "mail.payload" }},
+		{"operation secret marker", func(obs *ProviderObservation) { obs.OperationID = "send_token" }},
+		{"correlation authority ref", func(obs *ProviderObservation) { obs.CorrelationID = "authority_ref:abc" }},
+		{"error raw response", func(obs *ProviderObservation) { obs.ErrorClass = "raw response_body omitted" }},
+		{"degraded private path", func(obs *ProviderObservation) { obs.DegradedReason = "/home/provider/private" }},
+		{"message bearer token", func(obs *ProviderObservation) { obs.Message = "bearer token omitted" }},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			obs := validProviderObservation()
+			tc.mut(&obs)
+			if _, err := ProviderEvent(obs); err == nil || !strings.Contains(err.Error(), "unsafe provider") {
+				t.Fatalf("err = %v, want unsafe provider rejection", err)
+			}
+		})
+	}
+}
+
 func TestProviderEventRejectsUnsafeDetailKeysAndValues(t *testing.T) {
 	tests := []struct {
 		name    string

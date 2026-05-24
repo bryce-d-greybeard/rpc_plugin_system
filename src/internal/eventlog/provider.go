@@ -156,6 +156,21 @@ func validateProviderObservation(obs ProviderObservation) error {
 	if err := requireProviderField("correlation id", obs.CorrelationID); err != nil {
 		return err
 	}
+	for _, field := range []struct {
+		name  string
+		value string
+	}{
+		{"capability id", obs.CapabilityID},
+		{"operation id", obs.OperationID},
+		{"correlation id", obs.CorrelationID},
+		{"error class", obs.ErrorClass},
+		{"degraded reason", obs.DegradedReason},
+		{"message", obs.Message},
+	} {
+		if err := validateSafeProviderText(field.name, field.value); err != nil {
+			return err
+		}
+	}
 	if obs.DurationMS < 0 {
 		return fmt.Errorf("duration_ms must be non-negative")
 	}
@@ -172,8 +187,18 @@ func requireProviderField(name, value string) error {
 	if strings.TrimSpace(value) == "" {
 		return fmt.Errorf("%s is required", name)
 	}
+	return validateSafeProviderText(name, value)
+}
+
+func validateSafeProviderText(name, value string) error {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
 	if strings.IndexFunc(value, unicode.IsControl) >= 0 {
 		return fmt.Errorf("%s contains control characters", name)
+	}
+	if unsafeProviderDetailText(value) || looksLikeProviderPrivatePath(value) {
+		return fmt.Errorf("unsafe provider %s", name)
 	}
 	return nil
 }

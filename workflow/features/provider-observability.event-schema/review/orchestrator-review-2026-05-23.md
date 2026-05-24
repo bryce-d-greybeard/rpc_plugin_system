@@ -22,7 +22,7 @@ cd src && go vet ./...
 cd src && go test ./internal/eventlog -cover
 ```
 
-All passed. Eventlog package coverage: 92.9%.
+All passed. Eventlog package coverage: 93.1% after the judge-loop top-level provider field rejection tests.
 
 ## Coverage
 
@@ -33,7 +33,7 @@ Relevant behavior covered:
 - unknown event/status rejection;
 - missing plugin id/generation/capability/operation/correlation rejection;
 - negative duration rejection;
-- unsafe detail key/value rejection for payload/secret/authority/path markers;
+- unsafe top-level provider field and detail key/value rejection for payload/secret/authority/path markers;
 - filtering by capability/operation/correlation;
 - text formatting of provider fields.
 

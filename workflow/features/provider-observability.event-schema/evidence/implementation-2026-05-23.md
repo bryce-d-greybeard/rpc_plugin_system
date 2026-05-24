@@ -71,7 +71,7 @@ Focused tests cover the relevant provider event schema behavior requested for th
 - rejection of unknown statuses;
 - rejection of missing/malformed plugin id, missing generation, capability, operation, and correlation ids;
 - rejection of negative duration;
-- rejection of unsafe detail keys/values including payload, secret/token/API key, authority ref/use-ref, session, and provider-private absolute path markers;
+- rejection of unsafe top-level provider fields and detail keys/values including payload, secret/token/API key, authority ref/use-ref, session, and provider-private absolute path markers;
 - filtering by capability, operation, and correlation ids;
 - text formatting of provider fields.
 
@@ -100,6 +100,6 @@ cd src && go vet ./...
 cd src && go test ./internal/eventlog -cover
 ```
 
-All passed. Eventlog package coverage remained `92.9%`.
+All passed. Eventlog package coverage reached `93.1%` after the judge-loop top-level provider field rejection tests.
 
 Final coverage/gap status: no accepted coverage gap for `provider-observability.event-schema`; the earlier root verification blocker was resolved before the integration commit.
