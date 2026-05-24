@@ -36,6 +36,7 @@ This baseline is not 100% line coverage. That is acceptable only because the pol
 | `control-plane-ops` | admin RPC integration, CLI argument/status tests, event-log read/write tests, negative malformed input tests | admin RPC, CLI pre-I/O validation, eventlog long-line/corrupt-line tests | add aggregate multi-plugin log read if/when it becomes a committed feature |
 | `plugin-authoring-sdk` | SDK API unit tests, example build tests, auth-before-RPC behavior tests, public import examples | go-runtime tests, Capabilities auth tests, bad-token and double-auth replay rejection tests, local import docs, example binaries built in `make build` | add external-module packaging tests only if a real external module path is introduced |
 | `release-packaging-governance` | build wrapper tests, install docs command validation, release checklist consistency checks, coverage artifact checks | root/source Makefile tests, install-doc smoke check, coverage artifact tests, protocol honesty check | add release-promotion checklist automation when promotion process changes |
+| `provider-observability` | event schema unit tests, SDK emission tests, admin/CLI log-read tests, redaction negative tests, downstream provider logging docs | planned; `provider-observability.event-schema` is active after PRD boundary update | no accepted gaps; payload/secret/authority-handle logging is explicitly out of scope and must be rejected/redacted by tests |
 
 ## Gap record format
 

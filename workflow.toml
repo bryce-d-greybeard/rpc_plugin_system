@@ -2,7 +2,7 @@ schema_version = 1
 project = "rpc-plugin-system"
 repository = "agents/rpc-plugin-system"
 worktree_root = "/tank/development/linus/rpc-plugin-system-worktrees"
-active = ""
+active = "provider-observability.event-schema"
 
 [coverage]
 map = "workflow/artifacts/global-coverage-map.md"
@@ -505,3 +505,52 @@ branch = "workflow/feature/provider-bundle-substrate.restart-invalidation"
 path = "workflow/features/provider-bundle-substrate.restart-invalidation"
 source_path = "src/internal"
 worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/provider-bundle-substrate.restart-invalidation"
+
+[[root_features]]
+id = "provider-observability"
+branch = "workflow/root/provider-observability"
+path = "workflow/root/provider-observability"
+source_path = "src/internal/eventlog"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/root/provider-observability"
+features = [
+  "provider-observability.event-schema",
+  "provider-observability.sdk-emission",
+  "provider-observability.admin-read",
+  "provider-observability.redaction-contracts",
+]
+
+[[features]]
+id = "provider-observability.event-schema"
+root = "provider-observability"
+state = "active"
+branch = "workflow/feature/provider-observability.event-schema"
+path = "workflow/features/provider-observability.event-schema"
+source_path = "src/internal/eventlog"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/provider-observability.event-schema"
+
+[[features]]
+id = "provider-observability.sdk-emission"
+root = "provider-observability"
+state = "planned"
+branch = "workflow/feature/provider-observability.sdk-emission"
+path = "workflow/features/provider-observability.sdk-emission"
+source_path = "src/pkg/plugin"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/provider-observability.sdk-emission"
+
+[[features]]
+id = "provider-observability.admin-read"
+root = "provider-observability"
+state = "planned"
+branch = "workflow/feature/provider-observability.admin-read"
+path = "workflow/features/provider-observability.admin-read"
+source_path = "src/internal/adminrpc"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/provider-observability.admin-read"
+
+[[features]]
+id = "provider-observability.redaction-contracts"
+root = "provider-observability"
+state = "planned"
+branch = "workflow/feature/provider-observability.redaction-contracts"
+path = "workflow/features/provider-observability.redaction-contracts"
+source_path = "src/internal/eventlog"
+worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/provider-observability.redaction-contracts"
