@@ -383,7 +383,9 @@ Allow safe diagnostic facts:
 - digest algorithm/value where explicitly non-authoritative;
 - counts/sizes when they do not reveal payload content.
 
-Redaction must be deterministic and covered by tests. If a value is ambiguous, fail closed or redact.
+Redaction must be deterministic and covered by tests. Separator variants of unsafe markers (`authority-ref`, `authority_ref`, `authority.ref`, `authority:ref`, `authority ref`) are equivalent for matching. If a value is ambiguous, fail closed or redact.
+
+Durable provider event writes through `ProviderEvent` reject unsafe top-level provider text and unsafe details. Operator display through admin/CLI read paths redacts unsafe provider material, including socket paths and unsafe details, before rendering text or JSON. Downstream providers must use `Logger.ProviderDiagnostic` rather than arbitrary `LogEvent` provider diagnostics when emitting provider observability facts.
 
 ## Required tests
 

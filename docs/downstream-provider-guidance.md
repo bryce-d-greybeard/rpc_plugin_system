@@ -123,3 +123,23 @@ A provider that only works because systemd injected magic environment or filesys
 ## Compatibility stance
 
 If a provider needs a different startup environment, transport, auth flow, lifecycle rule, or generation rule, that is not a provider-local extension. It is a substrate compatibility change and must be handled in `rpc_plugin_system` standard docs and tests first.
+
+## Provider diagnostic logging contract
+
+Provider diagnostics are for operator diagnosis, not for authority transfer or payload capture.
+
+Use the SDK `Logger.ProviderDiagnostic` helper for provider-owned diagnostics. Providers should populate only these safe facts:
+
+- plugin id and generation are bound by the substrate logger, not provider input;
+- capability id and operation id as stable names, not permissions;
+- correlation id as an audit join key, not an authority ref;
+- bounded status;
+- duration in milliseconds;
+- coarse error class or degraded/unavailable reason;
+- non-authoritative digest/ref facts, counts, or sizes when they do not reveal payload content.
+
+Providers must not log raw prompts, provider request/response payloads, credentials, tokens, bearer strings, API keys, private keys, passwords, raw authority refs, authority-use refs, file/process/browser/socket/session handles, signer material, provider-private absolute paths, raw upstream response bodies, or reusable external handles.
+
+The substrate rejects unsafe provider diagnostic input before durable provider event writes where the SDK/schema helper is used. Local admin and CLI read surfaces also redact unsafe provider material before display. If a provider cannot tell whether a value is safe, it must omit the value or replace it with a coarse class such as `upstream_unavailable`, `rate_limited`, `quota_exceeded`, or a non-authoritative digest/count.
+
+Do not bypass the SDK helper by writing arbitrary `LogEvent` provider diagnostics. `LogEvent` exists for backward-compatible plugin lifecycle logging; provider observability uses the stricter diagnostic helper and redaction contract.

@@ -231,8 +231,8 @@ func RedactForDisplay(event Event) Event {
 		if value == "" {
 			return ""
 		}
-		if unsafeProviderDetailText(value) || looksLikeProviderPrivatePath(value) {
-			return "[redacted]"
+		if UnsafeProviderText(value) || looksLikeProviderPrivatePath(value) {
+			return ProviderRedactedValue
 		}
 		return value
 	}

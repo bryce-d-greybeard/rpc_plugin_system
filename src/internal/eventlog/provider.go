@@ -34,6 +34,8 @@ const (
 
 var providerPluginIDPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
 
+const ProviderRedactedValue = "[redacted]"
+
 var providerEventStatus = map[string]string{
 	EventProviderOperationStarted:     ProviderStatusStarted,
 	EventProviderOperationSucceeded:   ProviderStatusSucceeded,
@@ -197,7 +199,7 @@ func validateSafeProviderText(name, value string) error {
 	if strings.IndexFunc(value, unicode.IsControl) >= 0 {
 		return fmt.Errorf("%s contains control characters", name)
 	}
-	if unsafeProviderDetailText(value) || looksLikeProviderPrivatePath(value) {
+	if UnsafeProviderText(value) || looksLikeProviderPrivatePath(value) {
 		return fmt.Errorf("unsafe provider %s", name)
 	}
 	return nil
@@ -235,7 +237,7 @@ func safeProviderDetails(details map[string]any) (map[string]any, error) {
 	}
 	safe := make(map[string]any, len(details))
 	for key, value := range details {
-		if unsafeProviderDetailText(key) {
+		if UnsafeProviderText(key) {
 			return nil, fmt.Errorf("unsafe provider detail key %q", key)
 		}
 		if err := validateProviderDetailValue(key, value); err != nil {
@@ -251,13 +253,13 @@ func validateProviderDetailValue(key string, value any) error {
 	case nil, bool, float64, float32, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return nil
 	case string:
-		if unsafeProviderDetailText(v) || looksLikeProviderPrivatePath(v) {
+		if UnsafeProviderText(v) || looksLikeProviderPrivatePath(v) {
 			return fmt.Errorf("unsafe provider detail value for key %q", key)
 		}
 		return nil
 	case []string:
 		for _, item := range v {
-			if unsafeProviderDetailText(item) || looksLikeProviderPrivatePath(item) {
+			if UnsafeProviderText(item) || looksLikeProviderPrivatePath(item) {
 				return fmt.Errorf("unsafe provider detail value for key %q", key)
 			}
 		}
@@ -277,7 +279,11 @@ func validateProviderDetailValue(key string, value any) error {
 	}
 }
 
-func unsafeProviderDetailText(text string) bool {
+// UnsafeProviderText reports whether text is unsafe for provider observability.
+// The rule is deliberately deterministic and fail-closed: separators are
+// normalized before matching so authority-ref, authority_ref, authority.ref,
+// authority:ref, and authority ref are treated the same.
+func UnsafeProviderText(text string) bool {
 	normalized := strings.ToLower(strings.NewReplacer("-", "_", " ", "_", ".", "_", ":", "_").Replace(text))
 	for _, marker := range unsafeDetailMarkers {
 		if strings.Contains(normalized, strings.ToLower(marker)) {

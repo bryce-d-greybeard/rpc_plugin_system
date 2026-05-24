@@ -2,7 +2,7 @@ schema_version = 1
 project = "rpc-plugin-system"
 repository = "agents/rpc-plugin-system"
 worktree_root = "/tank/development/linus/rpc-plugin-system-worktrees"
-active = "provider-observability.sdk-emission"
+active = ""
 
 [coverage]
 map = "workflow/artifacts/global-coverage-map.md"
@@ -549,7 +549,7 @@ worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/provide
 [[features]]
 id = "provider-observability.redaction-contracts"
 root = "provider-observability"
-state = "active"
+state = "done"
 branch = "workflow/feature/provider-observability.redaction-contracts"
 path = "workflow/features/provider-observability.redaction-contracts"
 source_path = "src/internal/eventlog"
