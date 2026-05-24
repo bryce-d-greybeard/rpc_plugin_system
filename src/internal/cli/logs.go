@@ -21,6 +21,7 @@ func WriteEventsText(w io.Writer, events []eventlog.Event) error {
 
 // WriteEventsJSON writes events as indented JSON.
 func WriteEventsJSON(w io.Writer, events []eventlog.Event) error {
+	events = redactEventsForDisplay(events)
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(events); err != nil {
@@ -67,4 +68,15 @@ func WriteSummaryJSON(w io.Writer, summary eventlog.Summary) error {
 		return fmt.Errorf("encode summary: %w", err)
 	}
 	return nil
+}
+
+func redactEventsForDisplay(events []eventlog.Event) []eventlog.Event {
+	if len(events) == 0 {
+		return events
+	}
+	redacted := make([]eventlog.Event, len(events))
+	for i, event := range events {
+		redacted[i] = eventlog.RedactForDisplay(event)
+	}
+	return redacted
 }

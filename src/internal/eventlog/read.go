@@ -17,6 +17,7 @@ type Filters struct {
 	Component     string
 	Event         string
 	PluginID      string
+	GenerationID  uint64
 	Method        string
 	CapabilityID  string
 	OperationID   string
@@ -75,6 +76,7 @@ func Summarize(events []Event) Summary {
 
 // FormatText renders one event into a concise human-readable line.
 func FormatText(event Event) string {
+	event = RedactForDisplay(event)
 	parts := []string{event.Time.Format("2006-01-02 15:04:05Z07:00")}
 	parts = append(parts, "["+strings.ToUpper(event.Level)+"]")
 	if event.Component != "" {
@@ -193,6 +195,9 @@ func match(event Event, filters Filters) bool {
 	if filters.PluginID != "" && event.PluginID != filters.PluginID {
 		return false
 	}
+	if filters.GenerationID != 0 && event.GenerationID != filters.GenerationID {
+		return false
+	}
 	if filters.Method != "" && event.Method != filters.Method {
 		return false
 	}
@@ -215,4 +220,49 @@ func reverse(events []Event) {
 	for i, j := 0, len(events)-1; i < j; i, j = i+1, j-1 {
 		events[i], events[j] = events[j], events[i]
 	}
+}
+
+// RedactForDisplay returns an operator-display copy of event with unsafe provider text removed.
+func RedactForDisplay(event Event) Event {
+	if !isProviderObservationEvent(event) {
+		return event
+	}
+	redact := func(value string) string {
+		if value == "" {
+			return ""
+		}
+		if unsafeProviderDetailText(value) || looksLikeProviderPrivatePath(value) {
+			return "[redacted]"
+		}
+		return value
+	}
+	event.SocketPath = redact(event.SocketPath)
+	event.CapabilityID = redact(event.CapabilityID)
+	event.OperationID = redact(event.OperationID)
+	event.CorrelationID = redact(event.CorrelationID)
+	event.ErrorClass = redact(event.ErrorClass)
+	event.DegradedReason = redact(event.DegradedReason)
+	event.Message = redact(event.Message)
+	event.Error = redact(event.Error)
+	event.Reason = redact(event.Reason)
+	if len(event.Details) != 0 {
+		if details, err := safeProviderDetails(event.Details); err == nil {
+			event.Details = details
+		} else {
+			event.Details = map[string]any{"redacted": true}
+		}
+	}
+	return event
+}
+
+func isProviderObservationEvent(event Event) bool {
+	switch event.Component {
+	case ComponentProviderBoundary, ComponentProviderDiagnostic:
+		return true
+	}
+	switch event.Event {
+	case EventProviderOperationStarted, EventProviderOperationSucceeded, EventProviderOperationFailed, EventProviderOperationDegraded, EventProviderOperationUnavailable, EventProviderDiagnosticReported, EventProviderDiagnosticRejected:
+		return true
+	}
+	return false
 }

@@ -45,7 +45,7 @@ func run(args []string, env runEnv, stdout, stderr io.Writer) int {
 	env = env.normalize()
 	logger := log.New(stderr, log.Prefix(), log.Flags())
 	usage := func() string {
-		return fmt.Sprintf("usage: %s [-runtime-dir DIR] [-plugin-id ID] [-message TEXT] [-level LEVEL] [-component COMPONENT] [-event EVENT] [-method METHOD] [-limit N] [-format text|json] [-since DURATION] [-reverse] [-summary] <status|plugins|plugin|capabilities|routes|heartbeat|echo|restart|logs>", env.Prog)
+		return fmt.Sprintf("usage: %s [-runtime-dir DIR] [-plugin-id ID] [-message TEXT] [-level LEVEL] [-component COMPONENT] [-event EVENT] [-method METHOD] [-generation N] [-capability ID] [-operation ID] [-correlation ID] [-limit N] [-format text|json] [-since DURATION] [-reverse] [-summary] <status|plugins|plugin|capabilities|routes|heartbeat|echo|restart|logs>", env.Prog)
 	}
 	fatal := func(v ...any) int {
 		logger.Print(v...)
@@ -66,18 +66,22 @@ func run(args []string, env runEnv, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet(env.Prog, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	var (
-		runtimeDir = fs.String("runtime-dir", filepath.Join(env.TempDir(), "rpc_plugin_system"), "runtime directory")
-		pluginID   = fs.String("plugin-id", "", "target plugin id for plugin-specific operations")
-		echoMsg    = fs.String("message", "ping", "message for echo command")
-		level      = fs.String("level", "", "filter logs by level")
-		component  = fs.String("component", "", "filter logs by component")
-		eventName  = fs.String("event", "", "filter logs by event name")
-		method     = fs.String("method", "", "filter logs by method")
-		limit      = fs.Int("limit", 200, "limit log lines returned")
-		format     = fs.String("format", "text", "log format: text or json")
-		since      = fs.Duration("since", 0, "only show logs newer than this duration, e.g. 15m")
-		reverse    = fs.Bool("reverse", true, "show newest matching logs first")
-		summary    = fs.Bool("summary", false, "show summary counts instead of raw log lines")
+		runtimeDir  = fs.String("runtime-dir", filepath.Join(env.TempDir(), "rpc_plugin_system"), "runtime directory")
+		pluginID    = fs.String("plugin-id", "", "target plugin id for plugin-specific operations")
+		echoMsg     = fs.String("message", "ping", "message for echo command")
+		level       = fs.String("level", "", "filter logs by level")
+		component   = fs.String("component", "", "filter logs by component")
+		eventName   = fs.String("event", "", "filter logs by event name")
+		method      = fs.String("method", "", "filter logs by method")
+		generation  = fs.Uint64("generation", 0, "filter logs by plugin generation id")
+		capability  = fs.String("capability", "", "filter logs by provider capability id")
+		operation   = fs.String("operation", "", "filter logs by provider operation id")
+		correlation = fs.String("correlation", "", "filter logs by provider correlation id")
+		limit       = fs.Int("limit", 200, "limit log lines returned")
+		format      = fs.String("format", "text", "log format: text or json")
+		since       = fs.Duration("since", 0, "only show logs newer than this duration, e.g. 15m")
+		reverse     = fs.Bool("reverse", true, "show newest matching logs first")
+		summary     = fs.Bool("summary", false, "show summary counts instead of raw log lines")
 	)
 	if err := fs.Parse(flagArgs); err != nil {
 		return 2
@@ -168,13 +172,17 @@ func run(args []string, env runEnv, stdout, stderr io.Writer) int {
 			return fatal(err)
 		}
 		filters := eventlog.Filters{
-			Level:     *level,
-			Component: *component,
-			Event:     *eventName,
-			PluginID:  *pluginID,
-			Method:    *method,
-			Limit:     *limit,
-			Reverse:   *reverse,
+			Level:         *level,
+			Component:     *component,
+			Event:         *eventName,
+			PluginID:      *pluginID,
+			GenerationID:  *generation,
+			Method:        *method,
+			CapabilityID:  *capability,
+			OperationID:   *operation,
+			CorrelationID: *correlation,
+			Limit:         *limit,
+			Reverse:       *reverse,
 		}
 		if *since > 0 {
 			filters.Since = env.Now().Add(-*since)

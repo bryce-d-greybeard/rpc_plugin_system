@@ -191,6 +191,13 @@ func TestRunAdminCommands(t *testing.T) {
 			if !strings.Contains(stdout.String(), tc.want) {
 				t.Fatalf("stdout = %q want %q", stdout.String(), tc.want)
 			}
+			if tc.name == "provider json redaction" {
+				for _, forbidden := range []string{"/tmp/provider/private.sock", "authority_ref", "bearer token", "payload", "secret"} {
+					if strings.Contains(stdout.String(), forbidden) {
+						t.Fatalf("stdout = %q contains forbidden %q", stdout.String(), forbidden)
+					}
+				}
+			}
 		})
 	}
 }
@@ -246,6 +253,8 @@ func writeEventLog(t *testing.T, runtimeDir string) {
 	for _, ev := range []eventlog.Event{
 		{Time: time.Date(2026, 5, 6, 11, 30, 0, 0, time.UTC), Level: eventlog.LevelInfo, Component: eventlog.ComponentKernel, Event: eventlog.EventManagerInitialized, PluginID: "echo", Message: "old"},
 		{Time: time.Date(2026, 5, 6, 11, 55, 0, 0, time.UTC), Level: eventlog.LevelError, Component: eventlog.ComponentRPC, Event: eventlog.EventRPCFailed, PluginID: "echo", Method: "Echo", Error: "boom"},
+		{Time: time.Date(2026, 5, 6, 11, 56, 0, 0, time.UTC), Level: eventlog.LevelWarn, Component: eventlog.ComponentProviderDiagnostic, Event: eventlog.EventProviderDiagnosticReported, PluginID: "echo", GenerationID: 7, CapabilityID: "mail.send", OperationID: "send_message", CorrelationID: "corr-123", Status: eventlog.ProviderStatusDegraded, Message: "provider degraded"},
+		{Time: time.Date(2026, 5, 6, 11, 57, 0, 0, time.UTC), Level: eventlog.LevelWarn, Component: eventlog.ComponentProviderDiagnostic, Event: eventlog.EventProviderDiagnosticReported, PluginID: "echo", GenerationID: 7, CapabilityID: "mail.send", OperationID: "send_message", CorrelationID: "authority_ref:abc", Status: eventlog.ProviderStatusFailed, SocketPath: "/tmp/provider/private.sock", Message: "bearer token omitted", Details: map[string]any{"payload": "secret"}},
 	} {
 		if err := log.Write(ev); err != nil {
 			t.Fatalf("write event: %v", err)
@@ -263,8 +272,10 @@ func TestRunLogsCommands(t *testing.T) {
 	}{
 		{name: "text", args: []string{"logs", "-level", "error", "-since", "10m"}, want: "boom"},
 		{name: "json", args: []string{"logs", "-format", "json", "-reverse=false", "-limit", "1"}, want: "manager_initialized"},
-		{name: "summary text", args: []string{"logs", "-summary"}, want: "total: 2"},
+		{name: "summary text", args: []string{"logs", "-summary"}, want: "total: 4"},
 		{name: "summary json", args: []string{"logs", "-summary", "-format", "json"}, want: "by_level"},
+		{name: "provider filters", args: []string{"logs", "-component", "provider_diagnostic", "-generation", "7", "-capability", "mail.send", "-operation", "send_message", "-correlation", "corr-123", "-reverse=false"}, want: "provider degraded"},
+		{name: "provider json redaction", args: []string{"logs", "-component", "provider_diagnostic", "-format", "json", "-correlation", "authority_ref:abc"}, want: "[redacted]"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			args := append([]string{"-runtime-dir", runtimeDir}, tc.args...)
@@ -274,6 +285,13 @@ func TestRunLogsCommands(t *testing.T) {
 			}
 			if !strings.Contains(stdout.String(), tc.want) {
 				t.Fatalf("stdout = %q want %q", stdout.String(), tc.want)
+			}
+			if tc.name == "provider json redaction" {
+				for _, forbidden := range []string{"/tmp/provider/private.sock", "authority_ref", "bearer token", "payload", "secret"} {
+					if strings.Contains(stdout.String(), forbidden) {
+						t.Fatalf("stdout = %q contains forbidden %q", stdout.String(), forbidden)
+					}
+				}
 			}
 		})
 	}

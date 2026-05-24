@@ -38,6 +38,38 @@ func TestWriteEventsJSON(t *testing.T) {
 	}
 }
 
+func TestWriteEventsJSONRedactsUnsafeProviderFields(t *testing.T) {
+	var buf bytes.Buffer
+	events := []eventlog.Event{{
+		Time:          time.Unix(1, 0).UTC(),
+		Level:         eventlog.LevelWarn,
+		Component:     eventlog.ComponentProviderDiagnostic,
+		Event:         eventlog.EventProviderDiagnosticReported,
+		PluginID:      "provider.echo",
+		GenerationID:  7,
+		SocketPath:    "/tmp/provider/private.sock",
+		CapabilityID:  "mail.send",
+		CorrelationID: "authority_ref:abc",
+		Status:        eventlog.ProviderStatusFailed,
+		Message:       "raw response_body omitted",
+		Details:       map[string]any{"payload": "secret"},
+	}}
+	if err := WriteEventsJSON(&buf, events); err != nil {
+		t.Fatalf("write json: %v", err)
+	}
+	out := buf.String()
+	for _, forbidden := range []string{"/tmp/provider/private.sock", "authority_ref", "response_body", "payload", "secret"} {
+		if strings.Contains(out, forbidden) {
+			t.Fatalf("json output %q contains forbidden %q", out, forbidden)
+		}
+	}
+	for _, want := range []string{"mail.send", "[redacted]", "redacted"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("json output missing %q in %q", want, out)
+		}
+	}
+}
+
 func TestWriteSummaryText(t *testing.T) {
 	var buf bytes.Buffer
 	summary := eventlog.Summary{Total: 3, ByLevel: map[string]int{eventlog.LevelInfo: 1, eventlog.LevelWarn: 2}, ByComponent: map[string]int{eventlog.ComponentRPC: 2}, ByEvent: map[string]int{eventlog.EventRPCFailed: 2}}

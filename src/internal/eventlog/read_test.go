@@ -37,6 +37,76 @@ func TestReadAllFiltersEvents(t *testing.T) {
 	}
 }
 
+func TestReadAllFiltersProviderFieldsAndGeneration(t *testing.T) {
+	path := t.TempDir() + "/events.jsonl"
+	logger, err := New(path)
+	if err != nil {
+		t.Fatalf("new logger: %v", err)
+	}
+	defer logger.Close()
+	for _, event := range []Event{
+		{Time: time.Unix(1, 0).UTC(), Level: LevelInfo, Component: ComponentProviderDiagnostic, Event: EventProviderDiagnosticReported, PluginID: "provider.echo", GenerationID: 7, CapabilityID: "mail.send", OperationID: "send_message", CorrelationID: "corr-123", Status: ProviderStatusDegraded},
+		{Time: time.Unix(2, 0).UTC(), Level: LevelInfo, Component: ComponentProviderDiagnostic, Event: EventProviderDiagnosticReported, PluginID: "provider.echo", GenerationID: 8, CapabilityID: "mail.read", OperationID: "read_message", CorrelationID: "corr-456", Status: ProviderStatusSucceeded},
+	} {
+		if err := logger.Write(event); err != nil {
+			t.Fatalf("write event: %v", err)
+		}
+	}
+
+	events, err := ReadAll(path, Filters{PluginID: "provider.echo", GenerationID: 7, CapabilityID: "mail.send", OperationID: "send_message", CorrelationID: "corr-123"})
+	if err != nil {
+		t.Fatalf("ReadAll: %v", err)
+	}
+	if len(events) != 1 || events[0].GenerationID != 7 || events[0].CapabilityID != "mail.send" {
+		t.Fatalf("events = %#v, want generation 7 mail.send only", events)
+	}
+}
+
+func TestRedactForDisplayRedactsUnsafeProviderFieldsAndDetails(t *testing.T) {
+	event := Event{
+		Time:           time.Unix(1, 0).UTC(),
+		Level:          LevelWarn,
+		Component:      ComponentProviderDiagnostic,
+		Event:          EventProviderDiagnosticReported,
+		PluginID:       "provider.echo",
+		GenerationID:   7,
+		SocketPath:     "/tmp/provider/private.sock",
+		CapabilityID:   "mail.payload",
+		OperationID:    "send_message",
+		CorrelationID:  "authority_ref:abc",
+		Status:         ProviderStatusFailed,
+		ErrorClass:     "raw response_body",
+		DegradedReason: "/home/provider/private",
+		Message:        "bearer token omitted",
+		Details:        map[string]any{"payload": "secret"},
+	}
+	redacted := RedactForDisplay(event)
+	for name, value := range map[string]string{
+		"socket_path":     redacted.SocketPath,
+		"capability":      redacted.CapabilityID,
+		"correlation":     redacted.CorrelationID,
+		"error_class":     redacted.ErrorClass,
+		"degraded_reason": redacted.DegradedReason,
+		"message":         redacted.Message,
+	} {
+		if value != "[redacted]" {
+			t.Fatalf("%s = %q, want redacted", name, value)
+		}
+	}
+	if redacted.OperationID != "send_message" || redacted.Status != ProviderStatusFailed {
+		t.Fatalf("safe fields changed: %#v", redacted)
+	}
+	if got, ok := redacted.Details["redacted"].(bool); !ok || !got {
+		t.Fatalf("details = %#v, want redacted marker", redacted.Details)
+	}
+	line := FormatText(event)
+	for _, forbidden := range []string{"/tmp/provider/private.sock", "mail.payload", "authority_ref", "response_body", "/home/provider/private", "bearer token", "secret"} {
+		if strings.Contains(line, forbidden) {
+			t.Fatalf("line %q contains forbidden %q", line, forbidden)
+		}
+	}
+}
+
 func TestReadAllIncludesRotatedBackups(t *testing.T) {
 	dir := t.TempDir()
 	path := dir + "/events.jsonl"

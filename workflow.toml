@@ -540,7 +540,7 @@ worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/provide
 [[features]]
 id = "provider-observability.admin-read"
 root = "provider-observability"
-state = "active"
+state = "done"
 branch = "workflow/feature/provider-observability.admin-read"
 path = "workflow/features/provider-observability.admin-read"
 source_path = "src/internal/adminrpc"
@@ -549,7 +549,7 @@ worktree = "/tank/development/linus/rpc-plugin-system-worktrees/features/provide
 [[features]]
 id = "provider-observability.redaction-contracts"
 root = "provider-observability"
-state = "planned"
+state = "active"
 branch = "workflow/feature/provider-observability.redaction-contracts"
 path = "workflow/features/provider-observability.redaction-contracts"
 source_path = "src/internal/eventlog"
