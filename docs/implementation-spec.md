@@ -244,7 +244,7 @@ type ProviderObservation struct {
 func ProviderEvent(obs ProviderObservation) (Event, error)
 ```
 
-`ProviderEvent` must reject malformed identity, unknown provider event names, unknown statuses, missing capability/operation/correlation fields where required, negative duration, and unsafe detail keys/values.
+`ProviderEvent` must reject malformed identity, unknown provider event names, unknown statuses, missing capability/operation/correlation fields where required, negative duration, unsafe top-level provider field text, and unsafe detail keys/values.
 
 Unsafe detail keys or values include secret-like, payload-like, raw authority-ref, raw handle, raw credential, raw token, raw prompt, raw response body, raw socket, raw session, raw signer, and provider-private path material.
 
@@ -430,7 +430,7 @@ Required for `provider-observability.event-schema`:
 - unknown statuses are rejected;
 - missing plugin id/generation/capability/operation/correlation is rejected where required;
 - negative duration is rejected;
-- unsafe detail keys/values are rejected or redacted according to the helper contract;
+- unsafe top-level provider field text and detail keys/values are rejected or redacted according to the helper contract;
 - event reads can filter by capability, operation, and correlation once those filters are added;
 - text and JSON output preserve safe provider fields.
 

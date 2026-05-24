@@ -8,7 +8,7 @@ Accepted.
 
 Reviewed worker changes in the feature worktree and integrated only the eventlog-scoped patch into main. The implementation stays inside the active feature scope: `src/internal/eventlog` plus feature evidence/workflow records.
 
-The patch adds additive provider observability event fields, provider component/event/status constants, `ProviderObservation`, `ProviderEvent`, conservative unsafe detail rejection, event filters for capability/operation/correlation, and text formatting for provider fields.
+The patch adds additive provider observability event fields, provider component/event/status constants, `ProviderObservation`, `ProviderEvent`, conservative unsafe provider field/detail rejection, event filters for capability/operation/correlation, and text formatting for provider fields.
 
 ## Verification
 
