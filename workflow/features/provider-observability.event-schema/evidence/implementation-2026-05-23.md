@@ -14,7 +14,7 @@
 - `src/internal/eventlog/provider_test.go`
   - Added focused positive and negative tests for this slice.
 
-## Tests and verification run
+## Worker-local verification before integration
 
 From repo root unless noted:
 
@@ -75,7 +75,7 @@ Focused tests cover the relevant provider event schema behavior requested for th
 - filtering by capability, operation, and correlation ids;
 - text formatting of provider fields.
 
-Known gap: root `make doc-check` and root `make test` cannot pass in this worktree without touching unrelated feature workflow directories (`provider-observability.sdk-emission`). I did not modify unrelated workflow records. Source-level tests and vet pass.
+Worker-local blocker: root `make doc-check` and root `make test` could not pass in the feature worktree because unrelated provider-observability workflow directories were not tracked yet. The orchestrator resolved this during integration by adding tracked `.gitkeep` files for those directories; this is not an accepted final coverage gap.
 
 ## Risks
 
@@ -84,7 +84,7 @@ Known gap: root `make doc-check` and root `make test` cannot pass in this worktr
 
 ## Next recommendation
 
-Review the eventlog-only schema surface, then unblock repository-level `doc-check` by adding the required workflow directories for unrelated manifest features in a separate workflow/layout cleanup if those records are intended to be active.
+Proceed to the next active slice, `provider-observability.sdk-emission`, using the accepted event schema helpers. Repository-level workflow layout is now unblocked in main.
 
 ## Orchestrator final verification update
 
